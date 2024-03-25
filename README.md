@@ -77,8 +77,5 @@ The US Crisis Coordination (USCC) project aims to deliver a web-based platform t
 - Address any remaining issues
 - Deploy application for final testing
 
-## How to Contribute
-Contributions to the USCC project are welcome. Please refer to the [CONTRIBUTING.md](CONTRIBUTING.md) file for more information on how to submit pull requests, report issues, or suggest enhancements.
-
 ## License
 This project is licensed under the MIT License - see the [LICENSE.md](LICENSE.md) file for details.
