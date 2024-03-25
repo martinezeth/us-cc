@@ -1,70 +1,84 @@
-# Getting Started with Create React App
+# US Crisis Coordination (USCC)
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+## Team Members
+- Ethan Martinez
+- Nicolas Randazzo
+- Jacob Franco
 
-## Available Scripts
+## Project Overview
+The US Crisis Coordination (USCC) project aims to deliver a web-based platform that empowers communities and local authorities to respond quickly to disasters. It facilitates the reporting of incidents, management of resources, coordination of volunteer efforts, and utilization of real-time data for informed decision-making. The primary goal is to enable users within communities to report, confirm, converse about, and share information regarding weather anomalies and disaster response resources before losing internet connectivity.
 
-In the project directory, you can run:
+## Technology Stack
 
-### `npm start`
+### Database
+- **Language:** SQL
+- **Framework:** MySQL
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+### API Server
+- **Language:** JavaScript
+- **Framework:** Node.js / Express.js
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
+### UI Server
+- **Language:** JavaScript
 
-### `npm test`
+### Frontend Components
+- **Language:** JavaScript
+- **Framework:** React.js
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+### Backend Services
+- **Language:** JavaScript (Node.js)
+- **Framework:** Express.js (RESTful API)
 
-### `npm run build`
+### Data Models
+- **Language:** JavaScript
+- **Frameworks:** Sequelize or Mongoose (for MongoDB)
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+### Authentication and Authorization Middleware
+- **Language:** JavaScript (Node.js)
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+## Use Cases
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+1. **User Registration and Authentication**
+2. **Incident Reporting**
+3. **Resource Management**
+4. **Volunteer Signup and Coordination**
+5. **Incident Mapping**
+6. **User Profile Management**
 
-### `npm run eject`
+## Project Milestones
 
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
+### Week 1: Planning and Initial Setup
+- Finalize technology stack
+- Set up GitHub repository
+- Begin database design and setup
 
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+### Week 2: Begin Initial Frontend Development
+- Design UI mock-ups and wireframes
+- Start frontend development with React/Vue.js
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
+### Week 3: Continue Frontend Development
+- Create Incident Reporting Interface
+- Integrate map functionality
 
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
+### Week 4: Begin Backend Development
+- Set up Node.js server with Express.js
+- Connect backend to database and establish API endpoints
 
-## Learn More
+### Week 5: Continue Backend Development
+- Implement authentication and authorization
+- Define access control rules
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+### Week 6: Integration and Testing
+- Integrate frontend and backend
+- Conduct unit and integration testing
 
-To learn React, check out the [React documentation](https://reactjs.org/).
+### Week 7: Finalization and Deployment
+- Final UI refinements
+- Address any remaining issues
+- Deploy application for final testing
 
-### Code Splitting
+## How to Contribute
+Contributions to the USCC project are welcome. Please refer to the [CONTRIBUTING.md](CONTRIBUTING.md) file for more information on how to submit pull requests, report issues, or suggest enhancements.
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
-
-### Analyzing the Bundle Size
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
-
-### Making a Progressive Web App
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
-
-### Advanced Configuration
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
-
-### Deployment
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
-
-### `npm run build` fails to minify
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+## License
+This project is licensed under the MIT License - see the [LICENSE.md](LICENSE.md) file for details.
