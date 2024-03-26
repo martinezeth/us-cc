@@ -1,0 +1,17 @@
+.headerContainer{
+    background-color: blanchedalmond;
+    padding: 100px;
+    text-align: center;
+  }
+  
+  .bodyContainer{
+    background-color: blanchedalmond;
+    padding: 200px;
+    text-align: left;
+  }
+  
+  .footerContainer{
+    background-color: blanchedalmond;
+    padding: 100px;
+    text-align: center;
+  }

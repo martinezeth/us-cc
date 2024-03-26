@@ -1,14 +1,16 @@
 import logo from './logo.svg';
+
+import './Styles/styles.css'
+import hearderComponet from './Components/headerComponent';
 import bodyComponent from '../src/Components/bodyComponent'; 
+import footerComponent from './Components/footerComponent';
 
 function App() {
   return (
     <div className="window">
       
       <div className="headerContainer">
-        <div className="headerImage"></div>
-        <div className="headerMenu"></div>
-        <div className="accountContainer"></div>
+        <headerComponet />
       </div>
       
       <div className="bodyContainer">
@@ -16,9 +18,7 @@ function App() {
       </div>
       
       <div className="footerContainer">
-        <div className="footerSection"></div>
-        <div className="footerSection"></div>
-        <div className="footerSection"></div>
+        <footerComponent />
       </div>      
     
     </div>
