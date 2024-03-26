@@ -1,4 +1,4 @@
-import logo from './logo.svg';
+import React from 'react';
 
 import './Styles/styles.css'
 import HeaderComponent from './Components/HeaderComponent';
