@@ -1,6 +1,6 @@
 
 
-export default function headerComponet(){
+export default function headerComponent(){
     
     return(
         <>
