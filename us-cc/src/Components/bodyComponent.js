@@ -1,6 +1,6 @@
 
 
-export default function bodyComponent(){
+export default function BodyComponent(){
 
     return(
         <>

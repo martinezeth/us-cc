@@ -1,6 +1,6 @@
 
 
-export default function footerComponent(){
+export default function FooterComponent(){
     
     return(
         <>

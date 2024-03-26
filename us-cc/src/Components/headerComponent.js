@@ -1,11 +1,13 @@
 
 
-export default function headerComponent(){
+export default function HeaderComponent(){
     
     return(
         <>
             <div className="headerImage"></div>
-            <div className="headerMenu"></div>
+            <div className="headerMenu">
+                Hello World
+            </div>
             <div className="accountContainer"></div>
         </>
     );

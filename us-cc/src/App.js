@@ -1,24 +1,24 @@
 import logo from './logo.svg';
 
 import './Styles/styles.css'
-import headerComponent from './Components/headerComponent';
-import bodyComponent from '../src/Components/bodyComponent'; 
-import footerComponent from './Components/footerComponent';
+import HeaderComponent from './Components/HeaderComponent';
+import BodyComponent from './Components/BodyComponent'; 
+import FooterComponent from './Components/FooterComponent';
 
 function App() {
   return (
     <div className="window">
       
       <div className="headerContainer">
-        <headerComponent />
+        <HeaderComponent />
       </div>
       
       <div className="bodyContainer">
-        <bodyComponent />
+        <BodyComponent />
       </div>
       
       <div className="footerContainer">
-        <footerComponent />
+        <FooterComponent />
       </div>      
     
     </div>
