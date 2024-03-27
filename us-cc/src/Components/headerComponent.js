@@ -4,9 +4,13 @@ export default function HeaderComponent(){
     
     return(
         <>
-            <div className="headerImage"></div>
+            <div className="headerImage">
+                <h1>United States 
+                    <br></br> 
+                    Crisis Coordination
+                </h1>
+            </div>
             <div className="headerMenu">
-                Hello World
             </div>
             <div className="accountContainer"></div>
         </>
