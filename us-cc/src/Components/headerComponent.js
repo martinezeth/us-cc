@@ -1,18 +1,30 @@
-import React from "react";
+import React from 'react';
+import { AppBar, Toolbar, Typography, Button, IconButton, Box } from '@mui/material';
+// import MenuIcon from '@mui/icons-material/Menu';
+import Logo from '../Styles/Images/usccLogoDraft.svg';
 
-export default function HeaderComponent(){
-    
-    return(
-        <>
-            <div className="headerImage">
-                <h1>United States 
-                    <br></br> 
-                    Crisis Coordination
-                </h1>
-            </div>
-            <div className="headerMenu">
-            </div>
-            <div className="accountContainer"></div>
-        </>
-    );
-}
+const HeaderComponent = () => {
+  return (
+    <AppBar position="static">
+      <Toolbar>
+        {/* Logo */}
+        <IconButton edge="start" color="inherit" aria-label="logo">
+          <img src={Logo} alt="logo" style={{ maxHeight: '50px' }} />
+        </IconButton>
+
+        {/* Spacer to push the rest to the right */}
+        <Box sx={{ flexGrow: 1 }} />
+
+        {/* Navigation Links */}
+        <Button color="inherit" href="#about">About</Button>
+        <Button color="inherit" href="#features">Features</Button>
+
+        {/* Login/Join Now Button */}
+        <Button color="inherit" href="#login">Login</Button>
+        <Button color="inherit" variant="outlined" href="#join">Join Now</Button>
+      </Toolbar>
+    </AppBar>
+  );
+};
+
+export default HeaderComponent;
