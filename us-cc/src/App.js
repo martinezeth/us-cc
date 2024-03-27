@@ -4,23 +4,13 @@ import './Styles/styles.css'
 import HeaderComponent from './Components/headerComponent';
 import BodyComponent from './Components/bodyComponent'; 
 import FooterComponent from './Components/footerComponent';
+import LandingPage from './Components/LandingPage/LandingPage';
 
 function App() {
   return (
-    <div className="window">
-      
-      <div className="headerContainer">
-        <HeaderComponent />
-      </div>
-      
-      <div className="bodyContainer">
-        <BodyComponent />
-      </div>
-      
-      <div className="footerContainer">
-        <FooterComponent />
-      </div>      
-    
+    <div className="App">
+      <HeaderComponent />
+      <LandingPage />
     </div>
   );
 }
