@@ -12,6 +12,11 @@ const HeaderComponent = () => {
           <img src={Logo} alt="logo" style={{ maxHeight: '50px' }} />
         </IconButton>
 
+        {/* Title */}
+        <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
+          US Crisis Coordination
+        </Typography>
+
         {/* Spacer to push the rest to the right */}
         <Box sx={{ flexGrow: 1 }} />
 
