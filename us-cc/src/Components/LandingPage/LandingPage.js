@@ -23,7 +23,6 @@ export default function LandingPage() {
             Welcome to United States Crisis Coordination
         </Typography>
         <img src={landingPageMainImage} alt="Main Banner" style={{ width: '100%', height: 'auto' }} />
-        <p>This is a basic setup. We will add more components and content here.</p>
         <AboutSection />
       </Box>
     </ThemeProvider>

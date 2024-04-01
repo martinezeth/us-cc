@@ -11,6 +11,8 @@ function App() {
     <div className="App">
       <HeaderComponent />
       <LandingPage />
+      <BodyComponent />
+      <FooterComponent />
     </div>
   );
 }
