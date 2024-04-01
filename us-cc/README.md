@@ -77,6 +77,11 @@ The US Crisis Coordination (USCC) project aims to deliver a web-based platform t
 - Address any remaining issues
 - Deploy application for final testing
 
+---
+This command allows for legacy code (as proposed by Prof).
+# export NODE_OPTIONS=--openssl-legacy-provider 
+---
+
 ## How to Contribute
 Contributions to the USCC project are welcome. Please refer to the [CONTRIBUTING.md](CONTRIBUTING.md) file for more information on how to submit pull requests, report issues, or suggest enhancements.
 
