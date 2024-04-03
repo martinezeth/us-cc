@@ -1,7 +1,6 @@
 import React from "react";
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
-import HeaderComponent from "./HeaderComponent";
 import { Button, Container } from "@mui/material";
 
 function Register() {
