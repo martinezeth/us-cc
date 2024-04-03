@@ -26,8 +26,8 @@ const HeaderComponent = () => {
         <Button color="inherit" href="#features">Features</Button>
 
         {/* Login/Join Now Button */}
-        <Button color="inherit" as={<AuthenticationPage RegOrLogin={"Login"}/> }>Login</Button>
-        <Button color="inherit" variant="outlined" as={<AuthenticationPage RegOrLogin={"Register"} />}>Join Now</Button>
+        <Button color="inherit" onClick={()=>{<AuthenticationPage RegOrLogin={"Login"}/> }}>Login</Button>
+        <Button color="inherit" variant="outlined" onClick={()=>{<AuthenticationPage RegOrLogin={"Register"} />}}>Join Now</Button>
       </Toolbar>
     </AppBar>
   );
