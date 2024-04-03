@@ -1,7 +1,7 @@
 import React from 'react';
 
 import './Styles/styles.css'
-import HeaderComponent from './Components/headerComponent';
+import HeaderComponent from './Components/HeaderComponent';
 import BodyComponent from './Components/BodyComponent'; 
 import FooterComponent from './Components/FooterComponent';
 import LandingPage from './Components/LandingPage/LandingPage';
