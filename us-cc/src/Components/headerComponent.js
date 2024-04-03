@@ -1,5 +1,6 @@
 import React from 'react';
 import { AppBar, Toolbar, Typography, Button, IconButton, Box } from '@mui/material';
+import { AuthenticationPage } from './LoginRegisterPage';
 // import MenuIcon from '@mui/icons-material/Menu';
 import Logo from '../Styles/Images/usccLogoDraft.svg';
 
@@ -25,8 +26,8 @@ const HeaderComponent = () => {
         <Button color="inherit" href="#features">Features</Button>
 
         {/* Login/Join Now Button */}
-        <Button color="inherit" href="#login">Login</Button>
-        <Button color="inherit" variant="outlined" href="#join">Join Now</Button>
+        <Button color="inherit" as={<AuthenticationPage RegOrLogin={"Login"}/> }>Login</Button>
+        <Button color="inherit" variant="outlined" as={<AuthenticationPage RegOrLogin={"Register"} />}>Join Now</Button>
       </Toolbar>
     </AppBar>
   );
