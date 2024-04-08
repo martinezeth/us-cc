@@ -12,6 +12,7 @@ export default function NewReportPage(){
             <Box>
             </Box>
             {/* This box is where they write the title and body of the post */}
+            
             <Box>
                 <div>
 
