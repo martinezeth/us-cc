@@ -2,6 +2,7 @@ import React from "react";
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 import { Button, Container, FormControl, FormGroup } from "@mui/material";
+import TextField from "@mui/material";
 
 export default function NewReportPage(){
     
@@ -16,10 +17,15 @@ export default function NewReportPage(){
 
                 </div>
                 <div>
-                    <FormGroup>
-                        <FormControl></FormControl>
-                        <FormControl></FormControl>
-                    </FormGroup>
+                    <form noValidate autoComplete="off">
+                        <TextField 
+                            label="Post Title"
+                            variant="outlined"
+                            color="secondary"
+                            fullWidth
+                        />
+
+                    </form>
                 </div>
             </Box>
 
