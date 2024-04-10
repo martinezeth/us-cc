@@ -4,17 +4,19 @@ CREATE DATABASE IF NOT EXISTS USCCDB;
 -- Use the database
 USE USCCDB;
 
-DROP TABLE IncidentReports IF EXISTS;
-DROP TABLE Resources IF EXISTS;
-DROP TABLE Volunteers IF EXISTS;
-DROP TABLE Posts IF EXISTS;
 DROP TABLE Users IF EXISTS;
+DROP TABLE Posts IF EXISTS;
+DROP TABLE Volunteers IF EXISTS;
+DROP TABLE Region IF EXISTS;
+DROP TABLE Resources IF EXISTS;
+DROP TABLE IncidentReports IF EXISTS;
+DROP TABLE IncidentType IF EXISTS;
 
 
 -- Create the Users table
 CREATE TABLE IF NOT EXISTS Users (
     user_id INT AUTO_INCREMENT PRIMARY KEY,
-    username VARCHAR(50) NOT NULL,
+    UNIQUE username VARCHAR(50) NOT NULL,
     password_hash VARCHAR(255) NOT NULL,
     role ENUM('user', 'admin') DEFAULT 'user'
 );
@@ -39,6 +41,7 @@ CREATE TABLE IF NOT EXISTS IncidentReports (
     FOREIGN KEY (user_id) REFERENCES Users(user_id)
 );
 
+
 -- Create the Resources table
 CREATE TABLE IF NOT EXISTS Resources (
     resource_id INT AUTO_INCREMENT PRIMARY KEY,
@@ -59,9 +62,19 @@ CREATE TABLE IF NOT EXISTS Volunteers (
     FOREIGN KEY (user_id) REFERENCES Users(user_id)
 );
 
-CREATE TABLE IF NOT EXISTS IncidentType (
-    incidentType_id INT AUTO_INCREMENT PRIMARY KEY,
-    incident_type VARCHAR(50) NOT NULL,
-    description TEXT
+-- Create the Region table
+CREATE TABLE IF NOT EXISTS Region(
+    region_id INT AUTO_INCREMENT PRIMARY KEY,
+    region_name VARCHAR(100) NOT NULL,
+    state VARCHAR(100),
+    city VARCHAR(100),
+    postal_code VARCHAR(20),
+    UNIQUE (region_name, country, state, city, postal_code)
+);
 
+-- Create the IncidentType table 
+CREATE TABLE IF NOT EXISTS IncidentType (
+    incident_type_id INT AUTO_INCREMENT PRIMARY KEY,
+    incident_type_name VARCHAR(100) NOT NULL,
+    description TEXT
 );

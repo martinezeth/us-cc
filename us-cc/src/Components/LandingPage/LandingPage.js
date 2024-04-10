@@ -54,18 +54,14 @@ export default function LandingPage() {
 
       {/* Middle Column for Main Content */}
       <Grid item xs={6}> {/* This is the larger, central column */}
-        <Card>
-          <CardContent>
-            {/* Main Content Here */}
-            <Typography variant="h4">Main Content</Typography>
+      
+      {/*Include a foreach statement here that adds the posts */}
             <Card>
               <CardContent>
-                <Typography variant="h5">Post title</Typography>
-                <Typography>Post body</Typography>
+                <Typography variant="h5">Post title</Typography>  {/*posts.title*/}
+                <Typography>Post body</Typography> {/*posts.body*/}
               </CardContent>
             </Card>
-          </CardContent>
-        </Card>
       </Grid>
 
       {/* Right Column for Additional Information */}
