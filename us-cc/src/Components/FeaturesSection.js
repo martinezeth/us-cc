@@ -39,7 +39,7 @@ const featuresList = [
 const FeaturesSection = () => {
   return (
     <Box sx={{ flexGrow: 1, bgcolor: 'background.paper', p: 3 }} id="features">
-      <Typography variant="h4" gutterBottom>
+      <Typography variant="h5" gutterBottom>
         Features
       </Typography>
       <Grid container spacing={2}>
@@ -52,10 +52,10 @@ const FeaturesSection = () => {
             style={{ maxHeight: '140px', width: '100%', objectFit: 'contain' }}
             />
             <CardContent>
-            <Typography gutterBottom variant="h5" component="div">
+            <Typography gutterBottom variant="h6" component="div">
                 {feature.title}
             </Typography>
-            <Typography variant="body2" color="text.secondary">
+            <Typography variant="body3" color="text.secondary">
                 {feature.description}
             </Typography>
             </CardContent>
