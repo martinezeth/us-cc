@@ -1,6 +1,6 @@
 import React from 'react';
 import { AppBar, Toolbar, Typography, Button, IconButton, Box } from '@mui/material';
-import { AuthenticationPage, Login } from './LoginRegisterPage';
+import { AuthenticationPage, Login } from '../Pages/LoginRegisterPage';
 // import MenuIcon from '@mui/icons-material/Menu';
 import Logo from '../Styles/Images/usccLogoDraft.svg';
 import {

@@ -3,7 +3,7 @@ import React from 'react';
 import './Styles/styles.css'
 import HeaderComponent from './Components/HeaderComponent';
 import FooterComponent from './Components/FooterComponent';
-import LandingPage from './Components/LandingPage/LandingPage';
+import LandingPage from './Pages/LandingPage';
 
 function App() {
   return (
