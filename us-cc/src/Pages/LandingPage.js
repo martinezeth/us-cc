@@ -2,11 +2,11 @@ import * as React from 'react';
 import CssBaseline from '@mui/material/CssBaseline';
 import Box from '@mui/material/Box';
 import { ThemeProvider, createTheme } from '@mui/material/styles';
-import getLPTheme from '../Components/getLPTheme';
-import AboutSection from '../Components/AboutSection';
+// import getLPTheme from '../components/getLPTheme';
+import AboutSection from '../components/AboutSection';
 import { Typography } from '@mui/material';
-import landingPageMainImage from '../../Styles/Images/landingPageMainImage.webp';
-import FeaturesSection from '../Components/FeaturesSection';
+import landingPageMainImage from '../Images/landingPageMainImage.webp';
+import FeaturesSection from '../components/FeaturesSection';
 
 
 export default function LandingPage() {

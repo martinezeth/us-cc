@@ -6,10 +6,10 @@ import Card from '@mui/material/Card';
 import CardContent from '@mui/material/CardContent';
 import CardMedia from '@mui/material/CardMedia';
 import Grid from '@mui/material/Grid';
-import WarningCircleIcon from '../Styles/Images/Icons/warningCircle.svg';
-import ResourceManagementIcon from '../Styles/Images/Icons/resourceManagementIcon.svg';
-import VolunteerCoordinationIcon from '../Styles/Images/Icons/resourceIcon.svg';
-import DataVisualizationIcon from '../Styles/Images/Icons/dataVisualizationIcon.svg';
+import WarningCircleIcon from '../Images/Icons/warningCircle.svg';
+import ResourceManagementIcon from '../Images/Icons/resourceManagementIcon.svg';
+import VolunteerCoordinationIcon from '../Images/Icons/resourceIcon.svg';
+import DataVisualizationIcon from '../Images/Icons/dataVisualizationIcon.svg';
 
 
 const featuresList = [

@@ -2,7 +2,7 @@ import React from 'react';
 import { AppBar, Toolbar, Typography, Button, IconButton, Box } from '@mui/material';
 import { AuthenticationPage, Login } from '../Pages/LoginRegisterPage';
 // import MenuIcon from '@mui/icons-material/Menu';
-import Logo from '../Styles/Images/usccLogoDraft.svg';
+import Logo from '../Images/usccLogoDraft.svg';
 import {
   BrowserRouter as Router,
   Route,
