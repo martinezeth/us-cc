@@ -4,8 +4,8 @@ import CssBaseline from '@mui/material/CssBaseline';
 import Box from '@mui/material/Box';
 import { Typography } from '@mui/material';
 import landingPageMainImage from '../Images/landingPageMainImage.webp';
-import AboutSection from '../components/AboutSection';
-import FeaturesSection from '../components/FeaturesSection';
+import AboutSection from '../Components/AboutSection';
+import FeaturesSection from '../Components/FeaturesSection';
 
 export default function LandingPage() {
   const location = useLocation();
