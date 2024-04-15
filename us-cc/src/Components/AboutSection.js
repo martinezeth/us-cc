@@ -4,7 +4,7 @@ import Typography from '@mui/material/Typography';
 
 const AboutSection = () => {
     return (
-        <Box sx={{mt: 4}}>
+        <Box sx={{ p: 3 }} id="about-section">
             <Typography variant="h4" gutterBottom>
                 About Us
             </Typography>

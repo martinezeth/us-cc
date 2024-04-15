@@ -51,3 +51,5 @@ function AuthenticationPage(RegoOrLogin){
 }
 
 export {AuthenticationPage, Login, Register};
+
+// TODO: Link to authentication page

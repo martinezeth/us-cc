@@ -3,17 +3,36 @@ import { AppBar, Toolbar, Typography, Button, IconButton, Box } from '@mui/mater
 import { AuthenticationPage, Login } from '../Pages/LoginRegisterPage';
 // import MenuIcon from '@mui/icons-material/Menu';
 import Logo from '../Images/usccLogoDraft.svg';
-import {
-  BrowserRouter as Router,
-  Route,
-  Routes} from "react-router-dom";
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 
 const HeaderComponent = () => {
+
+  const location = useLocation();
+  const navigate = useNavigate();
+
+  // Function to handle navigation to different sections of the main page (i.e. Home, About, Features, etc.)
+  const handleNavigation = (sectionId) => {
+    if (location.pathname === '/') {
+      scrollToSection(sectionId);
+    } else {
+      navigate("/", { state: { sectionId: sectionId } });
+    }
+  };
+  
+
+  const scrollToSection = (sectionId) => {
+    const section = document.getElementById(sectionId);
+    if (section) {
+      section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  };
+
+
   return (
     <AppBar position="static">
       <Toolbar>
         {/* Logo */}
-        <IconButton edge="start" color="inherit" aria-label="logo">
+        <IconButton edge="start" color="inherit" aria-label="logo" component={Link} to="/">
           <img src={Logo} alt="logo" style={{ maxHeight: '50px' }} />
         </IconButton>
 
@@ -26,31 +45,13 @@ const HeaderComponent = () => {
         <Box sx={{ flexGrow: 1 }} />
 
         {/* Navigation Links */}
-        <Button color="inherit" href="#about">About</Button>
-        <Button color="inherit" href="#features">Features</Button>
+        <Button color="inherit" component={Link} to="/">Home</Button>
+        <Button color="inherit" onClick={() => handleNavigation('about-section')}>About</Button>
+        <Button color="inherit" onClick={() => handleNavigation('features-section')}>Features</Button>
 
         {/* Login/Join Now Button */}
-        
-            {/* <Switch>
-              <Route path="/login">
-                <AuthenticationPage RegoOrLogin="Login" /> 
-              </Route>
-              <Route path="/register">
-                <AuthenticationPage RegoOrLogin="Register" /> 
-              </Route>
-            </Switch> */}
-            {/**
-             * https://stackoverflow.com/questions/59520261/how-to-append-textquery-to-a-react-router-url
-             */}
-        <Router>
-          <Routes>
-            <Route path="/login" element={<AuthenticationPage RegoOrLogin={"Login"}/>}/>
-            <Route path="/register" element={<AuthenticationPage RegoOrLogin={"Register"} />} />
-          </Routes>
-        </Router>
-
-        {/* <Button color="inherit" >Login</Button>
-        <Button color="inherit" variant="outlined" >Join Now</Button> */}
+        <Button color="inherit" component={Link} to="/login">Login</Button>
+        <Button color="inherit" component={Link} to="/register">Join Now</Button>
       </Toolbar>
     </AppBar>
   );

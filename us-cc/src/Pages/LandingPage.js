@@ -1,36 +1,36 @@
 import * as React from 'react';
+import { useLocation } from 'react-router-dom';
 import CssBaseline from '@mui/material/CssBaseline';
 import Box from '@mui/material/Box';
-import { ThemeProvider, createTheme } from '@mui/material/styles';
-// import getLPTheme from '../components/getLPTheme';
-import AboutSection from '../components/AboutSection';
 import { Typography } from '@mui/material';
 import landingPageMainImage from '../Images/landingPageMainImage.webp';
+import AboutSection from '../components/AboutSection';
 import FeaturesSection from '../components/FeaturesSection';
 
-
 export default function LandingPage() {
-  const [mode, setMode] = React.useState('light'); // Going to try to implement dark mode option in the future
-  // const LPtheme = createTheme(getLPTheme(mode));
-  // const defaultTheme = createTheme({ palette: { mode } });
+  const location = useLocation();
 
+  React.useEffect(() => {
+    const { state } = location;
+    if (state && state.sectionId) {
+      const section = document.getElementById(state.sectionId);
+      if (section) {
+        section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    }
+  }, [location]);
 
   return (
-    // <ThemeProvider theme={LPtheme}> // commented until dark mode is implemented
     <>
       <CssBaseline />
       <Box sx={{ flexGrow: 1, bgcolor: 'background.default', padding: 3 }}>
-        {/* Box is the Container for landing page content */}
         <Typography variant="h2">
-            Welcome to United States Crisis Coordination
+          Welcome to United States Crisis Coordination
         </Typography>
         <img src={landingPageMainImage} alt="Main Banner" style={{ width: '100%', height: 'auto' }} />
         <AboutSection />
         <FeaturesSection />
       </Box>
-    {/* </ThemeProvider> */}
-     </>
+    </>
   );
 }
-
-

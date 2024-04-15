@@ -38,7 +38,7 @@ const featuresList = [
 
 const FeaturesSection = () => {
   return (
-    <Box sx={{ flexGrow: 1, bgcolor: 'background.paper', p: 3 }} id="features">
+    <Box sx={{ flexGrow: 1, bgcolor: 'background.paper', p: 3 }} id="features-section">
       <Typography variant="h4" gutterBottom>
         Features
       </Typography>
