@@ -1,55 +1,38 @@
 import React from "react";
-import Box from '@mui/material/Box';
-import Typography from '@mui/material/Typography';
-import { Button, Container } from "@mui/material";
+import { Box, Button, Input, VStack, Text, Container } from "@chakra-ui/react";
 
 function Register() {
-    return (
-        <>
-            <Container>
-                <Typography>
-
-                </Typography>
-                <input type="textbox" placeholder="Username" />
-                <input type="password" placeholder="Password" />
-                <Button>Register</Button>
-            </Container>
-        </>
-    );  
-}
- // CAN COMBINE THESE TWO METHODS INTO ONE, JUST ADD A PARAMETER FOR THE TEXT
-function Login(){
-    return (
-        <>
-        <Container>
-            <Typography>
-
-            </Typography>
-            <input type="textbox" placeholder="Username" />
-            <input type="password" placeholder="Password" />
-            <Button>Login</Button>
-        </Container>
-        </>
-    );
+  return (
+    <Container centerContent>
+      <VStack spacing={4}>
+        <Text fontSize="lg">Register</Text>
+        <Input placeholder="Username" />
+        <Input placeholder="Password" type="password" />
+        <Button colorScheme="blue">Register</Button>
+      </VStack>
+    </Container>
+  );
 }
 
-function AuthenticationPage(RegoOrLogin){
-    if(RegoOrLogin === "Register") {
-            return (
-            <>
-            <Register />
-            </>);
-        }
-    else {
-        return (
-            <>
-                <Login />
-            </>
-        )
-    }
-
+function Login() {
+  return (
+    <Container centerContent>
+      <VStack spacing={4}>
+        <Text fontSize="lg">Login</Text>
+        <Input placeholder="Username" />
+        <Input placeholder="Password" type="password" />
+        <Button colorScheme="blue">Login</Button>
+      </VStack>
+    </Container>
+  );
 }
 
-export {AuthenticationPage, Login, Register};
+function AuthenticationPage({ RegoOrLogin }) {
+  return (
+    <>
+      {RegoOrLogin === "Register" ? <Register /> : <Login />}
+    </>
+  );
+}
 
-// TODO: Link to authentication page
+export { AuthenticationPage, Login, Register };

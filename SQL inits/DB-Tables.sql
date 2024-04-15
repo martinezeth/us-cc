@@ -4,28 +4,28 @@ CREATE DATABASE IF NOT EXISTS USCCDB;
 -- Use the database
 USE USCCDB;
 
-DROP TABLE Users IF EXISTS;
-DROP TABLE Posts IF EXISTS;
-DROP TABLE Volunteers IF EXISTS;
-DROP TABLE Region IF EXISTS;
-DROP TABLE Resources IF EXISTS;
-DROP TABLE IncidentReports IF EXISTS;
-DROP TABLE IncidentType IF EXISTS;
+DROP TABLE IF EXISTS Users;
+DROP TABLE IF EXISTS Posts;
+DROP TABLE IF EXISTS Volunteers;
+DROP TABLE IF EXISTS Region;
+DROP TABLE IF EXISTS Resources;
+DROP TABLE IF EXISTS IncidentReports;
+DROP TABLE IF EXISTS IncidentType;
 
 
 -- Create the Users table
 CREATE TABLE IF NOT EXISTS Users (
     user_id INT AUTO_INCREMENT PRIMARY KEY,
-    UNIQUE username VARCHAR(50) NOT NULL,
+    username VARCHAR(50) NOT NULL UNIQUE,
     password_hash VARCHAR(255) NOT NULL,
     role ENUM('user', 'admin') DEFAULT 'user'
 );
 
 CREATE TABLE IF NOT EXISTS Posts (
     post_id INT AUTO_INCREMENT PRIMARY KEY,
-    user_id VARCHAR(50) NOT NULL,
-    title VARCHAR(max) NOT NULL,
-    body VARCHAR(max) NOT NULL,
+    user_id INT NOT NULL,
+    title VARCHAR(255) NOT NULL,
+    body TEXT NOT NULL,
     FOREIGN KEY (user_id) REFERENCES Users(user_id)
 );
 -- Create the IncidentReports table
@@ -69,6 +69,7 @@ CREATE TABLE IF NOT EXISTS Region(
     state VARCHAR(100),
     city VARCHAR(100),
     postal_code VARCHAR(20),
+    country VARCHAR(100),
     UNIQUE (region_name, country, state, city, postal_code)
 );
 
