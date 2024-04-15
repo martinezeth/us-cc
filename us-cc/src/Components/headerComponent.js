@@ -45,7 +45,7 @@ const HeaderComponent = () => {
         <Box sx={{ flexGrow: 1 }} />
 
         {/* Navigation Links */}
-        <Button color="inherit" component={Link} to="/">Home</Button>
+    
         <Button color="inherit" onClick={() => handleNavigation('about-section')}>About</Button>
         <Button color="inherit" onClick={() => handleNavigation('features-section')}>Features</Button>
 
