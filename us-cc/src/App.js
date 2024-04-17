@@ -3,8 +3,8 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { ChakraProvider } from "@chakra-ui/react";
 import { SaasProvider } from '@saas-ui/react';
 
-import HeaderComponent from './Components/HeaderComponent';
-import FooterComponent from './Components/FooterComponent';
+import HeaderComponent from './components/headerComponent';
+import FooterComponent from './components/footerComponent';
 import LandingPage from './Pages/LandingPage';
 import NewReportPage from './Pages/NewReportPage';
 import { AuthenticationPage } from './Pages/LoginRegisterPage';

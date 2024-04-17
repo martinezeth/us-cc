@@ -1,34 +1,16 @@
-// import React from 'react';
-// import Box from '@mui/material/Box';
-// import Typography from '@mui/material/Typography';
-
-// const AboutSection = () => {
-//     return (
-//         <Box sx={{ p: 3 }} id="about-section">
-//             <Typography variant="h4" gutterBottom>
-//                 About Us
-//             </Typography>
-//             <Typography variant="body1">
-//                 US Crisis Coordination (USCC) is a web-based platform designed to empower communities and local authorities to coordinate and respond to disasters. Our platform provides a centralized hub for information sharing, resource allocation, and communication during times of crisis. By connecting individuals, organizations, and government agencies, USCC aims to streamline disaster response efforts and improve outcomes for those affected by emergencies.
-//             </Typography>
-//         </Box>
-//     );
-// };
-
-// export default AboutSection;
-
-
 import React from 'react';
 import { Box, Text, VStack } from '@chakra-ui/react';
 
 function AboutSection() {
   return (
-    <Box p={5} shadow="md" borderWidth="1px" bg="white" rounded="md">
-      <VStack>
-        <Text fontSize="lg">About Us</Text>
-        <Text>
-          Our mission is to coordinate efforts across various sectors in times of crisis, 
-          ensuring that resources and aid are efficiently distributed to those in need.
+    <Box p={2} shadow="md" borderWidth="1px" bg="white" rounded="md">
+      <VStack spacing={4} align="start">
+        <Text fontSize="2xl" fontWeight="bold">About Us</Text>
+        <Text fontSize="md">
+          At US Crisis Coordination (USCC), we are dedicated to enhancing disaster response efforts through advanced coordination and real-time information systems. Our platform serves as a hub for communities and local authorities, enabling effective communication and resource management to inform and empower populations during critical times.
+        </Text>
+        <Text fontSize="md">
+          USCC leverages technology to streamline responses to natural disasters and emergencies, bridging gaps between individuals, organizations, and government agencies. Join us in making a significant impact in crisis management and response.
         </Text>
       </VStack>
     </Box>
