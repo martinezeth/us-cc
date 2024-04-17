@@ -1,7 +1,4 @@
-import express from 'express';
 import { createConnection } from 'mysql';
-
-const app = express();
 
 const db = createConnection({
     host            : 'localhost',

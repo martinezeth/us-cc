@@ -1,6 +1,6 @@
 import React from 'react';
 import { Box, VStack, Text, Image } from '@chakra-ui/react';
-import AboutSection from '../components/AboutSection';
+import AboutSection from '../Components/AboutSection';
 import FeaturesSection from '../components/FeaturesSection';
 
 

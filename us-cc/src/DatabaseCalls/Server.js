@@ -1,4 +1,3 @@
-
 import express from 'express';
 import db from './ConnectToDatabase'; // Import the database connection object
 
@@ -16,3 +15,8 @@ app.use('/api/data', dataRouter);
 app.listen(port, () => {
     console.log(`Server is running on port ${port}`);
 });
+
+// TODO: Nic finish this
+export function AuthUserLogin(username, password) {
+    return false;
+}
