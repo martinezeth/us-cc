@@ -1,7 +1,7 @@
 import React from 'react';
 import { Box, VStack, Text, Image } from '@chakra-ui/react';
 import AboutSection from '../Components/AboutSection';
-import FeaturesSection from '../components/FeaturesSection';
+import FeaturesSection from '../Components/FeaturesSection';
 
 
 export default function LandingPage() {

@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { Box, Button, Input, VStack, Text, Container } from "@chakra-ui/react";
-import AuthUserLogin from '../DatabaseCalls/Server';
+import axios from 'axios';
 
 function Register() {
   return (
@@ -15,6 +15,7 @@ function Register() {
   );
 }
 
+
 function Login() {
   const [user, setUser] = useState("");
   const [pass, setPass] = useState("");
@@ -23,16 +24,30 @@ function Login() {
     setUser(event.target.value);
   };
   const passWord = (event) => {
-    setUser(event.target.value);
+    setPass(event.target.value);
   };
-  // TODO: Actually write AuthUserLogin!
+  
+  // const handleLogin = () => {
+  //   axios.post('http://localhost:3001/api/login', { username: user, password: pass})
+  //       .then(response => {
+  //         if(response.data.success){
+  //           console.log("Login success");
+  //         } else {
+  //           console.log("Login failed");
+  //         }
+  //       })
+  //       .catch(error => {
+  //         console.log("Error during login:", error);
+  //       });
+  // };
+
   return (
     <Container centerContent>
       <VStack spacing={4}>
         <Text fontSize="lg">Login</Text>
         <Input placeholder="Username" onChange={userName}/>
         <Input placeholder="Password" type="password" onChange={passWord}/>
-        <Button colorScheme="blue" onClick={AuthUserLogin(user, pass)}>Login</Button>
+        <Button colorScheme="blue">Login</Button>
       </VStack>
     </Container>
   );
