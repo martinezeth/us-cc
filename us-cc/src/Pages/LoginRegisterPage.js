@@ -27,20 +27,6 @@ function Login() {
     setPass(event.target.value);
   };
   
-  // const handleLogin = () => {
-  //   axios.post('http://localhost:3001/api/login', { username: user, password: pass})
-  //       .then(response => {
-  //         if(response.data.success){
-  //           console.log("Login success");
-  //         } else {
-  //           console.log("Login failed");
-  //         }
-  //       })
-  //       .catch(error => {
-  //         console.log("Error during login:", error);
-  //       });
-  // };
-
   return (
     <Container centerContent>
       <VStack spacing={4}>
