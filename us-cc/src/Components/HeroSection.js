@@ -1,7 +1,7 @@
 import React from 'react';
 import { Box, Text, Button, VStack, useColorModeValue } from '@chakra-ui/react';
 import { Link as RouterLink } from 'react-router-dom';
-import heroImage from '../Images/landingPageMainImage.png'; // Adjust the path as necessary
+import heroImage from '../Images/landingPageMainImage.png';
 
 const Hero = () => {
   const bg = useColorModeValue('gray.50', 'gray.800');
@@ -10,9 +10,9 @@ const Hero = () => {
   return (
     <Box
       w="full"
-      h="100vh"
-      m={0} // Ensure margin is set to 0
-      p={0} // Ensure padding is set to 0
+      h="60vh"
+      m={0}
+      p={0}
       bg={bg}
       align="center"
       justify="center"
