@@ -24,9 +24,9 @@
 
 import React from 'react';
 import { Box, VStack } from '@chakra-ui/react';
-import Hero from '../components/HeroSection'; // Importing the Hero component
-import AboutSection from '../components/AboutSection';
-import FeaturesSection from '../components/FeaturesSection';
+import Hero from '../Components/HeroSection'; // Importing the Hero component
+import AboutSection from '../Components/AboutSection';
+import FeaturesSection from '../Components/FeaturesSection';
 
 export default function LandingPage() {
   return (
