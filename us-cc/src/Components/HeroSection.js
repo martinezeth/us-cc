@@ -27,7 +27,8 @@ const Hero = () => {
         height="full"
         bgGradient="linear(to-r, blackAlpha.600, transparent)"
       >
-        <Text fontSize="4xl" fontWeight="bold" color={textColor} textAlign="center">
+        {/*padding top is what is shifting the Welcome title down so it is not hidden */}
+        <Text paddingTop="100px" fontSize="4xl" fontWeight="bold" color={textColor} textAlign="center">
           Welcome to US Crisis Coordination
         </Text>
         <Text fontSize="xl" color={textColor} textAlign="center" maxW="lg">

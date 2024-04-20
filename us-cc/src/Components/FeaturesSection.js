@@ -92,7 +92,7 @@ const FeaturesSection = () => {
 
   return (
     <Box p={5} bg="gray.50">
-      <Text fontSize="2xl" textAlign="center" mb={6}>
+      <Text fontSize="3xl" textAlign="center" mb={6}>
         Key Features
       </Text>
       <SimpleGrid columns={{ base: 1, md: 2, lg: 4 }} spacing={10}>
