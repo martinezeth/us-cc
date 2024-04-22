@@ -13,17 +13,17 @@ function validateCredentials(username, password, callback) {
     connection.connect();
 
     // Perform query to check if username and password match
-    connection.query('SELECT * FROM users WHERE username = ? AND password = ?', [username, password], (error, results, fields) => {
+    connection.query('SELECT * FROM users WHERE username = ? AND password_hash = ?', [username, password], (error, results, fields) => {
         if (error) {
+            connection.end(); // Close the connection in case of an error
             callback(error, null);
             return;
         }
         // Check if user exists
         const userExists = results.length > 0;
         callback(null, userExists);
+        connection.end(); // Close the connection after the query is completed
     });
-
-    connection.end();
 }
 
 module.exports = { validateCredentials };

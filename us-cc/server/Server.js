@@ -1,9 +1,15 @@
 const express = require('express');
 const mysql = require('mysql');
 const { validateCredentials } = require('./AuthController');
+const cors = require('cors');
 const app = express();
 
-// Database connection
+app.use(cors({
+    origin: 'http://localhost:3000',
+    methods: ['GET', 'POST'],
+    credentials: true
+}));
+
 const connection = mysql.createConnection({
     host: 'localhost',
     user: 'root',
@@ -11,7 +17,7 @@ const connection = mysql.createConnection({
     database: 'usccdb'
 });
 
-connection.connect((err) => {
+connection.connect(err => {
     if (err) {
         console.error('Error connecting to database: ', err);
         return;
@@ -19,13 +25,10 @@ connection.connect((err) => {
     console.log('Connected to database.');
 });
 
-//Middleware
 app.use(express.json());
-app.use(express.urlencoded({extended: true}));
 
-//Routes section
-app.get('/api/login', (req, res) => {
-    const { username, password } = req.query;
+app.post('/api/login', (req, res) => {
+    const { username, password } = req.body;
     validateCredentials(username, password, (error, userExists) => {
         if (error) {
             console.error('Error validating credentials:', error);
