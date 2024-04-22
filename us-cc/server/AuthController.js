@@ -26,4 +26,27 @@ function validateCredentials(username, password, callback) {
     });
 }
 
-module.exports = { validateCredentials };
+function createUser(username, password, callback) {
+    // Connect to the database
+    const connection = mysql.createConnection({
+        host: 'localhost',
+        user: 'root',
+        password: 'root',
+        database: 'usccdb'
+    });
+
+    connection.connect();
+
+    // Perform query to insert new user into the database
+    connection.query('INSERT INTO users (username, password_hash) VALUES (?, ?)', [username, password], (error, results, fields) => {
+        if (error) {
+            connection.end(); // Close the connection in case of an error
+            callback(error);
+            return;
+        }
+        callback(null);
+        connection.end(); // Close the connection after the query is completed
+    });
+}
+
+module.exports = { validateCredentials, createUser };

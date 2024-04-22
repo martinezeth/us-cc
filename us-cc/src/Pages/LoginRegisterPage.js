@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { Box, Button, Input, VStack, Text, Container } from "@chakra-ui/react";
 import axios from "axios";
 import { Axios } from "axios";
+import { useNavigate } from 'react-router-dom';
 
 function Register() {
   return (
@@ -18,6 +19,7 @@ function Register() {
 
 
 function Login() {
+  const navigate = useNavigate();
   const [user, setUser] = useState("");
   const [pass, setPass] = useState("");
 
@@ -34,7 +36,10 @@ function Login() {
       password: pass
     })
     .then(response => {
-      console.log(response.data);
+      // console.log(response.data);
+      document.cookie = `authToken=${response.data.authToken}; path=/`;
+      navigate('/'); // redirect to home page after login
+      
     })
     .catch(error => {
       console.error("error fetching data in LoginRegisterPage: ", error);
