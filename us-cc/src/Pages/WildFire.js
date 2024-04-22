@@ -4,11 +4,11 @@ import CssBaseline from '@mui/material/CssBaseline';
 import { CardContent, Typography, Card, Box } from '@mui/material';
 
 
-export default function Profile() {
+export default function Wildfire() {
     return(
         <>
             <p>
-                Hello Profile
+                Hello Wildfire
                 </p>        
         </>
     )
