@@ -53,7 +53,7 @@ const HeaderComponent = () => {
             <Button  padding="8px 16px" variant="ghost" as={Link} to="/posts">Posts</Button>
             <Button  padding="8px 16px" variant ="ghost" as={Link} to="/profile">Profile</Button>
             <Button  padding="8px 16px" variant="ghost" onClick={() => handleNavigation('about-section')}>About</Button>
-            <Button  padding="8px 16px" variant="ghost" onClick={() => handleNavigation('features-section')}>Features</Button>
+            {/* <Button  padding="8px 16px" variant="ghost" onClick={() => handleNavigation('features-section')}>Features</Button> */}
             <Button  padding="8px 16px" variant="ghost" as={Link} to="/login">Login</Button>
             <Button  padding="8px 16px" variant="ghost" as={Link} to="/register">Join Now</Button>
           </Stack>

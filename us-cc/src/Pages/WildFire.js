@@ -27,13 +27,17 @@ export default function Wildfire() {
         <VStack
          spacing={8}
          justify="center"
-         align="center"
+         align="left"
          height="full"
-         bgGradient="linear(to-r, blackAlpha.600, transparent)"
          >
-            <Text fontSize='4xl' color={textColor} textAlign='left' maxW="lg">
+            <Text fontSize='4xl' color={textColor} maxW="lg">
                 Wildfire
             </Text>
+            <Text fontSize='md'>
+            Wildfires are unplanned fires that burn in natural areas like forests, grasslands or prairies. These dangerous fires spread quickly and can devastate not only wildlife and natural areas, but also communities.
+            </Text>
+            
+
         </VStack>
        </>
     )
