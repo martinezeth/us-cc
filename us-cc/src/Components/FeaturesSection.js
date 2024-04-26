@@ -1,38 +1,66 @@
 import React from 'react';
-import { Grid, GridItem, Box, Text, VStack } from '@chakra-ui/react';
+import { Box, SimpleGrid, VStack, Text, Icon } from '@chakra-ui/react';
+import { MdReportProblem, MdGroupWork, MdBarChart, MdSettings } from 'react-icons/md';
+import { useNavigate } from 'react-router-dom';
 
-function FeaturesSection() {
+const FeatureCard = ({ title, description, icon, onClick }) => {
   return (
-    <Box p={5} bg="white">
-      <Text fontSize="lg" mb={4}>Key Features</Text>
-      <Grid templateColumns="repeat(2, 1fr)" gap={6}>
-        <GridItem w="100%" h="10" bg="blue.500">
-          <VStack>
-            <Text>Incident Reporting</Text>
-            <Text fontSize="sm">Report and track incidents in real-time.</Text>
-          </VStack>
-        </GridItem>
-        <GridItem w="100%" h="10" bg="green.500">
-          <VStack>
-            <Text>Resource Management</Text>
-            <Text fontSize="sm">Efficient allocation of resources during crises.</Text>
-          </VStack>
-        </GridItem>
-        <GridItem w="100%" h="10" bg="orange.500">
-          <VStack>
-            <Text>Volunteer Coordination</Text>
-            <Text fontSize="sm">Coordinate volunteer efforts effectively.</Text>
-          </VStack>
-        </GridItem>
-        <GridItem w="100%" h="10" bg="red.500">
-          <VStack>
-            <Text>Real-time Data Visualization</Text>
-            <Text fontSize="sm">Visualize data to make informed decisions quickly.</Text>
-          </VStack>
-        </GridItem>
-      </Grid>
+    <VStack
+      p={5}
+      bg="white"
+      boxShadow="md"
+      rounded="md"
+      align="center"
+      spacing={4}
+      _hover={{ bg: 'gray.100' }}
+      onClick={onClick}
+      cursor="pointer"
+    >
+      <Icon as={icon} w={10} h={10} color="blue.500" />
+      <Text fontSize="xl" fontWeight="semibold">
+        {title}
+      </Text>
+      <Text textAlign="center" color="gray.600">
+        {description}
+      </Text>
+    </VStack>
+  );
+};
+
+
+const FeaturesSection = () => {
+  const navigate = useNavigate();
+
+  return (
+    <Box p={5} bg="gray.50">
+      <Text fontSize="3xl" textAlign="center" mb={6}>
+        Key Features
+      </Text>
+      <SimpleGrid columns={{ base: 1, md: 2, lg: 4 }} spacing={10}>
+        <FeatureCard
+          title="Incident Reporting"
+          description="Report and track incidents in real-time."
+          icon={MdReportProblem}
+        />
+        <FeatureCard
+          title="Resource Management"
+          description="Efficient allocation of resources during crises."
+          icon={MdSettings}
+        />
+        <FeatureCard
+          title="Volunteer Coordination"
+          description="Coordinate volunteer efforts effectively."
+          icon={MdGroupWork}
+        />
+        <FeatureCard
+          title="Real-time Data Visualization"
+          description="Visualize data to make informed decisions quickly."
+          icon={MdBarChart}
+          onClick={() => navigate('/mapview')}
+        />
+      </SimpleGrid>
     </Box>
   );
-}
+};
 
 export default FeaturesSection;

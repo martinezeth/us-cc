@@ -1,9 +1,10 @@
 import React from 'react';
-import { Box, Flex, Button, Image, useDisclosure, IconButton, Spacer, Text, Link as ChakraLink } from '@chakra-ui/react';
-import { HamburgerIcon, CloseIcon } from '@chakra-ui/icons';
+import { Box, Flex, Button, Image, useDisclosure, IconButton, Spacer, Text, Link as ChakraLink , Stack} from '@chakra-ui/react';
+import { HamburgerIcon, CloseIcon} from '@chakra-ui/icons';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 
 import Logo from '../Images/usccLogoDraft.svg';
+import DropDown from './Disasters';
 
 const HeaderComponent = () => {
   const location = useLocation();
@@ -47,10 +48,13 @@ const HeaderComponent = () => {
 
         {/* Navigation Links */}
         <Box display={{ base: isOpen ? "block" : "none", md: "flex" }} alignItems="center">
-          <Button variant="ghost" onClick={() => handleNavigation('about-section')}>About</Button>
-          <Button variant="ghost" onClick={() => handleNavigation('features-section')}>Features</Button>
-          <Button variant="ghost" as={Link} to="/login">Login</Button>
-          <Button variant="ghost" as={Link} to="/register">Join Now</Button>
+          <Stack direction="row" spacing={4} justifyContent="left">
+            <DropDown/>
+            <Button  padding="8px 16px" variant="ghost" onClick={() => handleNavigation('about-section')}>About</Button>
+            <Button  padding="8px 16px" variant="ghost" onClick={() => handleNavigation('features-section')}>Features</Button>
+            <Button  padding="8px 16px" variant="ghost" as={Link} to="/login">Login</Button>
+            <Button  padding="8px 16px" variant="ghost" as={Link} to="/register">Join Now</Button>
+          </Stack>
         </Box>
       </Flex>
     </Box>

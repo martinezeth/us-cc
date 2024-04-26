@@ -1,18 +1,18 @@
 import React from 'react';
 import { Box, VStack, Text, Image } from '@chakra-ui/react';
+import Hero from '../Components/HeroSection'; // Importing the Hero component
 import AboutSection from '../Components/AboutSection';
 import FeaturesSection from '../Components/FeaturesSection';
 
-
 export default function LandingPage() {
   return (
-    <Box p={5} bg="gray.100">
-      <VStack spacing={8}>
-        <Text fontSize="2xl">Welcome to United States Crisis Coordination</Text>
-        <Image src="../Images/landingPageMainImage.webp" alt="Main Banner" />
+    <Box w="full" p={0} m={0} bg="gray.100">
+      <VStack spacing={0}>
+        <Hero />
         <AboutSection />
         <FeaturesSection />
       </VStack>
     </Box>
   );
 }
+
