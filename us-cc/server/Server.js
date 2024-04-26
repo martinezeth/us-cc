@@ -108,6 +108,19 @@ app.post('/api/register', (req, res) => {
 });
 
 
+// Route for fetching Incident Reports
+app.get('/api/incident-reports', (req, res) => {
+    connection.query('SELECT * FROM IncidentReports', (error, results) => {
+        if (error) {
+            console.error("Error fetching incident reports: ", error);
+            res.status(500).send("Error fetching incident reports");
+            return;
+        }
+        res.json(results);
+    });
+});
+
+
 /**
  * Define the port
  * Listen on port 5000
