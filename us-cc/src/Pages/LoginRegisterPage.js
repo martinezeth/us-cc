@@ -5,13 +5,43 @@ import { Axios } from "axios";
 import { useNavigate } from 'react-router-dom';
 
 function Register() {
+  const navigate = useNavigate();
+  const [user, setUser] = useState("");
+  const [pass, setPass] = useState("");
+
+  const userName = (event) => {
+    setUser(event.target.value);
+    console.log(user);
+  };
+  const passWord = (event) => {
+    setPass(event.target.value);
+    console.log(pass);
+  };
+
+  const registerCheck = () => {
+    axios.post('http://localhost:5000/api/register', {
+      username: user,
+      password: pass
+    })
+      .then(response => {
+        // console.log(response.data);
+        document.cookie = `authToken=${response.data.authToken}; path=/`;
+        navigate('/'); // redirect to home page after login
+
+      })
+      .catch(error => {
+        // console.error("error fetching data in LoginRegisterPage: ", error);
+        console.log("User exists already");
+      });
+  };
+
   return (
     <Container centerContent>
       <VStack spacing={4}>
         <Text fontSize="lg">Register</Text>
-        <Input placeholder="Username" />
-        <Input placeholder="Password" type="password" />
-        <Button colorScheme="blue">Register</Button>
+        <Input placeholder="Username" onChange={userName} />
+        <Input placeholder="Password" type="password" onChange={passWord} />
+        <Button colorScheme="blue" onClick={registerCheck}>Register</Button>
       </VStack>
     </Container>
   );
@@ -42,7 +72,10 @@ function Login() {
       
     })
     .catch(error => {
-      console.error("error fetching data in LoginRegisterPage: ", error);
+      // TODO ASAP:
+      // Turn username and password boxes red
+      // console.error("error fetching data in LoginRegisterPage: ", error);
+      console.log("User does not exist");
     });
   };
   

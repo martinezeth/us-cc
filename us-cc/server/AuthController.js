@@ -1,8 +1,13 @@
 const mysql = require('mysql');
 
-// Function to validate user credentials
+/**
+ * 
+ * @param {string} username 
+ * @param {string} password 
+ * @param {(error, userExists)} callback  - Passes back error bool and userExists bool
+ */
 function validateCredentials(username, password, callback) {
-    // Connect to the database
+    
     const connection = mysql.createConnection({
         host: 'localhost',
         user: 'root',
@@ -12,22 +17,30 @@ function validateCredentials(username, password, callback) {
 
     connection.connect();
 
-    // Perform query to check if username and password match
+    
     connection.query('SELECT * FROM users WHERE username = ? AND password_hash = ?', [username, password], (error, results, fields) => {
         if (error) {
-            connection.end(); // Close the connection in case of an error
+            connection.end();
             callback(error, null);
             return;
         }
         // Check if user exists
-        const userExists = results.length > 0;
-        callback(null, userExists);
-        connection.end(); // Close the connection after the query is completed
-    });
-}
+        const userExists = results[0] && results[0].username !== '';
 
+        callback(null, userExists);
+        connection.end();
+    });
+
+}
+/**
+ * 
+ * @param {string} username 
+ * @param {string} password 
+ * @param {(createError)} callback 
+ * @returns 
+ */
 function createUser(username, password, callback) {
-    // Connect to the database
+    
     const connection = mysql.createConnection({
         host: 'localhost',
         user: 'root',
@@ -36,17 +49,22 @@ function createUser(username, password, callback) {
     });
 
     connection.connect();
-
-    // Perform query to insert new user into the database
+    if(username === '' || password === ''){
+        callback(1);
+        connection.end();
+        return;
+    }
+   
     connection.query('INSERT INTO users (username, password_hash) VALUES (?, ?)', [username, password], (error, results, fields) => {
         if (error) {
-            connection.end(); // Close the connection in case of an error
+            connection.end(); 
             callback(error);
             return;
         }
+        console.log("AuthController: Created User!");
         callback(null);
-        connection.end(); // Close the connection after the query is completed
+        connection.end(); 
     });
 }
 
-module.exports = { validateCredentials, createUser };
+module.exports = { validateCredentials, createUser }
