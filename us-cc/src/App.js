@@ -9,10 +9,13 @@ import LandingPage from './Pages/LandingPage';
 import NewReportPage from './Pages/NewReportPage';
 import NotFoundPage from './Pages/NotFoundPage';
 import { AuthenticationPage } from './Pages/LoginRegisterPage';
+import { CookiesProvider, useCookies } from 'react-cookie';
 
 import { baseTheme } from '@saas-ui/react'
 
 function App() {
+
+
   return (
     <SaasProvider theme={baseTheme}>
       <ChakraProvider>
