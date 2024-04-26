@@ -52,6 +52,7 @@ app.use(express.json());
  */
 
 
+
 // LOGIN Route
 app.post('/api/login', (req, res) => {
     const { username, password } = req.body;
@@ -67,6 +68,7 @@ app.post('/api/login', (req, res) => {
             const authToken = jwt.sign({username}, key, {expiresIn: '14h'} );
             res.cookie('authToken', authToken, {httpOnly: true});
             res.status(200).send('Login successful');
+            
         } else {
             res.status(401).send('Invalid username or password');
         }

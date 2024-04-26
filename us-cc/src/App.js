@@ -7,6 +7,7 @@ import HeaderComponent from './Components/HeaderComponent';
 import FooterComponent from './Components/FooterComponent';
 import LandingPage from './Pages/LandingPage';
 import NewReportPage from './Pages/NewReportPage';
+import NotFoundPage from './Pages/NotFoundPage';
 import { AuthenticationPage } from './Pages/LoginRegisterPage';
 
 import { baseTheme } from '@saas-ui/react'
@@ -23,6 +24,7 @@ function App() {
               <Route path="/login" element={<AuthenticationPage RegoOrLogin="Login" />} />
               <Route path="/register" element={<AuthenticationPage RegoOrLogin="Register" />} />
               <Route path="/newreport" element={<NewReportPage />} />
+              <Route path="*" element={<NotFoundPage />} />
             </Routes>
             <FooterComponent />
           </div>

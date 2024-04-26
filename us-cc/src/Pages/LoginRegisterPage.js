@@ -26,7 +26,7 @@ function Register() {
       .then(response => {
         // console.log(response.data);
         document.cookie = `authToken=${response.data.authToken}; path=/`;
-        navigate('/'); // redirect to home page after login
+        navigate('/login'); // redirect login after registering.. remember your password
 
       })
       .catch(error => {
