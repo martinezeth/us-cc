@@ -1,4 +1,13 @@
 const mysql = require('mysql');
+const jwt = require('jsonwebtoken');
+
+const pool = mysql.createPool({
+    connectionLimit: 10, // Adjust the limit as per your requirements
+    host: 'localhost',
+    user: 'root',
+    password: 'root',
+    database: 'usccdb'
+});
 
 /**
  * 
@@ -8,27 +17,24 @@ const mysql = require('mysql');
  */
 function validateCredentials(username, password, callback) {
     
-    const connection = mysql.createConnection({
-        host: 'localhost',
-        user: 'root',
-        password: 'root',
-        database: 'usccdb'
-    });
-
-    connection.connect();
-
-    
-    connection.query('SELECT * FROM users WHERE username = ? AND password_hash = ?', [username, password], (error, results, fields) => {
-        if (error) {
-            connection.end();
-            callback(error, null);
+    pool.getConnection((err, connection) => {
+        if(err){
+            callback(err, null);
             return;
         }
-        // Check if user exists
-        const userExists = results[0] && results[0].username !== '';
 
-        callback(null, userExists);
-        connection.end();
+        connection.query('SELECT * FROM users WHERE username = ? AND password_hash = ?', [username, password], (error, results, fields) => {
+            if (error) {
+                connection.release();
+                callback(error, null);
+                return;
+            }
+            // Check if user exists
+            const userExists = results[0] && results[0].username !== '';
+
+            callback(null, userExists);
+            connection.release();
+        });
     });
 
 }
@@ -41,30 +47,56 @@ function validateCredentials(username, password, callback) {
  */
 function createUser(username, password, callback) {
     
-    const connection = mysql.createConnection({
-        host: 'localhost',
-        user: 'root',
-        password: 'root',
-        database: 'usccdb'
-    });
-
-    connection.connect();
     if(username === '' || password === ''){
         callback(1);
-        connection.end();
         return;
     }
-   
-    connection.query('INSERT INTO users (username, password_hash) VALUES (?, ?)', [username, password], (error, results, fields) => {
-        if (error) {
-            connection.end(); 
-            callback(error);
+    pool.getConnection((err, connection) => {
+        if (err) {
+            callback(err);
             return;
         }
-        console.log("AuthController: Created User!");
-        callback(null);
-        connection.end(); 
+        connection.query('INSERT INTO users (username, password_hash) VALUES (?, ?)', [username, password], (error, results, fields) => {
+            if (error) {
+                callback(error);
+                return;
+            }
+            // console.log("AuthController: Created User!");
+            callback(null);
+            connection.release();
+        });
     });
 }
 
-module.exports = { validateCredentials, createUser }
+function getUserData(username, callback){
+    pool.getConnection((err, connection) => {
+        if(err){
+            callback(err, null);
+            return;
+        }
+        connection.query('SELECT * FROM users WHERE username = ?', [username], (error, results, fields) => {
+            if(error){
+                connection.release();
+                callback(error, null);
+                return;
+            }
+            // console.log("Got user info: ", results);
+            callback(null, results);
+            connection.release();
+
+        })
+    });
+}
+
+function decodeToken(authToken, secretKey) {
+    try {
+        const decodedToken = jwt.verify(authToken, secretKey);
+        // console.log('Decoded token:', decodedToken);
+        return { username, userData } = decodedToken;
+    } catch (error) {
+        console.error('Error decoding token:', error);
+        return; 
+    }
+}
+
+module.exports = { validateCredentials, createUser, getUserData, decodeToken }

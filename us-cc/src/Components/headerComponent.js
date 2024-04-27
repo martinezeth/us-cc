@@ -2,6 +2,7 @@ import React from 'react';
 import { Box, Flex, Button, Image, useDisclosure, IconButton, Spacer, Text, Link as ChakraLink , Stack} from '@chakra-ui/react';
 import { HamburgerIcon, CloseIcon} from '@chakra-ui/icons';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
+import {useCookies } from 'react-cookie';
 
 import Logo from '../Images/usccLogoDraft.svg';
 import DropDown from './Disasters';
@@ -10,6 +11,7 @@ const HeaderComponent = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { isOpen, onOpen, onClose } = useDisclosure();
+  const [cookies] = useCookies(['authToken']);
 
   // Function to handle navigation to different sections of the main page
   const handleNavigation = (sectionId) => {
@@ -25,6 +27,14 @@ const HeaderComponent = () => {
     if (section) {
       section.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
+  };
+
+  const handleLogout = () => {
+    // Clear the authToken cookie
+    document.cookie = 'authToken=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+
+    // Redirect the user to the login page
+    navigate("/");
   };
 
   return (
@@ -52,8 +62,17 @@ const HeaderComponent = () => {
             <DropDown/>
             <Button  padding="8px 16px" variant="ghost" onClick={() => handleNavigation('about-section')}>About</Button>
             <Button  padding="8px 16px" variant="ghost" onClick={() => handleNavigation('features-section')}>Features</Button>
-            <Button  padding="8px 16px" variant="ghost" as={Link} to="/login">Login</Button>
-            <Button  padding="8px 16px" variant="ghost" as={Link} to="/register">Join Now</Button>
+            {cookies.authToken ? ( 
+              <>
+                <Text padding="8px 16px" color="white">Hello, {cookies.authToken.username}</Text> 
+                <Button padding={"8px 16px"} variant="ghost" onClick={handleLogout}>Logout</Button>
+              </>
+            ) : ( 
+              <> 
+                <Button padding="8px 16px" variant="ghost" as={Link} to="/login">Login</Button> 
+                <Button padding="8px 16px" variant="ghost" as={Link} to="/register">Join Now</Button> 
+              </>
+            )}
           </Stack>
         </Box>
       </Flex>

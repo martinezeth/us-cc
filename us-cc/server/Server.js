@@ -1,6 +1,7 @@
 const express = require('express');
 const mysql = require('mysql');
-const { validateCredentials, createUser } = require('./AuthController');
+const sKey = require('./jwSec');
+const { validateCredentials, createUser, getUserData, decodeToken } = require('./AuthController');
 const cors = require('cors');
 const app = express();
 const jwt = require('jsonwebtoken');
@@ -13,10 +14,6 @@ const crypto = require('crypto');
  * - Routes
  * - API host
  */
-
-
-
-
 
 app.use(cors({
     origin: 'http://localhost:3000',
@@ -52,8 +49,6 @@ app.use(express.json());
  * Routes
  */
 
-
-
 // LOGIN Route
 app.post('/api/login', (req, res) => {
     const { username, password } = req.body;
@@ -65,10 +60,26 @@ app.post('/api/login', (req, res) => {
             return;
         }
         if (userExists) {
-            const key = crypto.randomBytes(32);
-            const authToken = jwt.sign({username}, key, {expiresIn: '14h'} );
-            res.cookie('authToken', authToken, {httpOnly: true});
-            res.status(200).send('Login successful');
+            // Assuming you have a function to retrieve user data from the database
+            getUserData(username, (userDataError, userData) => {
+                if (userDataError) {
+                    console.error('Error retrieving user data:', userDataError);
+                    res.status(500).send('Error retrieving user data');
+                    return;
+                }
+                    
+            
+
+                const key = sKey;//crypto.randomBytes(32);
+                const authToken = jwt.sign({ username, userData }, key, { expiresIn: '14h' });
+                // console.log(userData);
+                console.log(decodeToken(authToken, key));
+                // Set authToken as cookie
+                res.cookie('authToken', authToken, { httpOnly: true });
+
+                // Respond with success message
+                res.status(200).send('Login successful');
+            });
             
         } else {
             res.status(401).send('Invalid username or password');
@@ -102,7 +113,7 @@ app.post('/api/register', (req, res) => {
             }
             // User created successfully
             // res.status(200).send('User created successfully');
-            console.log("User created successfully");
+            // console.log("User created successfully");
         });
     });
 });

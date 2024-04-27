@@ -11,11 +11,11 @@ function Register() {
 
   const userName = (event) => {
     setUser(event.target.value);
-    console.log(user);
+    // console.log(user);
   };
   const passWord = (event) => {
     setPass(event.target.value);
-    console.log(pass);
+    // console.log(pass);
   };
 
   const registerCheck = () => {
