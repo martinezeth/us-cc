@@ -1,28 +1,124 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { MapContainer, TileLayer, useMap, Marker, Popup } from 'react-leaflet';
-import L from 'leaflet';
+import L, { icon } from 'leaflet';
 import { Box, ChakraProvider } from '@chakra-ui/react'
 import axios from 'axios';
 
-const BaseIcon = L.Icon.extend({
+const AccidentIcon = L.Icon.extend({
   options: {
-    iconSize: [25, 41], 
+    iconSize: [25, 41],
     iconAnchor: [12, 41],
     popupAnchor: [1, -34],
+    iconUrl: '../Images/Icons/accidentEventIcon.svg'
+  }
+});
+
+const EarthquakeIcon = L.Icon.extend({
+  options: {
+    iconSize: [25, 41],
+    iconAnchor: [12, 41],
+    popupAnchor: [1, -34],
+    iconUrl: '../Images/Icons/earthquakeEventIcon.svg'
+  }
+});
+
+const FireIcon = L.Icon.extend({
+  options: {
+    iconSize: [25, 41],
+    iconAnchor: [12, 41],
+    popupAnchor: [1, -34],
+    iconUrl: '../Images/Icons/fireEventIcon.svg'
+  }
+});
+
+const FirstAidIcon = L.Icon.extend({
+  options: {
+    iconSize: [25, 41],
+    iconAnchor: [12, 41],
+    popupAnchor: [1, -34],
+    iconUrl: '../Images/Icons/firstAidEventIcon.svg'
+  }
+});
+
+const FloodIcon = L.Icon.extend({
+  options: {
+    iconSize: [25, 41],
+    iconAnchor: [12, 41],
+    popupAnchor: [1, -34],
+    iconUrl: '../Images/Icons/floodEventIcon.svg'
+  }
+});
+
+const HailIcon = L.Icon.extend({
+  options: {
+    iconSize: [25, 41],
+    iconAnchor: [12, 41],
+    popupAnchor: [1, -34],
+    iconUrl: '../Images/US-CC-header.png'
+    //iconUrl: '../Images/Icons/hailEventIcon.svg'
+  }
+});
+
+const HighWindsIcon = L.Icon.extend({
+  options: {
+    iconSize: [25, 41],
+    iconAnchor: [12, 41],
+    popupAnchor: [1, -34],
+    iconUrl: '../Images/Icons/highWindEventIcon.svg'
+  }
+});
+
+const BlizzardIcon = L.Icon.extend({
+  options: {
+    iconSize: [25, 41],
+    iconAnchor: [12, 41],
+    popupAnchor: [1, -34],
+    iconUrl: '../Images/Icons/blizzardEventIcon.svg'
+  }
+});
+
+const LightningIcon = L.Icon.extend({
+  options: {
+    iconSize: [25, 41],
+    iconAnchor: [12, 41],
+    popupAnchor: [1, -34],
+    iconUrl: '../Images/Icons/lightningEventIcon.svg'
   }
 });
 
 const mapIcons = {
-  accident: new BaseIcon({iconUrl: 'Images/Icons/accidentEventIcon.svg'}),
-  earthquake: new BaseIcon({iconUrl: 'Images/Icons/earthquakeEventIcon.svg'}),
-  fire: new BaseIcon({iconUrl: 'Images/Icons/fireEventIcon.svg'}),
-  firstAid: new BaseIcon({iconUrl: 'Images/Icons/firstAidEventIcon.svg'}),
-  flood: new BaseIcon({iconUrl: 'Images/Icons/floodEventIcon.svg'}),
-  hail: new BaseIcon({iconUrl: 'Images/Icons/hailEventIcon.svg'}),
-  highWinds: new BaseIcon({iconUrl: 'Images/Icons/highWindEventIcon.svg'}),
-  blizzard: new BaseIcon({iconUrl: 'Images/Icons/blizzardEventIcon.svg'}),
-  lightning: new BaseIcon({iconUrl: 'Images/Icons/lightningEventIcon.svg'}),
+  accident: new AccidentIcon(),
+  earthquake: new EarthquakeIcon(),
+  fire: new FireIcon(),
+  firstAid: new FirstAidIcon(),
+  flood: new FloodIcon(),
+  hail: new HailIcon(),
+  highWinds: new HighWindsIcon(),
+  blizzard: new BlizzardIcon(),
+  lightning: new LightningIcon(),
 };
+const singleIcon =
+  {
+    incident_type: "Type B", 
+    description: "Description of Type B", 
+  location_lat: 38.338075, 
+  location_lng: -122.675004
+  }
+function SingleIconMarker({ incident }) {
+  const { location_lat, location_lng, incident_type, description } = incident;
+
+  return (
+
+      <Marker position={[location_lat, location_lng]} icon={mapIcons['hail']}>
+        <Popup>
+          <strong>{incident_type}</strong>
+          <br />
+          {description}
+          <br />
+        </Popup>
+      </Marker>
+  );
+}
 
 function LocationMarker() {
   const [position, setPosition] = useState(null);
@@ -47,15 +143,15 @@ function MapPage() {
   const mapRef = useRef(null);
   const [incidents, setIncidents] = useState([]);
 
-  useEffect(() => {
-    axios.get('http://localhost:5000/api/incident-reports')
-      .then(response => {
-        console.log('Incidents fetched:', response.data); // DEBUG LINE
-        setIncidents(response.data);
-      })
-      .catch(error => 
-        console.error("Error fetching incident reports for map view:", error));
-  }, []);
+  // useEffect(() => {
+  //   axios.get('http://localhost:5000/api/incident-reports')
+  //     .then(response => {
+  //       console.log('Incidents fetched:', response.data); // DEBUG LINE
+  //       setIncidents([...incidents, ...response.data]);
+  //     })
+  //     .catch(error => 
+  //       console.error("Error fetching incident reports for map view:", error));
+  // }, []);
 
   useEffect(() => {
     if (mapRef.current) {
@@ -63,7 +159,7 @@ function MapPage() {
     }
   }, [zoom]);
 
-//   return (
+/*   return (
 //     <ChakraProvider>
 //       <Box position="relative" height="100vh" width="100%">
 //         <MapContainer center={[37.819, -122.478]} zoom={zoom} style={{ height: '100%', width: '100%' }} ref={mapRef}>
@@ -81,7 +177,7 @@ function MapPage() {
 // }
 
 // export default MapPage;
-
+*/
 return (
   <ChakraProvider>
     <Box position="relative" height="100vh" width="100%">
@@ -91,7 +187,9 @@ return (
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
         />
         <LocationMarker />
-        {incidents.map(incident => (
+        <SingleIconMarker incident={singleIcon} />
+        {
+        /*incidents.map(incident => (
           <Marker
             key={incident.incident_id}
             position={[incident.location_lat, incident.location_lng]}
@@ -105,7 +203,8 @@ return (
               Reported at: {new Date(incident.timestamp).toLocaleString()}
             </Popup>
           </Marker>
-        ))}
+        ))*/}
+
       </MapContainer>
       <Box position="absolute" right="20px" bottom="20px" width="200px" zIndex="10" bgColor="whiteAlpha.600" p="2" borderRadius="md">
       </Box>
