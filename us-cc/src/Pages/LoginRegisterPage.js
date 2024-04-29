@@ -68,7 +68,7 @@ function Login() {
     .then(response => {
       // console.log(response.data);
       document.cookie = `authToken=${response.data.authToken}; path=/`;
-      console.log("cookieee:", document.cookie);
+      // console.log("cookieee:", document.cookie);
       navigate('/'); // redirect to home page after login
       
     })
