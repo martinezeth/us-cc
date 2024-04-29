@@ -1,25 +1,35 @@
 const express = require('express');
 const mysql = require('mysql');
-const sKey = require('./jwSec');
+const sKey = require('./.env');
+const cookie = require('react-cookie');
 const { validateCredentials, createUser, getUserData, decodeToken } = require('./AuthController');
 const cors = require('cors');
-const app = express();
 const jwt = require('jsonwebtoken');
-const crypto = require('crypto');
-
+const dotenv = require('dotenv');
+// let [cookies] = cookie.useCookies(['authToken']);
+dotenv.config();
+const app = express();
 
 /**
  * This file will contain:
  * - Database connection
  * - Routes
  * - API host
+ * - API middleware
+ * - env variables
  */
+
 
 app.use(cors({
     origin: 'http://localhost:3000',
     methods: ['GET', 'POST'],
     credentials: true
 }));
+
+/**
+ * API Creation
+ */
+app.use(express.json());
 
 /**
  * Database connection
@@ -39,11 +49,6 @@ connection.connect(err => {
     console.log('Connected to database.');
 });
 
-
-/**
- * API Creation
- */
-app.use(express.json());
 
 /**
  * Routes
@@ -70,10 +75,10 @@ app.post('/api/login', (req, res) => {
                     
             
 
-                const key = sKey;//crypto.randomBytes(32);
+                const key = process.env.JWT_SECRET; //crypto.randomBytes(32); 
                 const authToken = jwt.sign({ username, userData }, key, { expiresIn: '14h' });
                 // console.log(userData);
-                console.log(decodeToken(authToken, key));
+                console.log(decodeToken(authToken, key)); //testing to see if we can output the info within token
                 // Set authToken as cookie
                 res.cookie('authToken', authToken, { httpOnly: true });
 
@@ -131,6 +136,24 @@ app.get('/api/incident-reports', (req, res) => {
     });
 });
 
+
+/**
+ * This route will be used to return user information 
+ */
+app.get('/api/userinfo', (req,res) => {
+    // if(cookies.authToken.length < 1){
+    //     res.status(500).send('error in cookie');
+    // }
+});
+
+
+/**
+ * Return a single user posts
+ */
+app.get('/api/posts:username', (req, res) => {
+
+    res.json(results);
+});
 
 /**
  * Define the port

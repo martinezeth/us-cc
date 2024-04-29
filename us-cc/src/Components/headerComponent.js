@@ -2,7 +2,7 @@ import React from 'react';
 import { Box, Flex, Button, Image, useDisclosure, IconButton, Spacer, Text, Link as ChakraLink , Stack} from '@chakra-ui/react';
 import { HamburgerIcon, CloseIcon} from '@chakra-ui/icons';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import {useCookies } from 'react-cookie';
+import { useCookies } from 'react-cookie';
 
 import Logo from '../Images/usccLogoDraft.svg';
 import DropDown from './Disasters';

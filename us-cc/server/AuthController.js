@@ -92,7 +92,7 @@ function decodeToken(authToken, secretKey) {
     try {
         const decodedToken = jwt.verify(authToken, secretKey);
         // console.log('Decoded token:', decodedToken);
-        return { username, userData } = decodedToken;
+        return decodedToken;
     } catch (error) {
         console.error('Error decoding token:', error);
         return; 
