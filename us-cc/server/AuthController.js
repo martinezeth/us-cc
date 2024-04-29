@@ -2,7 +2,7 @@ const mysql = require('mysql');
 const jwt = require('jsonwebtoken');
 
 const pool = mysql.createPool({
-    connectionLimit: 10, // Adjust the limit as per your requirements
+    connectionLimit: 10,
     host: 'localhost',
     user: 'root',
     password: 'root',

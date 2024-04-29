@@ -12,6 +12,7 @@ import { AuthenticationPage } from './Pages/LoginRegisterPage';
 import { CookiesProvider, useCookies } from 'react-cookie';
 
 import theme from './Styles/theme';
+import ResourcesPage from './Pages/ResourcesPage';
 
 function App() {
 
@@ -29,6 +30,7 @@ function App() {
               <Route path="/newreport" element={<NewReportPage />} />
               <Route path="*" element={<NotFoundPage />} />
               <Route path="/mapview" element={<MapPage />} />
+              <Route path="/resources" element={<ResourcesPage />} />
             </Routes>
             <FooterComponent />
           </div>
