@@ -159,7 +159,7 @@ app.get('/api/posts:username', (req, res) => {
  * Define the port
  * Listen on port 5000
  */
-const PORT = 5000;
+const PORT = process.env.PORT;
 app.listen(PORT, () => {
     console.log(`Server is running on port ${PORT}`);
 });
