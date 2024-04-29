@@ -1,22 +1,32 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Box, Flex, Button, Image, useDisclosure, IconButton, Spacer, Text, Link as ChakraLink , Stack} from '@chakra-ui/react';
 import { HamburgerIcon, CloseIcon} from '@chakra-ui/icons';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { useCookies, removeCookie } from 'react-cookie';
+import { useCookies } from 'react-cookie';
 import Logo from '../Images/usccLogoDraft.svg';
 import DropDown from './Disasters';
 import { jwtDecode } from 'jwt-decode';
+import axios from 'axios';
 
 const HeaderComponent = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { isOpen, onOpen, onClose } = useDisclosure();
   const [cookies, removeCookie] = useCookies(['authToken']);
-  console.log(cookies.authToken);
-  // const decodedToken = jwtDecode(cookies.authToken); 
+  const [username, setUsername] = useState('');
+  
+  useEffect(() => {
+    // Decode the JWT token to get user data
+    if (cookies.authToken) {
+      const decodedToken = jwtDecode(cookies.authToken);
+      setUsername(decodedToken.username);
+    }
+    else {
+      setUsername(null);
+    }
+  }, [cookies.authToken]);
 
-  console.log("cookies:", cookies?.authToken);
-  // Function to handle navigation to different sections of the main page
+
   const handleNavigation = (sectionId) => {
     if (location.pathname === '/') {
       scrollToSection(sectionId);
@@ -33,17 +43,20 @@ const HeaderComponent = () => {
   };
 
   const handleLogout = () => {
-    // Clear the authToken cookie
-    removeCookie('authToken');
-
-    // Redirect the user to the login page
-    navigate("/");
+    axios.post('http://localhost:5000/api/logout')
+      .then((response) => {
+        console.log(response.data); 
+        // Remove the authToken cookie
+        document.cookie = 'authToken=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;'; 
+      })
+      .catch((error) => {
+        console.error('Logout failed:', error);
+      });
   };
 
   return (
     <Box as="nav" bg="blue.600" color="white" paddingY="2" paddingX="4">
       <Flex align="center" justify="space-between">
-        {/* Logo and Hamburger Menu */}
         <IconButton
           icon={isOpen ? <CloseIcon /> : <HamburgerIcon />}
           onClick={isOpen ? onClose : onOpen}
@@ -65,9 +78,9 @@ const HeaderComponent = () => {
             <DropDown/>
             <Button  padding="8px 16px" variant="ghost" onClick={() => handleNavigation('about-section')}>About</Button>
             <Button  padding="8px 16px" variant="ghost" onClick={() => handleNavigation('features-section')}>Features</Button>
-            {cookies.authToken ? (
+            {username ? (
               <>
-                <Text padding="8px 16px" color="white">Hello, {cookies.authToken.username}</Text>
+                <Text padding="8px 16px" color="white">Hello, {username}</Text>
                 <Button padding={"8px 16px"} variant="ghost" onClick={handleLogout}>Logout</Button>
               </>
             ) : (

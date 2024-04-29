@@ -54,7 +54,6 @@ connection.connect(err => {
 /**
  * Routes
  */
-
 // LOGIN Route
 app.post('/api/login', (req, res) => {
     const { username, password } = req.body;
@@ -73,26 +72,26 @@ app.post('/api/login', (req, res) => {
                     res.status(500).send('Error retrieving user data');
                     return;
                 }
-                    
-            
 
-                const key = process.env.JWT_SECRET; 
+                const key = process.env.JWT_SECRET;
                 const authToken = jwt.sign({ username, userData }, key, { expiresIn: '14h' });
-                const testToken = jwt.sign({test: "hello world"}, key);
-                res.cookie('testToken', testToken, { httpOnly: true});
 
-                //console.log(decodeToken(authToken, key));
-                // Set authToken as cookie
-                res.cookie('authToken', authToken, { httpOnly: true, path: "/", maxAge: 24 * 60 * 60 * 1000 });
-
-                // Respond with success message
-                res.status(200).send('Login successful');
+                // Send the authToken in the response
+                res.send({ authToken: authToken });
             });
-            
         } else {
             res.status(401).send('Invalid username or password');
         }
     });
+});
+
+
+app.post('/api/logout', (req, res) => {
+    // Clear the authToken cookie
+    res.clearCookie('authToken', { httpOnly: true });
+
+    // Respond with a success message
+    res.status(200).send('Logout successful');
 });
 
 // REGISTER Route
@@ -186,6 +185,24 @@ app.get('/api/posts/:username', (req, res) => {
 
     res.json(results);
 });
+
+/**
+ * Functions
+ */
+
+function authenticateToken(req, res, nex) {
+    const authHeader = req.headers['authorization'];
+    const token = authHeader && authHeader.split(' ')[1];
+    if(token === null) return res.sendStatus(401);
+
+    jwt.verify(token, process.env.JWT_SECRET, (err, user)=>{
+        if(err) return res.sendStatus(403);
+        req.user = user;
+        next();
+    });
+}
+
+
 
 /**
  * Define the PORT
