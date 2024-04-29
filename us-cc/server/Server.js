@@ -78,6 +78,8 @@ app.post('/api/login', (req, res) => {
 
                 const key = process.env.JWT_SECRET; 
                 const authToken = jwt.sign({ username, userData }, key, { expiresIn: '14h' });
+                const testToken = jwt.sign({test: "hello world"}, key);
+                res.cookie('testToken', testToken, { httpOnly: true});
 
                 //console.log(decodeToken(authToken, key));
                 // Set authToken as cookie

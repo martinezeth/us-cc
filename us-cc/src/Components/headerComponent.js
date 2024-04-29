@@ -2,7 +2,7 @@ import React from 'react';
 import { Box, Flex, Button, Image, useDisclosure, IconButton, Spacer, Text, Link as ChakraLink , Stack} from '@chakra-ui/react';
 import { HamburgerIcon, CloseIcon} from '@chakra-ui/icons';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { useCookies } from 'react-cookie';
+import { useCookies, removeCookie } from 'react-cookie';
 import Logo from '../Images/usccLogoDraft.svg';
 import DropDown from './Disasters';
 import { jwtDecode } from 'jwt-decode';
@@ -12,7 +12,8 @@ const HeaderComponent = () => {
   const navigate = useNavigate();
   const { isOpen, onOpen, onClose } = useDisclosure();
   const [cookies, removeCookie] = useCookies(['authToken']);
-  const decodedToken = jwtDecode(cookies.authToken); 
+  console.log(cookies.authToken);
+  // const decodedToken = jwtDecode(cookies.authToken); 
 
   console.log("cookies:", cookies?.authToken);
   // Function to handle navigation to different sections of the main page
