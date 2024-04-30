@@ -4,10 +4,9 @@ import L from 'leaflet';
 import { Box, ChakraProvider } from '@chakra-ui/react';
 import axios from 'axios';
 
-import accidentIconUrl from '../Images/Icons/accidentEventIcon.svg';
 import earthquakeIconUrl from '../Images/Icons/earthquakeEventIcon.svg';
 import fireIconUrl from '../Images/Icons/fireEventIcon.svg';
-import firstAidIconUrl from '../Images/Icons/firstAidEventIcon.svg';
+import aidIconUrl from '../Images/Icons/aidEventIcon.svg';
 import floodIconUrl from '../Images/Icons/floodEventIcon.svg';
 import hailIconUrl from '../Images/Icons/hailEventIcon.svg';
 import highWindsIconUrl from '../Images/Icons/highWindEventIcon.svg';
@@ -16,16 +15,15 @@ import lightningIconUrl from '../Images/Icons/lightningEventIcon.svg';
 
 var baseIcon = L.Icon.extend({
   options: {
-    iconSize: [25,41],
+    iconSize: [40,40],
     iconAnchor: [12,41],
     popupAnchor: [1,-34]
   }
 });
 
-var accidentIcon = new baseIcon({iconUrl: accidentIconUrl}),
-    earthquakeIcon = new baseIcon({iconUrl: earthquakeIconUrl}),
+var earthquakeIcon = new baseIcon({iconUrl: earthquakeIconUrl}),
     fireIcon = new baseIcon({iconUrl: fireIconUrl}),
-    firstAidIcon = new baseIcon({iconUrl: firstAidIconUrl}),
+    aidIcon = new baseIcon({iconUrl: aidIconUrl}),
     floodIcon = new baseIcon({iconUrl: floodIconUrl}),
     hailIcon = new baseIcon({iconUrl: hailIconUrl}),
     highWindsIcon = new baseIcon({iconUrl: highWindsIconUrl}),
@@ -34,10 +32,9 @@ var accidentIcon = new baseIcon({iconUrl: accidentIconUrl}),
 
 
   const mapIcons = {
-    accident: accidentIcon,
     earthquake: earthquakeIcon,
     fire: fireIcon,
-    firstAid: firstAidIcon,
+    firstAid: aidIcon,
     flood: floodIcon,
     hail: hailIcon,
     highWinds: highWindsIcon,
