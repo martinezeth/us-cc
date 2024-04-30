@@ -2,7 +2,8 @@ const express = require('express');
 const mysql = require('mysql');
 const sKey = require('./.env');
 const cookie = require('react-cookie');
-const { validateCredentials, createUser, getUserData, decodeToken } = require('./AuthController');
+const { validateCredentials, createUser, decodeToken } = require('./Controllers/AuthController');
+const { getUserData } = require('./Controllers/UserController');
 const cors = require('cors');
 const jwt = require('jsonwebtoken');
 const dotenv = require('dotenv');
@@ -53,7 +54,6 @@ connection.connect(err => {
 /**
  * Routes
  */
-
 // LOGIN Route
 app.post('/api/login', (req, res) => {
     const { username, password } = req.body;
@@ -72,24 +72,26 @@ app.post('/api/login', (req, res) => {
                     res.status(500).send('Error retrieving user data');
                     return;
                 }
-                    
-            
 
-                const key = process.env.JWT_SECRET; //crypto.randomBytes(32); 
+                const key = process.env.JWT_SECRET;
                 const authToken = jwt.sign({ username, userData }, key, { expiresIn: '14h' });
-                // console.log(userData);
-                console.log(decodeToken(authToken, key)); //testing to see if we can output the info within token
-                // Set authToken as cookie
-                res.cookie('authToken', authToken, { httpOnly: true });
 
-                // Respond with success message
-                res.status(200).send('Login successful');
+                // Send the authToken in the response
+                res.send({ authToken: authToken });
             });
-            
         } else {
             res.status(401).send('Invalid username or password');
         }
     });
+});
+
+
+app.post('/api/logout', (req, res) => {
+    // Clear the authToken cookie
+    res.clearCookie('authToken', { httpOnly: true });
+
+    // Respond with a success message
+    res.status(200).send('Logout successful');
 });
 
 // REGISTER Route
@@ -124,7 +126,7 @@ app.post('/api/register', (req, res) => {
 });
 
 
-// Route for fetching Incident Reports
+// Incident Reports Route 
 app.get('/api/incident-reports', (req, res) => {
     connection.query('SELECT * FROM IncidentReports', (error, results) => {
         if (error) {
@@ -137,27 +139,74 @@ app.get('/api/incident-reports', (req, res) => {
 });
 
 
-/**
- * This route will be used to return user information 
- */
-app.get('/api/userinfo', (req,res) => {
-    // if(cookies.authToken.length < 1){
-    //     res.status(500).send('error in cookie');
-    // }
+// User Info Route
+app.get('/api/userinfo/:username', (req,res) => {
+    const { authToken } = req.headers;
+    const { username } = req.params;
+    if (authToken) {
+        
+        const decodedToken = decodeToken(authToken);
+
+        if (username) {
+            
+            getUserData(username, (error, userData) => {
+                if (error) {
+                    console.error('Error retrieving user data:', error);
+                    res.status(500).send('Error retrieving user data');
+                    return;
+                }
+
+                
+                res.json(userData);
+            });
+        } else {
+            
+            const currentUser = decodedToken.username; 
+            getUserData(currentUser, (error, userData) => {
+                if (error) {
+                    console.error('Error retrieving user data:', error);
+                    res.status(500).send('Error retrieving user data');
+                    return;
+                }
+
+
+                res.json(userData);
+            });
+           
+        }
+    } else {
+        // If authToken is not provided in the request headers
+        res.status(401).send('Unauthorized');
+    }
 });
 
-
-/**
- * Return a single user posts
- */
-app.get('/api/posts:username', (req, res) => {
+// User Posts Route
+app.get('/api/posts/:username', (req, res) => {
 
     res.json(results);
 });
 
 /**
- * Define the port
- * Listen on port 5000
+ * Functions
+ */
+
+function authenticateToken(req, res, nex) {
+    const authHeader = req.headers['authorization'];
+    const token = authHeader && authHeader.split(' ')[1];
+    if(token === null) return res.sendStatus(401);
+
+    jwt.verify(token, process.env.JWT_SECRET, (err, user)=>{
+        if(err) return res.sendStatus(403);
+        req.user = user;
+        next();
+    });
+}
+
+
+
+/**
+ * Define the PORT
+ * Listen on PORT
  */
 const PORT = process.env.PORT;
 app.listen(PORT, () => {
