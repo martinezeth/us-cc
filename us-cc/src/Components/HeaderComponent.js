@@ -76,8 +76,9 @@ const HeaderComponent = () => {
         <Box display={{ base: isOpen ? "block" : "none", md: "flex" }} alignItems="center">
           <Stack direction="row" spacing={4} justifyContent="left">
             <DropDown/>
+            <Button  padding="8px 16px" variant="ghost" as={Link} to="/posts">Posts</Button>
+            <Button  padding="8px 16px" variant ="ghost" as={Link} to="/profile">Profile</Button>
             <Button  padding="8px 16px" variant="ghost" onClick={() => handleNavigation('about-section')}>About</Button>
-            <Button  padding="8px 16px" variant="ghost" onClick={() => handleNavigation('features-section')}>Features</Button>
             {username ? (
               <>
                 <Text padding="8px 16px" color="white">Hello, {username}</Text>
