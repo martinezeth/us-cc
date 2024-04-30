@@ -1,12 +1,13 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { ChakraProvider } from "@chakra-ui/react";
-import { SaasProvider } from '@saas-ui/react';
 
 import HeaderComponent from './Components/HeaderComponent';
 import FooterComponent from './Components/FooterComponent';
 import LandingPage from './Pages/LandingPage';
 import NewReportPage from './Pages/NewReportPage';
+import NotFoundPage from './Pages/NotFoundPage';
+import MapPage from './Pages/MapViewPage';
 import { AuthenticationPage } from './Pages/LoginRegisterPage';
 import Posts from './Pages/Posts';
 import Profile from './Pages/Profile';
@@ -15,13 +16,16 @@ import Flood from './Pages/Flood';
 import Hurricane from './Pages/Hurricane';
 import Covid from './Pages/Covid';
 import Earthquake from './Pages/Earthquake';
+import { CookiesProvider, useCookies } from 'react-cookie';
 
-import { baseTheme } from '@saas-ui/react'
+import theme from './Styles/theme';
 
 function App() {
+
+
   return (
-    <SaasProvider theme={baseTheme}>
-      <ChakraProvider>
+
+      <ChakraProvider theme={theme}>
         <Router>
           <div className="App">
             <HeaderComponent />
@@ -42,7 +46,6 @@ function App() {
           </div>
         </Router>
       </ChakraProvider>
-    </SaasProvider>
   );
 }
 

@@ -1,8 +1,9 @@
 import React from 'react';
 import { Box, SimpleGrid, VStack, Text, Icon } from '@chakra-ui/react';
 import { MdReportProblem, MdGroupWork, MdBarChart, MdSettings } from 'react-icons/md';
+import { useNavigate } from 'react-router-dom';
 
-const FeatureCard = ({ title, description, icon }) => {
+const FeatureCard = ({ title, description, icon, onClick }) => {
   return (
     <VStack
       p={5}
@@ -12,6 +13,8 @@ const FeatureCard = ({ title, description, icon }) => {
       align="center"
       spacing={4}
       _hover={{ bg: 'gray.100' }}
+      onClick={onClick}
+      cursor="pointer"
     >
       <Icon as={icon} w={10} h={10} color="blue.500" />
       <Text fontSize="xl" fontWeight="semibold">
@@ -24,7 +27,10 @@ const FeatureCard = ({ title, description, icon }) => {
   );
 };
 
+
 const FeaturesSection = () => {
+  const navigate = useNavigate();
+
   return (
     <Box p={5} bg="gray.50">
       <Text fontSize="3xl" textAlign="center" mb={6}>
@@ -50,6 +56,7 @@ const FeaturesSection = () => {
           title="Real-time Data Visualization"
           description="Visualize data to make informed decisions quickly."
           icon={MdBarChart}
+          onClick={() => navigate('/mapview')}
         />
       </SimpleGrid>
     </Box>
