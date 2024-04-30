@@ -143,10 +143,11 @@ app.get('/api/incident-reports', (req, res) => {
 app.get('/api/userinfo/:username', (req,res) => {
     const { authToken } = req.headers;
     const { username } = req.params;
+
     if (authToken) {
         
         const decodedToken = decodeToken(authToken);
-
+        console.log("decoded: ", decodedToken);
         if (username) {
             
             getUserData(username, (error, userData) => {

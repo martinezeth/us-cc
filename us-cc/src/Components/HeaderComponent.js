@@ -77,11 +77,10 @@ const HeaderComponent = () => {
           <Stack direction="row" spacing={4} justifyContent="left">
             <DropDown/>
             <Button  padding="8px 16px" variant="ghost" as={Link} to="/posts">Posts</Button>
-            <Button  padding="8px 16px" variant ="ghost" as={Link} to="/profile">Profile</Button>
             <Button  padding="8px 16px" variant="ghost" onClick={() => handleNavigation('about-section')}>About</Button>
             {username ? (
               <>
-                <Text padding="8px 16px" color="white">Hello, {username}</Text>
+                <Link to={'/profile/'+username}><Text padding="8px 16px" color="white">{username.substring(0, 2).toUpperCase()}</Text></Link>
                 <Button padding={"8px 16px"} variant="ghost" onClick={handleLogout}>Logout</Button>
               </>
             ) : (

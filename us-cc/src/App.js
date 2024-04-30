@@ -35,7 +35,7 @@ function App() {
                 <Route path="/register" element={<AuthenticationPage RegoOrLogin="Register" />} />
                 <Route path="/newreport" element={<NewReportPage />} />
                 <Route path="/posts" element={<Posts/>}/>
-                <Route path="/profile" element={<Profile/>} />
+                <Route path="/profile/:username" element={<Profile/>} />
                 <Route path="/wildfire" element={<Wildfire/>} />
                 <Route path="/flood" element={<Flood/>} />
                 <Route path="/earthquake" element={<Earthquake/>} />
