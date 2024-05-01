@@ -18,10 +18,6 @@ const app = express();
  * - env variables
  */
 
-
-const dotenv = require('dotenv');
-dotenv.config();
-
 // Setup CORS correctly
 app.use(cors({
     origin: 'http://localhost:3000',
