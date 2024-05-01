@@ -40,6 +40,7 @@ function App() {
                 <Route path="/about" element={<AboutPage/>} />
                 <Route path="/newreport" element={<NewReportPage />} />
                 <Route path="/posts" element={<Posts/>}/>
+                <Route path='/posts/:username' element={<Posts />}/>
                 <Route path="/profile/:username" element={<Profile/>} />
                 <Route path='/mapview' element={<MapPage />} />
                 <Route path="/wildfire" element={<Wildfire/>} />

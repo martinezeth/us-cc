@@ -41,7 +41,7 @@ CREATE TABLE IF NOT EXISTS
         title VARCHAR(255) NOT NULL,
         body TEXT NOT NULL,
         region VARCHAR(50) NULL,
-        date_posted DATETIME NULL,
+        date_posted DATETIME CURRENT_TIMESTAMP,
         FOREIGN KEY (user_id) REFERENCES Users (user_id)
     );
 
@@ -118,6 +118,7 @@ CREATE PROCEDURE IF NOT EXISTS `GetUserInfo`(IN `userid` INT)
 BEGIN
 SELECT
     U.date_joined,
+    U.user_id,
     U.name,
     U.username,
     U.role,
@@ -138,6 +139,7 @@ CREATE PROCEDURE IF NOT EXISTS `GetUserInfoUsername`(IN `username` VARCHAR(50))
 BEGIN
 SELECT
     U.date_joined,
+    U.user_id,
     U.name,
     U.username,
     U.role,
@@ -192,8 +194,35 @@ WHERE
 
 END$$
 
+CREATE PROCEDURE IF NOT EXISTS `GetUserPosts`(IN `userid` INT)
+BEGIN
+SELECT
+    p.*,
+    u.name AS user_name,
+    u.username AS user_username,
+    r.region_name AS user_region
+FROM
+    posts p
+    JOIN users u ON p.user_id = u.user_id
+    LEFT JOIN Region r ON u.region = r.region_id
+WHERE
+    p.user_id = userid;
 
+END$$
 
+CREATE PROCEDURE IF NOT EXISTS `GetRecentPosts`() BEGIN
+SELECT
+    p.*,
+    u.name AS user_name,
+    u.username AS user_username,
+    r.region_name AS user_region
+FROM
+    posts p
+    JOIN users u ON p.user_id = u.user_id
+    LEFT JOIN Region r ON u.region = r.region_id
+WHERE
+    p.date_posted >= NOW() - INTERVAL 48 HOUR;
 
+END$$
 
 DELIMITER ;

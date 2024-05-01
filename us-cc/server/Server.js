@@ -2,7 +2,7 @@ const express = require('express');
 const mysql = require('mysql');
 const { validateCredentials, createUser, decodeToken } = require('./Controllers/AuthController');
 const { getUserData, getUserVolunteering, getUserDataUsername, getVolunteersByRegion, getVolunteersBySkills } = require('./Controllers/UserController');
-
+const { getUserPostData, getRecentPostData } = require('./Controllers/PostsController');
 const cors = require('cors');
 const jwt = require('jsonwebtoken');
 const dotenv = require('dotenv');
@@ -168,8 +168,38 @@ app.get('/api/userinfo/:username', (req, res) => {
 
 // User Posts Route TODO
 app.get('/api/posts/:username', (req, res) => {
+    const authToken = req.headers['authorization'];
 
-    res.json(res);
+    const decodedToken = decodeToken(authToken, process.env.JWT_SECRET);
+
+    const { username, userData } = decodedToken;
+    const user_id = userData[0][0].user_id;
+
+    // Call the function to get post data based on user ID
+    getUserPostData(user_id, (error, postData) => {
+        if (error) {
+            console.error('Error fetching posts:', error);
+            res.status(500).json({ error: 'Internal Server Error' });
+            return;
+        }
+        console.log("post data user", postData[0]);
+
+        res.json(postData[0]);
+    });
+});
+
+app.get('/api/posts', (req, res) => {
+    const authToken = req.headers['authorization'];
+    // Call the function to get post data based on user ID
+    getRecentPostData((error, postData) => {
+        if (error) {
+            console.error('Error fetching posts:', error);
+            res.status(500).json({ error: 'Internal Server Error' });
+            return;
+        }
+        // console.log("post data all", postData);
+        res.json(postData);
+    });
 });
 
 
