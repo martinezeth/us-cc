@@ -69,6 +69,15 @@ app.post('/api/login', (req, res) => {
     });
 });
 
+app.post('/api/logout', (req, res) => {
+    // Clear the authToken cookie
+    res.clearCookie('authToken', { httpOnly: true });
+
+    // Respond with a success message
+    res.status(200).send('Logout successful');
+});
+
+
 app.post('/api/register', (req, res) => {
     const { username, password } = req.body;
     validateCredentials(username, password, (error, userExists) => {
