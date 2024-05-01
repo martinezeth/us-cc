@@ -3,7 +3,6 @@ import { MapContainer, TileLayer, Marker, Popup, useMap, useMapEvents } from 're
 import L from 'leaflet';
 import { Box, ChakraProvider } from '@chakra-ui/react';
 import axios from 'axios';
-
 import earthquakeIconUrl from '../Images/Icons/earthquakeEventIcon.svg';
 import fireIconUrl from '../Images/Icons/fireEventIcon.svg';
 import aidIconUrl from '../Images/Icons/aidEventIcon.svg';
@@ -75,7 +74,7 @@ function MapEvents({ setIncidents }) {
 
       // console.log("Fetching incidents for bounds:", params); // Debug output for the requested coordinate bounds
 
-      axios.get(`http://localhost:8000/api/incident-reports`, { params })
+      axios.get(`http://localhost:5000/api/incident-reports`, { params })
         .then(response => {
           // console.log("Incidents fetched:", response.data); // Debug output for the fetched data
           setIncidents(response.data);
