@@ -44,7 +44,7 @@ export default function Profile() {
                 </div>
             </div>
             <div className="info-section">
-                <h2>{userData.name || 'Username'}</h2>
+                <h2>{userData.username || 'Username'}</h2>
                 <p>{userData.role || 'Role'}</p>
                 <div className="additional-info">
                     <p>Member since: {userData.memberSince || 'XX/XX/XXXX'}</p>
