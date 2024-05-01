@@ -182,7 +182,7 @@ app.get('/api/posts/:username', (req, res) => {
             res.status(500).json({ error: 'Internal Server Error' });
             return;
         }
-        console.log("post data user", postData[0]);
+        console.log("post data user", postData);
 
         res.json(postData[0]);
     });
@@ -197,8 +197,8 @@ app.get('/api/posts', (req, res) => {
             res.status(500).json({ error: 'Internal Server Error' });
             return;
         }
-        // console.log("post data all", postData);
-        res.json(postData);
+        console.log("post data all", postData[0]);
+        res.json(postData[0]);
     });
 });
 

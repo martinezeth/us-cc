@@ -6,8 +6,8 @@ import '../Styles/styles.css';
 
 
 const Post = ({ postData }) => {
-    const { name, username, title, body, date_posted } = postData;
-    // console.log("supposed post data", postData);
+    const { user_name, user_username, user_region, title, body, date_posted } = postData;
+    console.log("supposed post data", postData);
     const datePosted = date_posted ? new Date(date_posted) : null;
     const formattedDate = datePosted ? datePosted.toLocaleDateString() : 'N/A';
 
@@ -20,14 +20,14 @@ const Post = ({ postData }) => {
             boxShadow="xl"         // Shadow for 3D effect
         >
             <Box p={4}>
-                <Text fontWeight="bold">Name: {name}</Text>
-                <Text fontWeight="bold">Username: {username}</Text>
+                <Text fontWeight="bold">@ {user_name}</Text>
+                <Text fontWeight="normal">{user_username}</Text>
                 <Text fontSize="xl" fontWeight="semibold" textAlign="center" my={2}>
-                    Title: {title}
+                    {title}
                 </Text>
                 <Divider />
                 <VStack spacing={4} align="left" my={4}>
-                    <Text fontSize="md">Body: {body}</Text>
+                    <Text fontSize="lg">{body}</Text>
                 </VStack>
                 <Text fontSize="sm">Date posted: {formattedDate}</Text>
             </Box>
@@ -69,21 +69,25 @@ export default function Posts() {
 
     console.log("posts:", posts);
     return (
-        <Grid
-            p={5}
-            templateColumns="repeat(1, 1fr)"  // One column layout
-            gap={2}
-            justifyContent="center"          // Centers the column in the grid horizontally
-            alignContent="center"
-        >
+        <>
             <Button className="newPostButton" colorScheme='blue'>New Post</Button>
+            <Grid
+                className='postcard'
+                p={5}
+                templateColumns="repeat(1, 1fr)"  // One column layout
+                gap={2}
+                justifyContent="center"          // Centers the column in the grid horizontally
+                alignContent="center"
+            >
+                
 
 
-            <VStack spacing={4} align="stretch">
-                {posts.map((post, index) => (
-                    <Post key={index} postData={post} />
-                ))}
-            </VStack>
-        </Grid>
+                <VStack spacing={4} align="stretch">
+                    {posts.map((post, index) => (
+                        <Post key={index} postData={post} />
+                    ))}
+                </VStack>
+            </Grid>
+        </>
     );
 };
