@@ -68,35 +68,16 @@ function createUser(username, password, callback) {
     });
 }
 
-function getUserData(username, callback){
-    pool.getConnection((err, connection) => {
-        if(err){
-            callback(err, null);
-            return;
-        }
-        connection.query('SELECT * FROM users WHERE username = ?', [username], (error, results, fields) => {
-            if(error){
-                connection.release();
-                callback(error, null);
-                return;
-            }
-            // console.log("Got user info: ", results);
-            callback(null, results);
-            connection.release();
-
-        })
-    });
-}
 
 function decodeToken(authToken, secretKey) {
     try {
         const decodedToken = jwt.verify(authToken, secretKey);
         // console.log('Decoded token:', decodedToken);
-        return { username, userData } = decodedToken;
+        return decodedToken;
     } catch (error) {
         console.error('Error decoding token:', error);
         return; 
     }
 }
 
-module.exports = { validateCredentials, createUser, getUserData, decodeToken }
+module.exports = { validateCredentials, createUser, decodeToken }

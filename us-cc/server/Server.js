@@ -3,18 +3,36 @@ const mysql = require('mysql');
 const sKey = require('./jwSec');
 const { validateCredentials, createUser, getUserData, decodeToken } = require('./AuthController');
 const cors = require('cors');
-const app = express();
 const jwt = require('jsonwebtoken');
+const dotenv = require('dotenv');
+// let [cookies] = cookie.useCookies(['authToken']);
+dotenv.config();
+const app = express();
+
+/**
+ * This file will contain:
+ * - Database connection
+ * - Routes
+ * - API host
+ * - API middleware
+ * - env variables
+ */
+
+
 const dotenv = require('dotenv');
 dotenv.config();
 
 // Setup CORS correctly
 app.use(cors({
-    origin: 'http://localhost:3000',  // Frontend server
-    methods: ['GET', 'POST', 'OPTIONS'],  // Allowed methods
-    credentials: true,  // To allow cookies
-    allowedHeaders: ['Content-Type', 'Authorization']
+    origin: 'http://localhost:3000',
+    methods: ['GET', 'POST'],
+    credentials: true
 }));
+
+/**
+ * API Creation
+ */
+app.use(express.json());
 
 /**
  * Database connection
@@ -35,13 +53,9 @@ connection.connect(err => {
 });
 
 /**
- * API Creation
- */
-app.use(express.json());
-
-/**
  * Routes
  */
+// LOGIN Route
 app.post('/api/login', (req, res) => {
     const { username, password } = req.body;
     validateCredentials(username, password, (error, userExists) => {
@@ -58,9 +72,14 @@ app.post('/api/login', (req, res) => {
                     return;
                 }
                 const key = sKey;
+
+                const key = process.env.JWT_SECRET;
                 const authToken = jwt.sign({ username, userData }, key, { expiresIn: '14h' });
                 res.cookie('authToken', authToken, { httpOnly: true });
                 res.status(200).send('Login successful');
+
+                // Send the authToken in the response
+                res.send({ authToken: authToken });
             });
         } else {
             res.status(401).send('Invalid username or password');
@@ -90,7 +109,7 @@ app.post('/api/register', (req, res) => {
     });
 });
 
-// Route for fetching Incident Reports
+// Incident Reports Route 
 app.get('/api/incident-reports', (req, res) => {
     connection.query('SELECT * FROM IncidentReports', (error, results) => {
         if (error) {
@@ -102,9 +121,75 @@ app.get('/api/incident-reports', (req, res) => {
     });
 });
 
+// User Info Route
+app.get('/api/userinfo/:username', (req,res) => {
+    const { authToken } = req.headers;
+    const { username } = req.params;
+
+    if (authToken) {
+        
+        const decodedToken = decodeToken(authToken);
+        console.log("decoded: ", decodedToken);
+        if (username) {
+            
+            getUserData(username, (error, userData) => {
+                if (error) {
+                    console.error('Error retrieving user data:', error);
+                    res.status(500).send('Error retrieving user data');
+                    return;
+                }
+
+                
+                res.json(userData);
+            });
+        } else {
+            
+            const currentUser = decodedToken.username; 
+            getUserData(currentUser, (error, userData) => {
+                if (error) {
+                    console.error('Error retrieving user data:', error);
+                    res.status(500).send('Error retrieving user data');
+                    return;
+                }
+
+
+                res.json(userData);
+            });
+           
+        }
+    } else {
+        // If authToken is not provided in the request headers
+        res.status(401).send('Unauthorized');
+    }
+});
+
+// User Posts Route
+app.get('/api/posts/:username', (req, res) => {
+
+    res.json(results);
+});
+
 /**
- * Define the port
- * Listen on port 5000
+ * Functions
+ */
+
+function authenticateToken(req, res, nex) {
+    const authHeader = req.headers['authorization'];
+    const token = authHeader && authHeader.split(' ')[1];
+    if(token === null) return res.sendStatus(401);
+
+    jwt.verify(token, process.env.JWT_SECRET, (err, user)=>{
+        if(err) return res.sendStatus(403);
+        req.user = user;
+        next();
+    });
+}
+
+
+
+/**
+ * Define the PORT
+ * Listen on PORT
  */
 const PORT = process.env.PORT;
 app.listen(PORT, () => {

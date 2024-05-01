@@ -68,10 +68,11 @@ function Login() {
     .then(response => {
       // console.log(response.data);
       document.cookie = `authToken=${response.data.authToken}; path=/`;
+      // console.log("cookieee:", document.cookie);
       navigate('/'); // redirect to home page after login
       
     })
-    .catch(error => {
+    .catch(() => {
       // TODO ASAP:
       // Turn username and password boxes red
       // console.error("error fetching data in LoginRegisterPage: ", error);
