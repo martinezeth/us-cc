@@ -57,7 +57,8 @@ app.post('/api/login', (req, res) => {
                     res.status(500).send('Error retrieving user data');
                     return;
                 }
-                const key = sKey;
+
+                const key = process.env.JWT_SECRET;
                 const authToken = jwt.sign({ username, userData }, key, { expiresIn: '14h' });
                 res.cookie('authToken', authToken, { httpOnly: true });
                 res.status(200).send('Login successful');
@@ -90,7 +91,6 @@ app.post('/api/register', (req, res) => {
     });
 });
 
-
 app.get('/api/incident-reports', (req, res) => {
     const { swLat, swLng, neLat, neLng } = req.query;
     if(swLat && swLng && neLat && neLng) {
@@ -119,6 +119,32 @@ app.get('/api/incident-reports', (req, res) => {
 });
 
 
+// User Info Route
+app.get('/api/userinfo/:username', (req,res) => {
+    const authToken  = req.headers['authorization'];
+    const { username } = req.params;
+
+    if (authToken) {
+        
+        const decodedToken = decodeToken(authToken, process.env.JWT_SECRET);
+        if (username) {
+            
+            getUserData(username, (error, userData) => {
+                if (error) {
+                    console.error('Error retrieving user data:', error);
+                    res.status(500).send('Error retrieving user data');
+                    return;
+                }
+                res.json(userData);
+            });
+        } else {
+        // If authToken is not provided in the request headers
+        res.status(401);
+    }
+  }
+});
+
+
 // Route to get volunteers by region
 app.get('/api/volunteers/region', (req, res) => {
     const { region } = req.query;
@@ -143,6 +169,7 @@ app.get('/api/volunteers/skills', (req, res) => {
         }
     });
 });
+
 
 
 /**
