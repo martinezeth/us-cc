@@ -37,7 +37,7 @@ var earthquakeIcon = new baseIcon({iconUrl: earthquakeIconUrl}),
     firstAid: aidIcon,
     flood: floodIcon,
     hail: hailIcon,
-    highWinds: highWindsIcon,
+    high_winds: highWindsIcon,
     blizzard: blizzardIcon,
     lightning: lightningIcon,
   };
@@ -113,7 +113,7 @@ function MapPage() {
             <Marker
               key={incident.incident_id}
               position={[incident.location_lat, incident.location_lng]}
-              icon={mapIcons[incident.incident_type.toLowerCase().replace(/ /g, '')] || new L.Icon()}
+              icon={mapIcons[incident.incident_type.toLowerCase().replace(/ /g, '_')] || new L.Icon()}
             >
               <Popup>
                 <strong>{incident.incident_type}</strong><br />
