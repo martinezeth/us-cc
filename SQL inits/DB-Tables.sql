@@ -112,6 +112,7 @@ CREATE TABLE IF NOT EXISTS
         location_lng DECIMAL(10, 6)
     );
 
+DELIMITER $$ 
 CREATE PROCEDURE `GetVolunteersByRegion`(IN regionName VARCHAR(255)) BEGIN
 SELECT
     *
@@ -120,7 +121,7 @@ FROM
 WHERE
     region = regionName;
 
-END;
+END$$ 
 
 CREATE PROCEDURE `GetVolunteersBySkills`(IN skill VARCHAR(255)) BEGIN
 SELECT
@@ -130,4 +131,87 @@ FROM
 WHERE
     FIND_IN_SET(skill, skills) > 0;
 
-END;
+END$$ 
+
+DELIMITER $$ 
+
+CREATE PROCEDURE GetUniqueSkills() BEGIN -- Create a temporary table to store unique skills
+CREATE TEMPORARY TABLE IF NOT EXISTS TempSkills (skill VARCHAR(255));
+
+DECLARE done INT DEFAULT 0;
+
+DECLARE skills_str VARCHAR(255);
+
+DECLARE cur_pos INT;
+
+DECLARE skill VARCHAR(255);
+
+DECLARE skill_cursor CURSOR FOR
+SELECT
+    skills
+FROM
+    Volunteers
+WHERE
+    skills IS NOT NULL;
+
+DECLARE CONTINUE HANDLER FOR NOT FOUND
+SET
+    done = 1;
+
+OPEN skill_cursor;
+
+read_loop: LOOP FETCH skill_cursor INTO skills_str;
+
+IF done THEN LEAVE read_loop;
+
+END IF;
+
+SET
+    cur_pos = 1;
+
+WHILE (cur_pos > 0) DO
+SET
+    cur_pos = INSTR(skills_str, ',', cur_pos) + 1;
+
+SET
+    skill = TRIM(
+        SUBSTRING_INDEX(
+            SUBSTRING_INDEX(skills_str, ',', cur_pos),
+            ',',
+            -1
+        )
+    );
+
+-- Insert only if not exists
+IF NOT EXISTS (
+    SELECT
+        1
+    FROM
+        TempSkills
+    WHERE
+        skill = skill
+) THEN
+INSERT INTO
+    TempSkills(skill)
+VALUES
+    (skill);
+
+END IF;
+
+END WHILE;
+
+END LOOP;
+
+CLOSE skill_cursor;
+
+-- Return unique skills
+SELECT
+    DISTINCT skill
+FROM
+    TempSkills;
+
+DROP TABLE TempSkills;
+
+END$$ 
+
+DELIMITER ;
