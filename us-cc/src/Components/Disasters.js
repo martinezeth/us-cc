@@ -34,7 +34,7 @@ export default function DropDown() {
             <MenuItem as={Link} to="/flood" bg='blue.600' color="black">Flood</MenuItem>
             <MenuItem as={Link} to="/hurricane" bg='blue.600' color="black">Hurricane</MenuItem>
             <MenuItem as={Link} to="/earthquake" bg='blue.600'color="black">Earthquake</MenuItem>
-            <MenuItem as={Link} to="/COVID" bg='blue.600' color="black">COVID-19</MenuItem>
+            {/* <MenuItem as={Link} to="/COVID" bg='blue.600' color="black">COVID-19</MenuItem> */}
           </MenuList>
         </Menu>
       </VStack>

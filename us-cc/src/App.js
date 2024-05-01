@@ -43,9 +43,7 @@ function App() {
                 <Route path="/flood" element={<Flood/>} />
                 <Route path="/earthquake" element={<Earthquake/>} />
                 <Route path="/hurricane" element={<Hurricane/>} />
-                <Route path="/COVID" element={<Covid/>} />
                 <Route path="/resources" element={<ResourcesPage />} />
-
               </Routes>
             <FooterComponent />
           </div>
