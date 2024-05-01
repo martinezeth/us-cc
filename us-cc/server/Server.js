@@ -1,13 +1,10 @@
 const express = require('express');
 const mysql = require('mysql');
-const sKey = require('./.env');
-const cookie = require('react-cookie');
 const { validateCredentials, createUser, decodeToken } = require('./Controllers/AuthController');
 const { getUserData } = require('./Controllers/UserController');
 const cors = require('cors');
 const jwt = require('jsonwebtoken');
 const dotenv = require('dotenv');
-// let [cookies] = cookie.useCookies(['authToken']);
 dotenv.config();
 const app = express();
 
@@ -27,9 +24,6 @@ app.use(cors({
     credentials: true
 }));
 
-/**
- * API Creation
- */
 app.use(express.json());
 
 /**
@@ -54,6 +48,7 @@ connection.connect(err => {
 /**
  * Routes
  */
+
 // LOGIN Route
 app.post('/api/login', (req, res) => {
     const { username, password } = req.body;
@@ -87,10 +82,7 @@ app.post('/api/login', (req, res) => {
 
 
 app.post('/api/logout', (req, res) => {
-    // Clear the authToken cookie
     res.clearCookie('authToken', { httpOnly: true });
-
-    // Respond with a success message
     res.status(200).send('Logout successful');
 });
 
@@ -99,14 +91,11 @@ app.post('/api/register', (req, res) => {
     const { username, password } = req.body;
     validateCredentials(username, password, (error, userExists) => {
         if (error) {
-            // Some error occurs
             console.error('Error validating credentials:', error);
             res.status(500).send('Internal Server Error');
             return;
         }
         if (userExists) {
-            // User already exists, respond with 409 Conflict
-            // res.status(409).send('Username already exists');
             console.log("User exists already");
             return;
         }
@@ -118,9 +107,7 @@ app.post('/api/register', (req, res) => {
                 res.status(500).send('Error creating user');
                 return;
             }
-            // User created successfully
-            // res.status(200).send('User created successfully');
-            // console.log("User created successfully");
+            console.log("User created successfully");
         });
     });
 });
@@ -157,7 +144,7 @@ app.get('/api/userinfo/:username', (req,res) => {
                 }
                 res.json(userData);
             });
-        } else {
+        } else { // This feels redundant
             
             const currentUser = decodedToken.username; 
             getUserData(currentUser, (error, userData) => {
@@ -166,7 +153,6 @@ app.get('/api/userinfo/:username', (req,res) => {
                     res.status(500).send('Error retrieving user data');
                     return;
                 }
-
 
                 res.json(userData);
             });
@@ -181,7 +167,7 @@ app.get('/api/userinfo/:username', (req,res) => {
 // User Posts Route
 app.get('/api/posts/:username', (req, res) => {
 
-    res.json(results);
+    res.json(res);
 });
 
 
