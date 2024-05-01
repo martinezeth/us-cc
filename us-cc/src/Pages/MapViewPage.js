@@ -73,11 +73,11 @@ function MapEvents({ setIncidents }) {
         neLng: bounds.getNorthEast().lng,
       };
 
-      console.log("Fetching incidents for bounds:", params); // Debug output for the requested coordinate bounds
+      // console.log("Fetching incidents for bounds:", params); // Debug output for the requested coordinate bounds
 
       axios.get(`http://localhost:8000/api/incident-reports`, { params })
         .then(response => {
-          console.log("Incidents fetched:", response.data); // Debug output for the fetched data
+          // console.log("Incidents fetched:", response.data); // Debug output for the fetched data
           setIncidents(response.data);
         })
         .catch(error => {

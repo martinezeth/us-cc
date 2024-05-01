@@ -43,6 +43,7 @@ function App() {
                 <Route path="/hurricane" element={<Hurricane/>} />
                 <Route path="/COVID" element={<Covid/>} />
                 <Route path="/resources" element={<ResourcesPage />} />
+                <Route path="/mapview" element={<MapPage />} />
 
               </Routes>
             <FooterComponent />
