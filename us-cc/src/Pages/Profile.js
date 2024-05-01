@@ -36,21 +36,34 @@ export default function Profile() {
     }, [username]);
 
     return (
-        <>
-            <div>
-                {userData ? (
-                    <div>
-                        {userData.map((user) => (
-                            <div key={user.user_id}>
-                                <p>User ID: {user.user_id}</p>
-                                <p>Role: {user.role}</p>
-                            </div>
-                        ))}
-                    </div>
-                ) : (
-                    <p>Loading user data...</p>
-                )}
+        <div className="user-profile">
+            <div className="avatar-section">
+                <div className="avatar">
+                    {/* Placeholder for avatar image, replace 'avatarUrl' with your dynamic source */}
+                    <img src={'../Images/Icons/warningCircle.svg'} alt="User Avatar" />
+                </div>
             </div>
-        </>
+            <div className="info-section">
+                <h2>{userData.name || 'Username'}</h2>
+                <p>{userData.role || 'Role'}</p>
+                <div className="additional-info">
+                    <p>Member since: {userData.memberSince || 'XX/XX/XXXX'}</p>
+                    <p>State: {userData.state || 'XXXXXXX'}</p>
+                    <p>City: {userData.city || 'XXXXXXX'}</p>
+                </div>
+                <div className="volunteering-section">
+                    <h3>Currently volunteering with:</h3>
+                    <ul>
+                        {userData.volunteeringPlaces && userData.volunteeringPlaces.length > 0 ? (
+                            userData.volunteeringPlaces.map((place, index) => (
+                                <li key={index}>{place}</li>
+                            ))
+                        ) : (
+                            <p>No volunteering places listed.</p>
+                        )}
+                    </ul>
+                </div>
+            </div>
+        </div>
     );
 };
