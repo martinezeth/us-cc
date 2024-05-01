@@ -100,7 +100,7 @@ export default function Profile() {
                     </Box>
                     <Box textAlign="center">
                         <Text fontSize="lg" fontWeight="bold">
-                            Currently volunteering with:
+                            Currently volunteering at:
                         </Text>
                         {volunteering && volunteering.length > 0 ? (
                             <Box as="ul" listStyleType="none" padding="0">
