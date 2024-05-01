@@ -1,20 +1,31 @@
 const express = require('express');
 const mysql = require('mysql');
-const { validateCredentials, createUser, getUserData, decodeToken } = require('./Controllers/AuthController');
-const { getVolunteersByRegion, getVolunteersBySkills } = require('./Controllers/UserController');
+const { validateCredentials, createUser, decodeToken } = require('./Controllers/AuthController');
+const { getUserData, getUserVolunteering, getUserDataUsername, getVolunteersByRegion, getVolunteersBySkills } = require('./Controllers/UserController');
+const { getUserPostData, getRecentPostData, createUserPost } = require('./Controllers/PostsController');
 const cors = require('cors');
-const app = express();
 const jwt = require('jsonwebtoken');
 const dotenv = require('dotenv');
 dotenv.config();
+const app = express();
 
-// Setup CORS correctly
+/**
+ * This file will contain:
+ * - Database connection
+ * - Routes
+ * - API host
+ * - API middleware
+ * - env variables
+ */
+
 app.use(cors({
-    origin: 'http://localhost:3000',  // Frontend server
-    methods: ['GET', 'POST', 'OPTIONS'],  // Allowed methods
-    credentials: true,  // To allow cookies
+    origin: 'http://localhost:3000',
+    methods: ['GET', 'POST'],
+    credentials: true,
     allowedHeaders: ['Content-Type', 'Authorization']
 }));
+
+app.use(express.json());
 
 /**
  * Database connection
@@ -34,16 +45,15 @@ connection.connect(err => {
     console.log('Connected to database.');
 });
 
-/**
- * API Creation
- */
-app.use(express.json());
 
 /**
  * Routes
  */
+
+// LOGIN Route
 app.post('/api/login', (req, res) => {
     const { username, password } = req.body;
+
     validateCredentials(username, password, (error, userExists) => {
         if (error) {
             console.error('Error validating credentials:', error);
@@ -51,7 +61,8 @@ app.post('/api/login', (req, res) => {
             return;
         }
         if (userExists) {
-            getUserData(username, (userDataError, userData) => {
+            // Assuming you have a function to retrieve user data from the database
+            getUserDataUsername(username, (userDataError, userData) => {
                 if (userDataError) {
                     console.error('Error retrieving user data:', userDataError);
                     res.status(500).send('Error retrieving user data');
@@ -60,8 +71,9 @@ app.post('/api/login', (req, res) => {
 
                 const key = process.env.JWT_SECRET;
                 const authToken = jwt.sign({ username, userData }, key, { expiresIn: '14h' });
-                res.cookie('authToken', authToken, { httpOnly: true });
-                res.status(200).send('Login successful');
+
+                // Send the authToken in the response
+                res.send({ authToken: authToken });
             });
         } else {
             res.status(401).send('Invalid username or password');
@@ -69,6 +81,13 @@ app.post('/api/login', (req, res) => {
     });
 });
 
+
+app.post('/api/logout', (req, res) => {
+    res.clearCookie('authToken', { httpOnly: true });
+    res.status(200).send('Logout successful');
+});
+
+// REGISTER Route
 app.post('/api/register', (req, res) => {
     const { username, password } = req.body;
     validateCredentials(username, password, (error, userExists) => {
@@ -81,20 +100,24 @@ app.post('/api/register', (req, res) => {
             console.log("User exists already");
             return;
         }
+
+        // If user does not exist, create the user
         createUser(username, password, (createError) => {
             if (createError) {
                 console.error('Error creating user:', createError);
                 res.status(500).send('Error creating user');
                 return;
             }
+            res.sendStatus(200);
+
         });
     });
 });
 
 
+// Incident Reports Route 
 app.get('/api/incident-reports', (req, res) => {
-    const { swLat, swLng, neLat, neLng, lat, lng, radius } = req.query;
-
+    const { swLat, swLng, neLat, neLng } = req.query;
     if (swLat && swLng && neLat && neLng) {
         connection.query(
             'SELECT * FROM IncidentReports WHERE location_lat BETWEEN ? AND ? AND location_lng BETWEEN ? AND ?',
@@ -144,18 +167,16 @@ app.get('/api/incident-reports', (req, res) => {
     }
 });
 
-
 // User Info Route
-app.get('/api/userinfo/:username', (req,res) => {
-    const authToken  = req.headers['authorization'];
+app.get('/api/userinfo/:username', (req, res) => {
+    const authToken = req.headers['authorization'];
     const { username } = req.params;
 
     if (authToken) {
-        
+
         const decodedToken = decodeToken(authToken, process.env.JWT_SECRET);
-        if (username) {
-            
-            getUserData(username, (error, userData) => {
+        if (decodedToken) {
+            getUserDataUsername(username, (error, userData) => {
                 if (error) {
                     console.error('Error retrieving user data:', error);
                     res.status(500).send('Error retrieving user data');
@@ -163,13 +184,79 @@ app.get('/api/userinfo/:username', (req,res) => {
                 }
                 res.json(userData);
             });
-        } else {
-        // If authToken is not provided in the request headers
+        } 
+
+    } else {
         res.status(401);
     }
-  }
 });
 
+// User Posts Route TODO
+app.get('/api/posts/:username', (req, res) => {
+    const authToken = req.headers['authorization'];
+
+    const decodedToken = decodeToken(authToken, process.env.JWT_SECRET);
+
+    const { username, userData } = decodedToken;
+    const user_id = userData[0][0].user_id;
+
+    // Call the function to get post data based on user ID
+    getUserPostData(user_id, (error, postData) => {
+        if (error) {
+            console.error('Error fetching posts:', error);
+            res.status(500).json({ error: 'Internal Server Error' });
+            return;
+        }
+        console.log("post data user", postData);
+
+        res.json(postData[0]);
+    });
+});
+
+app.get('/api/posts', (req, res) => {
+    const authToken = req.headers['authorization'];
+    // Call the function to get post data based on user ID
+    getRecentPostData((error, postData) => {
+        if (error) {
+            console.error('Error fetching posts:', error);
+            res.status(500).json({ error: 'Internal Server Error' });
+            return;
+        }
+        console.log("post data all", postData[0]);
+        res.json(postData[0]);
+    });
+});
+
+app.post('/api/createpost', (req, res) => {
+    const authToken = req.headers['authorization'];
+    const postInfo = req.body;
+    const decodedToken = decodeToken(authToken, process.env.JWT_SECRET);
+    console.log("dd", decodedToken);
+    postInfo['user_id'] = decodedToken.user_id;
+    console.log(postInfo);
+    createUserPost(postInfo, (err, result) => {
+        if(err){
+            console.error('Error creating post:', err);
+            res.status(500).send('Error creating post:');
+            return;
+        }
+        res.sendStatus(200);
+    });
+});
+
+
+app.get('/api/volunteering/:username', (req, res) => {
+    const { username } = req.params;
+
+    getUserVolunteering(username, (error, volunteeringData) => {
+        if (error) {
+            console.error('Error fetching volunteering data:', error);
+            res.status(500).json({ error: 'Internal server error' });
+            return;
+        }
+        res.json(volunteeringData);
+    });
+});
 
 // Route to get volunteers by region
 app.get('/api/volunteers/region', (req, res) => {
@@ -184,6 +271,7 @@ app.get('/api/volunteers/region', (req, res) => {
 });
 
 
+
 // Route to get volunteers by skills
 app.get('/api/volunteers/skills', (req, res) => {
     const { skill } = req.query;
@@ -195,6 +283,7 @@ app.get('/api/volunteers/skills', (req, res) => {
         }
     });
 });
+
 
 // Endpoint for getting number of volunteers by region
 app.get('/api/volunteers/region-chart', (req, res) => {
@@ -222,10 +311,9 @@ app.get('/api/volunteers/skill-chart', (req, res) => {
 });
 
 
-
 /**
- * Define the port
- * Listen on port 5000
+ * Define the PORT
+ * Listen on PORT
  */
 const PORT = process.env.PORT;
 app.listen(PORT, () => {

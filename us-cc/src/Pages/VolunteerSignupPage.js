@@ -27,7 +27,6 @@ function VolunteerPage() {
                 skills,
                 availability,
             });
-            console.log('Volunteer registration successful:', response.data);
             // Optionally, you can redirect the user to a different page after successful registration
             // navigate('/thank-you');
             navigate('/');

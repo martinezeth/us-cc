@@ -27,9 +27,9 @@ CREATE TABLE IF NOT EXISTS
         user_id INT AUTO_INCREMENT PRIMARY KEY,
         username VARCHAR(50) NOT NULL UNIQUE,
         password_hash VARCHAR(255) NOT NULL,
-        name VARCHAR(255) NOT NULL,
-        region INT NULL,
-        date_joined DATE NULL DEFAULT CURRENT_DATE,
+        name VARCHAR(255) NOT NULL DEFAULT '',
+        region INT NULL DEFAULT 1,
+        date_joined DATE NULL,
         role ENUM('user', 'admin') DEFAULT 'user'
     );
 
@@ -40,7 +40,7 @@ CREATE TABLE IF NOT EXISTS
         title VARCHAR(255) NOT NULL,
         body TEXT NOT NULL,
         region VARCHAR(50) NULL,
-        date_posted DATETIME NULL,
+        date_posted DATETIME NULL CURRENT_TIMESTAMP(),
         FOREIGN KEY (user_id) REFERENCES Users (user_id)
     );
 
@@ -112,7 +112,67 @@ CREATE TABLE IF NOT EXISTS
         location_lng DECIMAL(10, 6)
     );
 
-CREATE PROCEDURE `GetVolunteersByRegion`(IN regionName VARCHAR(255)) BEGIN
+DELIMITER $$
+CREATE PROCEDURE IF NOT EXISTS `GetUserInfo`(IN `userid` INT) 
+BEGIN
+SELECT
+    U.date_joined,
+    U.user_id,
+    U.name,
+    U.username,
+    U.role,
+    VL.location_name 'Volunteering at',
+    R.state,
+    R.city
+FROM
+    users U
+    JOIN uservolunteeringlocation UVL ON UVL.user_id = U.user_id
+    JOIN volunteeringlocation VL ON VL.location_id = UVL.location_id
+    JOIN region R ON U.region = R.region_id
+WHERE
+    U.user_id = userid;
+
+END$$
+
+CREATE PROCEDURE IF NOT EXISTS `GetUserInfoUsername`(IN `username` VARCHAR(50))
+BEGIN
+SELECT
+    U.date_joined,
+    U.user_id,
+    U.name,
+    U.username,
+    U.role,
+    GROUP_CONCAT(VL.location_name SEPARATOR ', ') AS 'Volunteering at',
+    -- Concatenate location names
+    R.state,
+    R.city
+FROM
+    Users U
+    JOIN UserVolunteeringLocation UVL ON UVL.user_id = U.user_id
+    JOIN VolunteeringLocation VL ON VL.location_id = UVL.location_id
+    JOIN Region R ON U.region = R.region_id
+WHERE
+    U.username = username
+GROUP BY
+    U.user_id;
+
+END$$
+
+CREATE PROCEDURE IF NOT EXISTS `GetUserVolunteering`(IN `username` VARCHAR(50))
+BEGIN
+SELECT
+    VL.location_name
+FROM
+    Users U
+    JOIN UserVolunteeringLocation UVL ON U.user_id = UVL.user_id
+    JOIN VolunteeringLocation VL ON UVL.location_id = VL.location_id
+WHERE
+    U.username = username;
+
+END$$
+
+CREATE PROCEDURE IF NOT EXISTS `GetVolunteersByRegion`(IN `regionName` VARCHAR(255))
+BEGIN
 SELECT
     *
 FROM
@@ -120,9 +180,10 @@ FROM
 WHERE
     region = regionName;
 
-END;
+END$$
 
-CREATE PROCEDURE `GetVolunteersBySkills`(IN skill VARCHAR(255)) BEGIN
+CREATE PROCEDURE IF NOT EXISTS `GetVolunteersBySkills`(IN `skill` VARCHAR(255))
+BEGIN
 SELECT
     *
 FROM
@@ -130,4 +191,37 @@ FROM
 WHERE
     FIND_IN_SET(skill, skills) > 0;
 
-END;
+END$$
+
+CREATE PROCEDURE IF NOT EXISTS `GetUserPosts`(IN `userid` INT)
+BEGIN
+SELECT
+    p.*,
+    u.name AS user_name,
+    u.username AS user_username,
+    r.region_name AS user_region
+FROM
+    posts p
+    JOIN users u ON p.user_id = u.user_id
+    LEFT JOIN Region r ON u.region = r.region_id
+WHERE
+    p.user_id = userid;
+
+END$$
+
+CREATE PROCEDURE IF NOT EXISTS `GetRecentPosts`() BEGIN
+SELECT
+    p.*,
+    u.name AS user_name,
+    u.username AS user_username,
+    r.region_name AS user_region
+FROM
+    posts p
+    JOIN users u ON p.user_id = u.user_id
+    LEFT JOIN Region r ON u.region = r.region_id
+WHERE
+    p.date_posted >= NOW() - INTERVAL 48 HOUR;
+
+END$$
+
+DELIMITER ;

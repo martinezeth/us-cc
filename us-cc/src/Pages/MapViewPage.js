@@ -4,7 +4,6 @@ import L from 'leaflet';
 import { Box, ChakraProvider, VStack, Text, Button, Select } from '@chakra-ui/react';
 import { Icons } from '@chakra-ui/icons';
 import axios from 'axios';
-
 import earthquakeIconUrl from '../Images/Icons/earthquakeEventIcon.svg';
 import fireIconUrl from '../Images/Icons/fireEventIcon.svg';
 import aidIconUrl from '../Images/Icons/aidEventIcon.svg';
@@ -85,6 +84,7 @@ function MapEvents({ setIncidents }) {
         neLat: bounds.getNorthEast().lat,
         neLng: bounds.getNorthEast().lng,
       };
+
       axios.get(`http://localhost:8000/api/incident-reports`, { params })
         .then(response => setIncidents(response.data))
         .catch(error => console.error("Error fetching incidents:", error));
