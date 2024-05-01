@@ -52,6 +52,7 @@ function getRecentPostData(callback) {
 
 function createUserPost(postInfo, callback) {
     const {user_id, title, body, region} = postInfo;
+    console.log("po", postInfo);
     pool.getConnection((err, connection) => {
         if (err) {
             callback(err, null);

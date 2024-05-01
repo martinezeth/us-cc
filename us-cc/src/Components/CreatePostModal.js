@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import axios from 'axios';
 import '../Styles/styles.css';
 
 const CreatePostModal = ({ isOpen, onClose, onCreatePost }) => {
@@ -6,12 +7,40 @@ const CreatePostModal = ({ isOpen, onClose, onCreatePost }) => {
     const [body, setBody] = useState('');
 
     const handleCancel = () => {
+        // Clear title and body
+        setTitle('');
+        setBody('');
 
+        // Close the modal
+        onClose();
     }
 
     const handlePost = () => {
-
-    }
+        // Assuming title and body are state variables
+        const postInfo = {
+            title: title,
+            body: body
+        };
+        const authToken = document.cookie && document.cookie.split('; ')
+            .find(row => row.startsWith('authToken=')).split('=')[1];
+        // Make the axios POST request
+        axios.post('http://localhost:5000/api/createpost', postInfo, {
+            headers: {
+                Authorization: authToken
+            }
+        })
+            .then(response => {
+                // Handle success
+                console.log('Post created successfully');
+                // Close the modal or perform any other actions upon successful creation
+                onClose();
+            })
+            .catch(error => {
+                // Handle error
+                console.error('Error creating post:', error);
+                // You can optionally display an error message to the user
+            });
+    };
 
     return (
         <div className={isOpen ? "modalshown" : "modalhidden"}>

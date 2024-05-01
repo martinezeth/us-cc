@@ -205,9 +205,13 @@ app.get('/api/posts', (req, res) => {
 app.post('/api/createpost', (req, res) => {
     const authToken = req.headers['authorization'];
     const postInfo = req.body;
+    const decodedToken = decodeToken(authToken, process.env.JWT_SECRET);
+    console.log("dd", decodedToken);
+    postInfo['user_id'] = decodedToken.user_id;
+    console.log(postInfo);
     createUserPost(postInfo, (err, result) => {
         if(err){
-            console.error('Error creating post:', error);
+            console.error('Error creating post:', err);
             res.status(500).send('Error creating post:');
             return;
         }
