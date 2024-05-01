@@ -61,17 +61,6 @@ function LocationMarker() {
 }
 
 
-
-  useEffect(() => {
-    axios.get('http://localhost:5000/api/incident-reports')
-      .then(response => {
-        // console.log('Incidents fetched:', response.data); // DEBUG LINE
-        setIncidents(response.data);
-      })
-      .catch(error => 
-        console.error("Error fetching incident reports for map view:", error));
-  }, []);
-
 function MapEvents({ setIncidents }) {
   const map = useMapEvents({
     moveend: () => {
