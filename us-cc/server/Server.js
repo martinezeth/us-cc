@@ -1,9 +1,7 @@
 const express = require('express');
 const mysql = require('mysql');
-const sKey = require('./.env');
-const cookie = require('react-cookie');
-const { validateCredentials, createUser, decodeToken } = require('./Controllers/AuthController');
-const { getUserData } = require('./Controllers/UserController');
+const sKey = require('./jwSec');
+const { validateCredentials, createUser, getUserData, decodeToken } = require('./AuthController');
 const cors = require('cors');
 const jwt = require('jsonwebtoken');
 const dotenv = require('dotenv');
@@ -21,6 +19,10 @@ const app = express();
  */
 
 
+const dotenv = require('dotenv');
+dotenv.config();
+
+// Setup CORS correctly
 app.use(cors({
     origin: 'http://localhost:3000',
     methods: ['GET', 'POST'],
@@ -50,14 +52,12 @@ connection.connect(err => {
     console.log('Connected to database.');
 });
 
-
 /**
  * Routes
  */
 // LOGIN Route
 app.post('/api/login', (req, res) => {
     const { username, password } = req.body;
-
     validateCredentials(username, password, (error, userExists) => {
         if (error) {
             console.error('Error validating credentials:', error);
@@ -65,7 +65,6 @@ app.post('/api/login', (req, res) => {
             return;
         }
         if (userExists) {
-            // Assuming you have a function to retrieve user data from the database
             getUserData(username, (userDataError, userData) => {
                 if (userDataError) {
                     console.error('Error retrieving user data:', userDataError);
@@ -75,6 +74,8 @@ app.post('/api/login', (req, res) => {
 
                 const key = process.env.JWT_SECRET;
                 const authToken = jwt.sign({ username, userData }, key, { expiresIn: '14h' });
+                res.cookie('authToken', authToken, { httpOnly: true });
+                res.status(200).send('Login successful');
 
                 // Send the authToken in the response
                 res.send({ authToken: authToken });
@@ -85,46 +86,27 @@ app.post('/api/login', (req, res) => {
     });
 });
 
-
-app.post('/api/logout', (req, res) => {
-    // Clear the authToken cookie
-    res.clearCookie('authToken', { httpOnly: true });
-
-    // Respond with a success message
-    res.status(200).send('Logout successful');
-});
-
-// REGISTER Route
 app.post('/api/register', (req, res) => {
     const { username, password } = req.body;
     validateCredentials(username, password, (error, userExists) => {
         if (error) {
-            // Some error occurs
             console.error('Error validating credentials:', error);
             res.status(500).send('Internal Server Error');
             return;
         }
         if (userExists) {
-            // User already exists, respond with 409 Conflict
-            // res.status(409).send('Username already exists');
             console.log("User exists already");
             return;
         }
-
-        // If user does not exist, create the user
         createUser(username, password, (createError) => {
             if (createError) {
                 console.error('Error creating user:', createError);
                 res.status(500).send('Error creating user');
                 return;
             }
-            // User created successfully
-            // res.status(200).send('User created successfully');
-            // console.log("User created successfully");
         });
     });
 });
-
 
 // Incident Reports Route 
 app.get('/api/incident-reports', (req, res) => {
@@ -137,7 +119,6 @@ app.get('/api/incident-reports', (req, res) => {
         res.json(results);
     });
 });
-
 
 // User Info Route
 app.get('/api/userinfo/:username', (req,res) => {
