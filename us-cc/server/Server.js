@@ -1,38 +1,20 @@
 const express = require('express');
 const mysql = require('mysql');
-const sKey = require('./jwSec');
-const { validateCredentials, createUser, getUserData, decodeToken } = require('./AuthController');
+const { validateCredentials, createUser, getUserData, decodeToken } = require('./Controllers/AuthController');
+const { getVolunteersByRegion, getVolunteersBySkills } = require('./Controllers/UserController');
 const cors = require('cors');
-const jwt = require('jsonwebtoken');
-const dotenv = require('dotenv');
-// let [cookies] = cookie.useCookies(['authToken']);
-dotenv.config();
 const app = express();
-
-/**
- * This file will contain:
- * - Database connection
- * - Routes
- * - API host
- * - API middleware
- * - env variables
- */
-
-
+const jwt = require('jsonwebtoken');
 const dotenv = require('dotenv');
 dotenv.config();
 
 // Setup CORS correctly
 app.use(cors({
-    origin: 'http://localhost:3000',
-    methods: ['GET', 'POST'],
-    credentials: true
+    origin: 'http://localhost:3000',  // Frontend server
+    methods: ['GET', 'POST', 'OPTIONS'],  // Allowed methods
+    credentials: true,  // To allow cookies
+    allowedHeaders: ['Content-Type', 'Authorization']
 }));
-
-/**
- * API Creation
- */
-app.use(express.json());
 
 /**
  * Database connection
@@ -53,9 +35,13 @@ connection.connect(err => {
 });
 
 /**
+ * API Creation
+ */
+app.use(express.json());
+
+/**
  * Routes
  */
-// LOGIN Route
 app.post('/api/login', (req, res) => {
     const { username, password } = req.body;
     validateCredentials(username, password, (error, userExists) => {
@@ -76,9 +62,6 @@ app.post('/api/login', (req, res) => {
                 const authToken = jwt.sign({ username, userData }, key, { expiresIn: '14h' });
                 res.cookie('authToken', authToken, { httpOnly: true });
                 res.status(200).send('Login successful');
-
-                // Send the authToken in the response
-                res.send({ authToken: authToken });
             });
         } else {
             res.status(401).send('Invalid username or password');
@@ -108,17 +91,33 @@ app.post('/api/register', (req, res) => {
     });
 });
 
-// Incident Reports Route 
 app.get('/api/incident-reports', (req, res) => {
-    connection.query('SELECT * FROM IncidentReports', (error, results) => {
-        if (error) {
-            console.error("Error fetching incident reports: ", error);
-            res.status(500).send("Error fetching incident reports");
-            return;
-        }
-        res.json(results);
-    });
+    const { swLat, swLng, neLat, neLng } = req.query;
+    if(swLat && swLng && neLat && neLng) {
+        connection.query(
+            'SELECT * FROM IncidentReports WHERE location_lat BETWEEN ? AND ? AND location_lng BETWEEN ? AND ?',
+            [parseFloat(swLat), parseFloat(neLat), parseFloat(swLng), parseFloat(neLng)],
+            (error, results) => {
+                if (error) {
+                    console.error("Error fetching incident reports: ", error);
+                    res.status(500).send("Error fetching incident reports");
+                    return;
+                }
+                res.json(results);
+            }
+        );
+    } else {
+        connection.query('SELECT * FROM IncidentReports', (error, results) => {
+            if (error) {
+                console.error("Error fetching incident reports: ", error);
+                res.status(500).send("Error fetching incident reports");
+                return;
+            }
+            res.json(results);
+        });
+    }
 });
+
 
 // User Info Route
 app.get('/api/userinfo/:username', (req,res) => {
@@ -139,38 +138,43 @@ app.get('/api/userinfo/:username', (req,res) => {
                 res.json(userData);
             });
         } else {
-            
-            const currentUser = decodedToken.username; 
-            getUserData(currentUser, (error, userData) => {
-                if (error) {
-                    console.error('Error retrieving user data:', error);
-                    res.status(500).send('Error retrieving user data');
-                    return;
-                }
-
-
-                res.json(userData);
-            });
-           
-        }
-    } else {
         // If authToken is not provided in the request headers
         res.status(401);
     }
+  }
 });
 
-// User Posts Route
-app.get('/api/posts/:username', (req, res) => {
 
-    res.json(results);
+// Route to get volunteers by region
+app.get('/api/volunteers/region', (req, res) => {
+    const { region } = req.query;
+    getVolunteersByRegion(region, (err, volunteers) => {
+        if (err) {
+            res.status(500).send('Failed to fetch volunteers');
+        } else {
+            res.json(volunteers);
+        }
+    });
 });
 
+
+// Route to get volunteers by skills
+app.get('/api/volunteers/skills', (req, res) => {
+    const { skill } = req.query;
+    getVolunteersBySkills(skill, (err, volunteers) => {
+        if (err) {
+            res.status(500).send('Failed to fetch volunteers');
+        } else {
+            res.json(volunteers);
+        }
+    });
+});
 
 
 
 /**
- * Define the PORT
- * Listen on PORT
+ * Define the port
+ * Listen on port 5000
  */
 const PORT = process.env.PORT;
 app.listen(PORT, () => {
