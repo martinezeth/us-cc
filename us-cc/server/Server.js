@@ -2,7 +2,7 @@ const express = require('express');
 const mysql = require('mysql');
 const { validateCredentials, createUser, decodeToken } = require('./Controllers/AuthController');
 const { getUserData, getUserVolunteering, getUserDataUsername, getVolunteersByRegion, getVolunteersBySkills } = require('./Controllers/UserController');
-const { getUserPostData, getRecentPostData } = require('./Controllers/PostsController');
+const { getUserPostData, getRecentPostData, createUserPost } = require('./Controllers/PostsController');
 const cors = require('cors');
 const jwt = require('jsonwebtoken');
 const dotenv = require('dotenv');
@@ -199,6 +199,19 @@ app.get('/api/posts', (req, res) => {
         }
         console.log("post data all", postData[0]);
         res.json(postData[0]);
+    });
+});
+
+app.post('/api/createpost', (req, res) => {
+    const authToken = req.headers['authorization'];
+    const postInfo = req.body;
+    createUserPost(postInfo, (err, result) => {
+        if(err){
+            console.error('Error creating post:', error);
+            res.status(500).send('Error creating post:');
+            return;
+        }
+        res.sendStatus(200);
     });
 });
 

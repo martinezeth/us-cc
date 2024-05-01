@@ -3,11 +3,12 @@ import axios from 'axios';
 import { useParams } from 'react-router-dom';
 import { Grid, Card, Box, CardHeader, CardBody, CardFooter, Text, Button, Heading, Stack, StackDivider, VStack, HStack, Divider } from '@chakra-ui/react'
 import '../Styles/styles.css';
+import CreatePostModal from '../Components/CreatePostModal';
 
 
 const Post = ({ postData }) => {
     const { user_name, user_username, user_region, title, body, date_posted } = postData;
-    console.log("supposed post data", postData);
+    
     const datePosted = date_posted ? new Date(date_posted) : null;
     const formattedDate = datePosted ? datePosted.toLocaleDateString() : 'N/A';
 
@@ -38,10 +39,16 @@ const Post = ({ postData }) => {
 export default function Posts() {
     const [posts, setPosts] = useState([]);
     const { username } = useParams();
+    const [loggedIn, setLoggedIn] = useState(false);
+    const [isModalOpen, setIsModalOpen] = useState(false);
+
+
     useEffect(() => {
         const fetchData = async () => {
             const authToken = document.cookie && document.cookie.split('; ').find(row => row.startsWith('authToken=')).split('=')[1];
-            
+            if(authToken){
+                setLoggedIn(true);
+            }
             try {
                 let response;
                 if (username) {
@@ -67,10 +74,28 @@ export default function Posts() {
         fetchData();
     }, [username]);
 
-    console.log("posts:", posts);
+    const showModal = () => {
+        setIsModalOpen(true);
+    };
+    const hideModal = () => {
+        setIsModalOpen(false);
+    };
+    
     return (
         <>
-            <Button className="newPostButton" colorScheme='blue'>New Post</Button>
+        { loggedIn ?
+        <>
+                <Button className="newPostButton" colorScheme='blue' onClick={showModal}>
+                    New Post
+                </Button>
+                    <CreatePostModal isOpen={isModalOpen} onClose={hideModal} />
+                </>
+                
+            :
+            <div></div>
+         }
+            
+
             <Grid
                 className='postcard'
                 p={5}

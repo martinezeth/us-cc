@@ -50,4 +50,25 @@ function getRecentPostData(callback) {
     });
 }
 
-module.exports = { getUserPostData, getRecentPostData }
+function createUserPost(postInfo, callback) {
+    const {user_id, title, body, region} = postInfo;
+    pool.getConnection((err, connection) => {
+        if (err) {
+            callback(err, null);
+            return;
+        }
+        connection.query(`INSERT INTO posts (${user_id}, ${title}, ${body}, ${region})`, (error, results, fields) => {
+            if (error) {
+                connection.release();
+                callback(error, null);
+                return;
+            }
+            // console.log("Got post info: ", results);
+            callback(null, results);
+            connection.release();
+
+        })
+    });
+}
+
+module.exports = { getUserPostData, getRecentPostData, createUserPost }
