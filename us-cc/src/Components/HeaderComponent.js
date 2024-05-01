@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Box, Flex, Button, Image, useDisclosure, IconButton, Spacer, Text, Link as ChakraLink , Stack} from '@chakra-ui/react';
+import { Box, Flex, Button, Image, useDisclosure, IconButton, Spacer, Text, Link as ChakraLink , Stack, Avatar} from '@chakra-ui/react';
 import { HamburgerIcon, CloseIcon} from '@chakra-ui/icons';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useCookies } from 'react-cookie';
@@ -7,6 +7,18 @@ import Logo from '../Images/usccLogoDraft.svg';
 import DropDown from './Disasters';
 import { jwtDecode } from 'jwt-decode';
 import axios from 'axios';
+
+const UserProfileAvatar = ({ username }) => {
+  const initials = username.substring(1,2).toUpperCase();
+
+  return (
+    <Link to={`/profile/${username}`}>
+      <Avatar name={username} size="md">
+        {initials}
+      </Avatar>
+    </Link>
+  );
+};
 
 const HeaderComponent = () => {
   const location = useLocation();
@@ -79,8 +91,9 @@ const HeaderComponent = () => {
             <Button  padding="8px 16px" variant="ghost" as={Link} to="/posts">Posts</Button>
             <Button  padding="8px 16px" variant="ghost" onClick={() => handleNavigation('about-section')}>About</Button>
             {username ? (
+              
               <>
-                <Link to={'/profile/'+username}><Text padding="8px 16px" color="white">{username.substring(0, 2).toUpperCase()}</Text></Link>
+                <UserProfileAvatar username={username} />
                 <Button padding={"8px 16px"} variant="ghost" onClick={handleLogout}>Logout</Button>
               </>
             ) : (

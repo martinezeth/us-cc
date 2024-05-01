@@ -122,13 +122,12 @@ app.get('/api/incident-reports', (req, res) => {
 
 // User Info Route
 app.get('/api/userinfo/:username', (req,res) => {
-    const { authToken } = req.headers;
+    const authToken  = req.headers['authorization'];
     const { username } = req.params;
 
     if (authToken) {
         
-        const decodedToken = decodeToken(authToken);
-        console.log("decoded: ", decodedToken);
+        const decodedToken = decodeToken(authToken, process.env.JWT_SECRET);
         if (username) {
             
             getUserData(username, (error, userData) => {
@@ -137,8 +136,6 @@ app.get('/api/userinfo/:username', (req,res) => {
                     res.status(500).send('Error retrieving user data');
                     return;
                 }
-
-                
                 res.json(userData);
             });
         } else {
@@ -158,7 +155,7 @@ app.get('/api/userinfo/:username', (req,res) => {
         }
     } else {
         // If authToken is not provided in the request headers
-        res.status(401).send('Unauthorized');
+        res.status(401);
     }
 });
 
@@ -168,21 +165,6 @@ app.get('/api/posts/:username', (req, res) => {
     res.json(results);
 });
 
-/**
- * Functions
- */
-
-function authenticateToken(req, res, nex) {
-    const authHeader = req.headers['authorization'];
-    const token = authHeader && authHeader.split(' ')[1];
-    if(token === null) return res.sendStatus(401);
-
-    jwt.verify(token, process.env.JWT_SECRET, (err, user)=>{
-        if(err) return res.sendStatus(403);
-        req.user = user;
-        next();
-    });
-}
 
 
 
