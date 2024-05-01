@@ -4,7 +4,7 @@ import { useLocation } from 'react-router-dom';
 import earthquake from '../Images/earthquake.png';
 
 
-export default function Wildfire() {
+export default function Earthquake() {
     const bg = useColorModeValue('gray.50', 'gray.800');
     const textColor = useColorModeValue('gray.800', 'gray.100');
 

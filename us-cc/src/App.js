@@ -17,6 +17,7 @@ import Flood from './Pages/Flood';
 import Hurricane from './Pages/Hurricane';
 import Covid from './Pages/Covid';
 import Earthquake from './Pages/Earthquake';
+import AboutPage from './Pages/About';
 import { CookiesProvider, useCookies } from 'react-cookie';
 
 import theme from './Styles/theme';
@@ -36,6 +37,7 @@ function App() {
                 <Route path='*' element={<NotFoundPage />} />
                 <Route path="/login" element={<AuthenticationPage RegoOrLogin="Login" />} />
                 <Route path="/register" element={<AuthenticationPage RegoOrLogin="Register" />} />
+                <Route path="/about" element={<AboutPage/>} />
                 <Route path="/newreport" element={<NewReportPage />} />
                 <Route path="/posts" element={<Posts/>}/>
                 <Route path="/profile/:username" element={<Profile/>} />
