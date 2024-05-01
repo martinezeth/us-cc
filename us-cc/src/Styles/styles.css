@@ -29,3 +29,12 @@
     text-align: center;
   }
 
+
+  .newPostButton {
+    color: blue;
+    border-radius: 9999px; /* Rounded to make it circular */
+    font-size: small; /* Smaller font size */
+    width: 100px;
+    position: sticky;
+    top: 20px;
+}
