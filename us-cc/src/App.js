@@ -32,11 +32,13 @@ function App() {
             <HeaderComponent />
               <Routes>
                 <Route path="/" element={<LandingPage />} />
+                <Route path='*' element={<NotFoundPage />} />
                 <Route path="/login" element={<AuthenticationPage RegoOrLogin="Login" />} />
                 <Route path="/register" element={<AuthenticationPage RegoOrLogin="Register" />} />
                 <Route path="/newreport" element={<NewReportPage />} />
                 <Route path="/posts" element={<Posts/>}/>
                 <Route path="/profile/:username" element={<Profile/>} />
+                <Route path='/mapview' element={<MapPage />} />
                 <Route path="/wildfire" element={<Wildfire/>} />
                 <Route path="/flood" element={<Flood/>} />
                 <Route path="/earthquake" element={<Earthquake/>} />

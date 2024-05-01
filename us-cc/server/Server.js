@@ -71,7 +71,6 @@ app.post('/api/login', (req, res) => {
                     res.status(500).send('Error retrieving user data');
                     return;
                 }
-                const key = sKey;
 
                 const key = process.env.JWT_SECRET;
                 const authToken = jwt.sign({ username, userData }, key, { expiresIn: '14h' });
