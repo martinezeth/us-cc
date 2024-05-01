@@ -9,6 +9,7 @@ import NewReportPage from './Pages/NewReportPage';
 import NotFoundPage from './Pages/NotFoundPage';
 import MapPage from './Pages/MapViewPage';
 import { AuthenticationPage } from './Pages/LoginRegisterPage';
+import VolunteerSignupPage from './Pages/VolunteerSignupPage';
 import VolunteerDashPage from './Pages/VolunteerDashPage';
 import Posts from './Pages/Posts';
 import Profile from './Pages/Profile';
@@ -46,6 +47,8 @@ function App() {
                 <Route path="/resources" element={<ResourcesPage />} />
                 <Route path="/mapview" element={<MapPage />} />
                 <Route path="/volunteering" element={<VolunteerDashPage />} />
+                <Route path="/volunteer-register" element={<VolunteerSignupPage />} />
+
               </Routes>
             <FooterComponent />
           </div>

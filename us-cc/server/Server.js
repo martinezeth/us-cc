@@ -144,6 +144,31 @@ app.get('/api/volunteers/skills', (req, res) => {
     });
 });
 
+// Endpoint for getting number of volunteers by region
+app.get('/api/volunteers/region-chart', (req, res) => {
+    connection.query('SELECT region, COUNT(*) AS count FROM Volunteers GROUP BY region', (error, results) => {
+        if (error) {
+            console.error('Error fetching aggregated volunteers:', error);
+            res.status(500).send('Error fetching data');
+            return;
+        }
+        res.json(results);
+    });
+});
+
+
+// Endpoint for getting number of volunteers by skill
+app.get('/api/volunteers/skill-chart', (req, res) => {
+    connection.query('SELECT skills, COUNT(*) AS count FROM Volunteers GROUP BY skills', (error, results) => {
+        if (error) {
+            console.error('Error fetching aggregated volunteers:', error);
+            res.status(500).send('Error fetching data');
+            return;
+        }
+        res.json(results);
+    });
+});
+
 
 /**
  * Define the port
