@@ -1,6 +1,7 @@
 const express = require('express');
 const mysql = require('mysql');
 const { validateCredentials, createUser, getUserData, decodeToken } = require('./Controllers/AuthController');
+const { getVolunteersByRegion, getVolunteersBySkills } = require('./Controllers/UserController');
 const cors = require('cors');
 const app = express();
 const jwt = require('jsonwebtoken');
@@ -89,17 +90,6 @@ app.post('/api/register', (req, res) => {
     });
 });
 
-// Route for fetching Incident Reports
-// app.get('/api/incident-reports', (req, res) => {
-//     connection.query('SELECT * FROM IncidentReports', (error, results) => {
-//         if (error) {
-//             console.error("Error fetching incident reports: ", error);
-//             res.status(500).send("Error fetching incident reports");
-//             return;
-//         }
-//         res.json(results);
-//     });
-// });
 
 app.get('/api/incident-reports', (req, res) => {
     const { swLat, swLng, neLat, neLng } = req.query;
@@ -126,6 +116,32 @@ app.get('/api/incident-reports', (req, res) => {
             res.json(results);
         });
     }
+});
+
+
+// Route to get volunteers by region
+app.get('/api/volunteers/region', (req, res) => {
+    const { region } = req.query;
+    getVolunteersByRegion(region, (err, volunteers) => {
+        if (err) {
+            res.status(500).send('Failed to fetch volunteers');
+        } else {
+            res.json(volunteers);
+        }
+    });
+});
+
+
+// Route to get volunteers by skills
+app.get('/api/volunteers/skills', (req, res) => {
+    const { skill } = req.query;
+    getVolunteersBySkills(skill, (err, volunteers) => {
+        if (err) {
+            res.status(500).send('Failed to fetch volunteers');
+        } else {
+            res.json(volunteers);
+        }
+    });
 });
 
 

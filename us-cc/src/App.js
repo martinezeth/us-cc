@@ -9,6 +9,7 @@ import NewReportPage from './Pages/NewReportPage';
 import NotFoundPage from './Pages/NotFoundPage';
 import MapPage from './Pages/MapViewPage';
 import { AuthenticationPage } from './Pages/LoginRegisterPage';
+import VolunteerDashPage from './Pages/VolunteerDashPage';
 import Posts from './Pages/Posts';
 import Profile from './Pages/Profile';
 import Wildfire from './Pages/WildFire';
@@ -44,7 +45,7 @@ function App() {
                 <Route path="/COVID" element={<Covid/>} />
                 <Route path="/resources" element={<ResourcesPage />} />
                 <Route path="/mapview" element={<MapPage />} />
-
+                <Route path="/volunteering" element={<VolunteerDashPage />} />
               </Routes>
             <FooterComponent />
           </div>
