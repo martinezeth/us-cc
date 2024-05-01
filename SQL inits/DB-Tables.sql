@@ -4,7 +4,6 @@ CREATE DATABASE IF NOT EXISTS USCCDB;
 -- Use the database
 USE USCCDB;
 
-
 DROP TABLE IF EXISTS Posts;
 
 DROP TABLE IF EXISTS UserVolunteeringLocation;
@@ -30,7 +29,7 @@ CREATE TABLE IF NOT EXISTS
         password_hash VARCHAR(255) NOT NULL,
         name VARCHAR(255) NOT NULL,
         region INT NULL,
-        date_joined DATE NULL,
+        date_joined DATE NULL DEFAULT CURRENT_DATE,
         role ENUM('user', 'admin') DEFAULT 'user'
     );
 
@@ -112,3 +111,23 @@ CREATE TABLE IF NOT EXISTS
         location_lat DECIMAL(10, 6),
         location_lng DECIMAL(10, 6)
     );
+
+CREATE PROCEDURE `GetVolunteersByRegion`(IN regionName VARCHAR(255)) BEGIN
+SELECT
+    *
+FROM
+    Volunteers
+WHERE
+    region = regionName;
+
+END;
+
+CREATE PROCEDURE `GetVolunteersBySkills`(IN skill VARCHAR(255)) BEGIN
+SELECT
+    *
+FROM
+    Volunteers
+WHERE
+    FIND_IN_SET(skill, skills) > 0;
+
+END;
