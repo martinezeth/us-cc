@@ -9,13 +9,33 @@ const pool = mysql.createPool({
     database: 'usccdb'
 });
 
-function getUserData(username, callback) {
+function getUserDataUsername(username, callback) {
     pool.getConnection((err, connection) => {
         if (err) {
             callback(err, null);
             return;
         }
-        connection.query('SELECT * FROM users WHERE username = ?', [username], (error, results, fields) => {
+        connection.query('CALL GetUserInfoUsername(?)', [username], (error, results, fields) => {
+            if (error) {
+                connection.release();
+                callback(error, null);
+                return;
+            }
+            
+            callback(null, results);
+            connection.release();
+
+        })
+    });
+}
+
+function getUserData(user_id, callback) {
+    pool.getConnection((err, connection) => {
+        if (err) {
+            callback(err, null);
+            return;
+        }
+        connection.query(`CALL GetUserInfo(?)`, [user_id], (error, results, fields) => {
             if (error) {
                 connection.release();
                 callback(error, null);
@@ -29,4 +49,22 @@ function getUserData(username, callback) {
     });
 }
 
-module.exports = {getUserData}
+function getUserVolunteering(username, callback){
+    pool.getConnection((err, connection) => {
+        if(err){
+            callback(err, null)
+            return;
+        }
+        connection.query(`CALL GetUserVolunteering(?)`, [username], (error, results, fields) => {
+            if(error){
+                connection.release();
+                callback(error, null);
+                return;
+            }
+            callback(null, results);
+            connection.release();
+        });
+    });
+}
+
+module.exports = { getUserData, getUserDataUsername, getUserVolunteering }

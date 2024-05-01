@@ -50,7 +50,7 @@ function MapPage() {
   useEffect(() => {
     axios.get('http://localhost:5000/api/incident-reports')
       .then(response => {
-        console.log('Incidents fetched:', response.data); // DEBUG LINE
+        // console.log('Incidents fetched:', response.data); // DEBUG LINE
         setIncidents(response.data);
       })
       .catch(error => 

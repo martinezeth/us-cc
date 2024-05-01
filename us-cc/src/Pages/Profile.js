@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useLocation, useParams } from 'react-router-dom';
-import { Avatar } from '@chakra-ui/react';
+import { Avatar, Box, Text } from '@chakra-ui/react';
 import profilecss from '../Styles/profilecss.css';
 
 export default function Profile() {
     const [userData, setUserData] = useState([]);
     const { username } = useParams();
+    const [volunteering, setVolunteering] = useState([]);
+
 
     // User is self
     // USer is other
@@ -31,52 +33,94 @@ export default function Profile() {
                 console.error('Error fetching user data:', error);
             }
         };
+        const fetchVolunteering = (username) => {
+            // Define the URL for the API endpoint
+            const apiUrl = `http://localhost:5000/api/volunteering/${username}`;
+
+            // Make the Axios GET request
+            axios.get(apiUrl)
+                .then(response => {
+                    // Handle successful response
+                    setVolunteering(response.data); // Assuming setVolunteering is a state setter function
+                })
+                .catch(error => {
+                    // Handle error
+                    console.error('Error fetching volunteering data:', error);
+                });
+        };
         fetchUserData();
+        fetchVolunteering(username);
     }, [username]);
+    
+
+
+    // Call the fetchVolunteering function with the desired username
+
 
     return (
-        <div className="user-profile">
-            <div className="avatar-section">
-                <div className="avatar">
-                   <Avatar ></Avatar>
-                </div>
-            </div>
-            
-            {
-            userData.length > 0 ? 
-                <div className="info-section">
-                    <h2>{userData[0].username || 'Username'}</h2>
-                    <p>{userData[0].role || 'Role'}</p>
-                    <div className="additional-info">
-                        <p>Member since: {userData[0].date_joined ? new Date(userData[0].date_joined).toLocaleDateString() : 'XX/XX/XXXX'}</p>
+        <Box
+            display="flex"
+            justifyContent="center"
+            height={'94vh'}
+            alignItems="center"
+            flexDirection="column"
+            backgroundColor="blue.200"
+            padding="20px"
+        >
+            {userData.length > 0 ? (
+                <Box
+                    display="flex"
+                    justifyContent="center"
+                    alignItems="center"
+                    flexDirection="column"
+                >
+                    <Box>
+                        <Avatar size="lg" />
+                    </Box>
+                    <Box textAlign="center" marginY="10px">
+                        <Text fontSize="xl" fontWeight="bold">
+                            {userData[0][0].username || 'Username'}
+                        </Text>
+                        <Text>{userData[0][0].role || 'Role'}</Text>
+                    </Box>
+                    <Box textAlign="center" marginY="10px">
+                        <Text>
+                            Member since:{' '}
+                            {userData[0][0].date_joined
+                                ? new Date(userData[0][0].date_joined).toLocaleDateString()
+                                : 'Unknown join date'}
+                        </Text>
                         {/* Display state and city if available */}
-                        {userData[0].region && (
+                        {userData[0][0].region && (
                             <>
-                                <p>State: {userData[0].region.state || 'XXXXXXX'}</p>
-                                <p>City: {userData[0].region.city || 'XXXXXXX'}</p>
+                                <Text>State: {userData[0][0].region.state || 'XXXXXXX'}</Text>
+                                <Text>City: {userData[0][0].region.city || 'XXXXXXX'}</Text>
                             </>
                         )}
-                    </div>
-
-                    <div className="volunteering-section">
-                        <h3>Currently volunteering with:</h3>
-
-                        {userData[0].volunteeringPlaces && userData[0].volunteeringPlaces.length > 0 ? (
-                            <ul>
-                                {userData[0].volunteeringPlaces.map((place, index) => (
-                                    <li key={index}>{place}</li>
+                    </Box>
+                    <Box textAlign="center">
+                        <Text fontSize="lg" fontWeight="bold">
+                            Currently volunteering with:
+                        </Text>
+                        {volunteering && volunteering.length > 0 ? (
+                            <Box as="ul" listStyleType="none" padding="0">
+                                {volunteering[0].map((place, index) => (
+                                    <Text as="li" key={index}>
+                                        {place.location_name}
+                                    </Text>
                                 ))}
-                            </ul>
+                            </Box>
                         ) : (
-                            <p>No volunteering places listed.</p>
+                            <Text>No volunteering places listed.</Text>
                         )}
-                    </div>
 
-                </div> 
-            :
-                <h1>Unauthorized Access</h1>
-            }
-            
-        </div>
+                    </Box>
+                </Box>
+            ) : (
+                <Text fontSize="xl" fontWeight="bold">
+                    Unauthorized Access
+                </Text>
+            )}
+        </Box>
     );
 };
