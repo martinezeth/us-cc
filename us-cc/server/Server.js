@@ -1,11 +1,11 @@
 const express = require('express');
 const mysql = require('mysql');
-const sKey = require('./jwSec');
-const { validateCredentials, createUser, getUserData, decodeToken } = require('./AuthController');
+const { validateCredentials, createUser, decodeToken } = require('./Controllers/AuthController');
+const { getUserData, getUserVolunteering, getUserDataUsername, getVolunteersByRegion, getVolunteersBySkills } = require('./Controllers/UserController');
+
 const cors = require('cors');
 const jwt = require('jsonwebtoken');
 const dotenv = require('dotenv');
-// let [cookies] = cookie.useCookies(['authToken']);
 dotenv.config();
 const app = express();
 
@@ -18,16 +18,13 @@ const app = express();
  * - env variables
  */
 
-// Setup CORS correctly
 app.use(cors({
     origin: 'http://localhost:3000',
     methods: ['GET', 'POST'],
-    credentials: true
+    credentials: true,
+    allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
-/**
- * API Creation
- */
 app.use(express.json());
 
 /**
@@ -48,12 +45,15 @@ connection.connect(err => {
     console.log('Connected to database.');
 });
 
+
 /**
  * Routes
  */
+
 // LOGIN Route
 app.post('/api/login', (req, res) => {
     const { username, password } = req.body;
+
     validateCredentials(username, password, (error, userExists) => {
         if (error) {
             console.error('Error validating credentials:', error);
@@ -61,7 +61,8 @@ app.post('/api/login', (req, res) => {
             return;
         }
         if (userExists) {
-            getUserData(username, (userDataError, userData) => {
+            // Assuming you have a function to retrieve user data from the database
+            getUserDataUsername(username, (userDataError, userData) => {
                 if (userDataError) {
                     console.error('Error retrieving user data:', userDataError);
                     res.status(500).send('Error retrieving user data');
@@ -70,8 +71,6 @@ app.post('/api/login', (req, res) => {
 
                 const key = process.env.JWT_SECRET;
                 const authToken = jwt.sign({ username, userData }, key, { expiresIn: '14h' });
-                res.cookie('authToken', authToken, { httpOnly: true });
-                res.status(200).send('Login successful');
 
                 // Send the authToken in the response
                 res.send({ authToken: authToken });
@@ -82,6 +81,13 @@ app.post('/api/login', (req, res) => {
     });
 });
 
+
+app.post('/api/logout', (req, res) => {
+    res.clearCookie('authToken', { httpOnly: true });
+    res.status(200).send('Logout successful');
+});
+
+// REGISTER Route
 app.post('/api/register', (req, res) => {
     const { username, password } = req.body;
     validateCredentials(username, password, (error, userExists) => {
@@ -94,93 +100,117 @@ app.post('/api/register', (req, res) => {
             console.log("User exists already");
             return;
         }
+
+        // If user does not exist, create the user
         createUser(username, password, (createError) => {
             if (createError) {
                 console.error('Error creating user:', createError);
                 res.status(500).send('Error creating user');
                 return;
             }
+            res.sendStatus(200);
+
         });
     });
 });
 
 // Incident Reports Route 
 app.get('/api/incident-reports', (req, res) => {
-    connection.query('SELECT * FROM IncidentReports', (error, results) => {
-        if (error) {
-            console.error("Error fetching incident reports: ", error);
-            res.status(500).send("Error fetching incident reports");
-            return;
-        }
-        res.json(results);
-    });
-});
-
-// User Info Route
-app.get('/api/userinfo/:username', (req,res) => {
-    const { authToken } = req.headers;
-    const { username } = req.params;
-
-    if (authToken) {
-        
-        const decodedToken = decodeToken(authToken);
-        console.log("decoded: ", decodedToken);
-        if (username) {
-            
-            getUserData(username, (error, userData) => {
+    const { swLat, swLng, neLat, neLng } = req.query;
+    if (swLat && swLng && neLat && neLng) {
+        connection.query(
+            'SELECT * FROM IncidentReports WHERE location_lat BETWEEN ? AND ? AND location_lng BETWEEN ? AND ?',
+            [parseFloat(swLat), parseFloat(neLat), parseFloat(swLng), parseFloat(neLng)],
+            (error, results) => {
                 if (error) {
-                    console.error('Error retrieving user data:', error);
-                    res.status(500).send('Error retrieving user data');
+                    console.error("Error fetching incident reports: ", error);
+                    res.status(500).send("Error fetching incident reports");
                     return;
                 }
-
-                
-                res.json(userData);
-            });
-        } else {
-            
-            const currentUser = decodedToken.username; 
-            getUserData(currentUser, (error, userData) => {
-                if (error) {
-                    console.error('Error retrieving user data:', error);
-                    res.status(500).send('Error retrieving user data');
-                    return;
-                }
-
-
-                res.json(userData);
-            });
-           
-        }
+                res.json(results);
+            }
+        );
     } else {
-        // If authToken is not provided in the request headers
-        res.status(401).send('Unauthorized');
+        connection.query('SELECT * FROM IncidentReports', (error, results) => {
+            if (error) {
+                console.error("Error fetching incident reports: ", error);
+                res.status(500).send("Error fetching incident reports");
+                return;
+            }
+            res.json(results);
+        });
     }
 });
 
-// User Posts Route
-app.get('/api/posts/:username', (req, res) => {
+// User Info Route
+app.get('/api/userinfo/:username', (req, res) => {
+    const authToken = req.headers['authorization'];
+    const { username } = req.params;
 
-    res.json(results);
+    if (authToken) {
+
+        const decodedToken = decodeToken(authToken, process.env.JWT_SECRET);
+        if (decodedToken) {
+            getUserDataUsername(username, (error, userData) => {
+                if (error) {
+                    console.error('Error retrieving user data:', error);
+                    res.status(500).send('Error retrieving user data');
+                    return;
+                }
+                res.json(userData);
+            });
+        } 
+
+    } else {
+        res.status(401);
+    }
 });
 
-/**
- * Functions
- */
+// User Posts Route TODO
+app.get('/api/posts/:username', (req, res) => {
 
-function authenticateToken(req, res, nex) {
-    const authHeader = req.headers['authorization'];
-    const token = authHeader && authHeader.split(' ')[1];
-    if(token === null) return res.sendStatus(401);
+    res.json(res);
+});
 
-    jwt.verify(token, process.env.JWT_SECRET, (err, user)=>{
-        if(err) return res.sendStatus(403);
-        req.user = user;
-        next();
+
+app.get('/api/volunteering/:username', (req, res) => {
+    const { username } = req.params;
+
+    getUserVolunteering(username, (error, volunteeringData) => {
+        if (error) {
+            console.error('Error fetching volunteering data:', error);
+            res.status(500).json({ error: 'Internal server error' });
+            return;
+        }
+        res.json(volunteeringData);
     });
-}
+});
+
+// Route to get volunteers by region
+app.get('/api/volunteers/region', (req, res) => {
+    const { region } = req.query;
+    getVolunteersByRegion(region, (err, volunteers) => {
+        if (err) {
+            res.status(500).send('Failed to fetch volunteers');
+        } else {
+            res.json(volunteers);
+        }
+    });
+});
 
 
+
+// Route to get volunteers by skills
+app.get('/api/volunteers/skills', (req, res) => {
+    const { skill } = req.query;
+    getVolunteersBySkills(skill, (err, volunteers) => {
+        if (err) {
+            res.status(500).send('Failed to fetch volunteers');
+        } else {
+            res.json(volunteers);
+        }
+    });
+});
 
 /**
  * Define the PORT
