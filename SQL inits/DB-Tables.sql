@@ -41,7 +41,7 @@ CREATE TABLE IF NOT EXISTS
         title VARCHAR(255) NOT NULL,
         body TEXT NOT NULL,
         region VARCHAR(50) NULL,
-        date_posted DATETIME NULL,
+        date_posted DATETIME CURRENT_TIMESTAMP,
         FOREIGN KEY (user_id) REFERENCES Users (user_id)
     );
 
