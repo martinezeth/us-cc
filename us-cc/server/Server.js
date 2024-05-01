@@ -107,7 +107,7 @@ app.post('/api/register', (req, res) => {
                 res.status(500).send('Error creating user');
                 return;
             }
-            console.log("User created successfully");
+            res.sendStatus(200);
         });
     });
 });

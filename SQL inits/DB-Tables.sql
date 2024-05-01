@@ -29,7 +29,7 @@ CREATE TABLE IF NOT EXISTS
         username VARCHAR(50) NOT NULL UNIQUE,
         password_hash VARCHAR(255) NOT NULL,
         name VARCHAR(255) NOT NULL DEFAULT '',
-        region INT NULL,
+        region INT NULL DEFAULT 1,
         date_joined DATE NULL,
         role ENUM('user', 'admin') DEFAULT 'user'
     );
