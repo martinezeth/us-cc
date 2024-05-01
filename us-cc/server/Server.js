@@ -2,7 +2,7 @@ const express = require('express');
 const mysql = require('mysql');
 const { validateCredentials, createUser, decodeToken } = require('./Controllers/AuthController');
 const { getUserData, getUserVolunteering, getUserDataUsername, getVolunteersByRegion, getVolunteersBySkills } = require('./Controllers/UserController');
-const { getUserPostData, getRecentPostData } = require('./Controllers/PostsController');
+const { getUserPostData, getRecentPostData, createUserPost } = require('./Controllers/PostsController');
 const cors = require('cors');
 const jwt = require('jsonwebtoken');
 const dotenv = require('dotenv');
@@ -182,7 +182,7 @@ app.get('/api/posts/:username', (req, res) => {
             res.status(500).json({ error: 'Internal Server Error' });
             return;
         }
-        console.log("post data user", postData[0]);
+        console.log("post data user", postData);
 
         res.json(postData[0]);
     });
@@ -197,8 +197,25 @@ app.get('/api/posts', (req, res) => {
             res.status(500).json({ error: 'Internal Server Error' });
             return;
         }
-        // console.log("post data all", postData);
-        res.json(postData);
+        console.log("post data all", postData[0]);
+        res.json(postData[0]);
+    });
+});
+
+app.post('/api/createpost', (req, res) => {
+    const authToken = req.headers['authorization'];
+    const postInfo = req.body;
+    const decodedToken = decodeToken(authToken, process.env.JWT_SECRET);
+    console.log("dd", decodedToken);
+    postInfo['user_id'] = decodedToken.user_id;
+    console.log(postInfo);
+    createUserPost(postInfo, (err, result) => {
+        if(err){
+            console.error('Error creating post:', err);
+            res.status(500).send('Error creating post:');
+            return;
+        }
+        res.sendStatus(200);
     });
 });
 

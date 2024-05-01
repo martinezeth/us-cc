@@ -30,7 +30,6 @@ CREATE TABLE IF NOT EXISTS
         name VARCHAR(255) NOT NULL DEFAULT '',
         region INT NULL DEFAULT 1,
         date_joined DATE NULL,
-
         role ENUM('user', 'admin') DEFAULT 'user'
     );
 
@@ -41,7 +40,7 @@ CREATE TABLE IF NOT EXISTS
         title VARCHAR(255) NOT NULL,
         body TEXT NOT NULL,
         region VARCHAR(50) NULL,
-        date_posted DATETIME CURRENT_TIMESTAMP,
+        date_posted DATETIME NULL CURRENT_TIMESTAMP(),
         FOREIGN KEY (user_id) REFERENCES Users (user_id)
     );
 
