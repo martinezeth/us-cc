@@ -143,7 +143,7 @@ app.get('/api/incident-reports', (req, res) => {
 app.get('/api/userinfo/:username', (req,res) => {
     const { authToken } = req.headers;
     const { username } = req.params;
-
+    console.log("userinfo headers:", req.headers);
     if (authToken) {
         
         const decodedToken = decodeToken(authToken);

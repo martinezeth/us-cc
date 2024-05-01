@@ -9,7 +9,29 @@ export default function Profile() {
     const [userData, setUserData] = useState(null);
     const { username } = useParams();
 
+    
 
+    useEffect(() => {
+        const fetchUserData = async () => {
+            try {
+                // Get the authToken cookie from the browser's cookies
+                const authToken = document.cookie.split('; ').find(row => row.startsWith('authToken=')).split('=')[1]
+                console.log("aa", authToken);
+                // Make the HTTP GET request to the profile endpoint
+                const response = await axios.get(`http://localhost:5000/api/userinfo/${username}`, {
+                    headers: {
+                        Authorization: `${authToken}` // Include the authToken in the Authorization header
+                    }
+                });
+
+                // Update the component's state with the fetched user data
+                setUserData(response.data);
+            } catch (error) {
+                console.error('Error fetching user data:', error);
+            }
+        };
+        fetchUserData();
+    }, [username]);
 
     return (
         <div>
