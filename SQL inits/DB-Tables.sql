@@ -63,7 +63,7 @@ CREATE TABLE IF NOT EXISTS
         availability TEXT,
         region VARCHAR(50) NULL,
         FOREIGN KEY (user_id) REFERENCES Users (user_id),
-        FOREIGN KEY (region) REFERENCES Region (region)
+        FOREIGN KEY (region) REFERENCES Region (region_name)
     );
 
 CREATE TABLE IF NOT EXISTS 
