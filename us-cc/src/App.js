@@ -9,6 +9,7 @@ import NewReportPage from './Pages/NewReportPage';
 import NotFoundPage from './Pages/NotFoundPage';
 import MapPage from './Pages/MapViewPage';
 import { AuthenticationPage } from './Pages/LoginRegisterPage';
+import VolunteerSignupPage from './Pages/VolunteerSignupPage';
 import VolunteerDashPage from './Pages/VolunteerDashPage';
 import Posts from './Pages/Posts';
 import Profile from './Pages/Profile';
@@ -34,7 +35,6 @@ function App() {
             <HeaderComponent />
               <Routes>
                 <Route path="/" element={<LandingPage />} />
-                <Route path='*' element={<NotFoundPage />} />
                 <Route path="/login" element={<AuthenticationPage RegoOrLogin="Login" />} />
                 <Route path="/register" element={<AuthenticationPage RegoOrLogin="Register" />} />
                 <Route path="/about" element={<AboutPage/>} />
@@ -42,13 +42,15 @@ function App() {
                 <Route path="/posts" element={<Posts/>}/>
                 <Route path='/posts/:username' element={<Posts />}/>
                 <Route path="/profile/:username" element={<Profile/>} />
-                <Route path='/mapview' element={<MapPage />} />
                 <Route path="/wildfire" element={<Wildfire/>} />
                 <Route path="/flood" element={<Flood/>} />
                 <Route path="/earthquake" element={<Earthquake/>} />
                 <Route path="/hurricane" element={<Hurricane/>} />
+                <Route path="/COVID" element={<Covid/>} />
                 <Route path="/resources" element={<ResourcesPage />} />
+                <Route path="/mapview" element={<MapPage />} />
                 <Route path="/volunteering" element={<VolunteerDashPage />} />
+                <Route path="/volunteer-register" element={<VolunteerSignupPage />} />
               </Routes>
             <FooterComponent />
           </div>

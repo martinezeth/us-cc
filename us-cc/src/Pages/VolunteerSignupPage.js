@@ -72,4 +72,6 @@ function VolunteerPage() {
     );
 }
 
-export { VolunteerPage };
+
+// export { VolunteerPage };
+export default VolunteerPage;

@@ -114,6 +114,7 @@ app.post('/api/register', (req, res) => {
     });
 });
 
+
 // Incident Reports Route 
 app.get('/api/incident-reports', (req, res) => {
     const { swLat, swLng, neLat, neLng } = req.query;
@@ -130,7 +131,31 @@ app.get('/api/incident-reports', (req, res) => {
                 res.json(results);
             }
         );
+    } else if (lat && lng && radius) {
+        const query = `
+            SELECT *, (
+                3959 * acos (
+                    cos ( radians(?) ) *
+                    cos ( radians( location_lat ) ) *
+                    cos ( radians( location_lng ) - radians(?) ) +
+                    sin ( radians(?) ) *
+                    sin ( radians( location_lat ) )
+                )
+            ) AS distance
+            FROM IncidentReports
+            HAVING distance < ?
+            ORDER BY distance;
+        `;
+        connection.query(query, [parseFloat(lat), parseFloat(lng), parseFloat(lat), parseFloat(radius)], (error, results) => {
+            if (error) {
+                console.error("Error fetching incident reports within radius: ", error);
+                res.status(500).send("Error fetching incident reports");
+                return;
+            }
+            res.json(results);
+        });
     } else {
+        // Fallback to fetching all incidents if no specific parameters are provided
         connection.query('SELECT * FROM IncidentReports', (error, results) => {
             if (error) {
                 console.error("Error fetching incident reports: ", error);
@@ -258,6 +283,33 @@ app.get('/api/volunteers/skills', (req, res) => {
         }
     });
 });
+
+
+// Endpoint for getting number of volunteers by region
+app.get('/api/volunteers/region-chart', (req, res) => {
+    connection.query('SELECT region, COUNT(*) AS count FROM Volunteers GROUP BY region', (error, results) => {
+        if (error) {
+            console.error('Error fetching aggregated volunteers:', error);
+            res.status(500).send('Error fetching data');
+            return;
+        }
+        res.json(results);
+    });
+});
+
+
+// Endpoint for getting number of volunteers by skill
+app.get('/api/volunteers/skill-chart', (req, res) => {
+    connection.query('SELECT skills, COUNT(*) AS count FROM Volunteers GROUP BY skills', (error, results) => {
+        if (error) {
+            console.error('Error fetching aggregated volunteers:', error);
+            res.status(500).send('Error fetching data');
+            return;
+        }
+        res.json(results);
+    });
+});
+
 
 /**
  * Define the PORT
