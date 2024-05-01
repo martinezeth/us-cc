@@ -1,7 +1,8 @@
 const express = require('express');
 const mysql = require('mysql');
 const { validateCredentials, createUser, decodeToken } = require('./Controllers/AuthController');
-const { getUserData, getUserDataUsername, getUserVolunteering } = require('./Controllers/UserController');
+const { getUserData, getUserDataUsername, getVolunteersByRegion, getVolunteersBySkills } = require('./Controllers/UserController');
+
 const cors = require('cors');
 const jwt = require('jsonwebtoken');
 const dotenv = require('dotenv');
@@ -21,7 +22,8 @@ const app = express();
 app.use(cors({
     origin: 'http://localhost:3000',
     methods: ['GET', 'POST'],
-    credentials: true
+    credentials: true,
+    allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
 app.use(express.json());
@@ -108,29 +110,46 @@ app.post('/api/register', (req, res) => {
                 return;
             }
             res.sendStatus(200);
+
         });
     });
 });
 
 // Incident Reports Route 
 app.get('/api/incident-reports', (req, res) => {
-    connection.query('SELECT * FROM IncidentReports', (error, results) => {
-        if (error) {
-            console.error("Error fetching incident reports: ", error);
-            res.status(500).send("Error fetching incident reports");
-            return;
-        }
-        res.json(results);
-    });
+    const { swLat, swLng, neLat, neLng } = req.query;
+    if (swLat && swLng && neLat && neLng) {
+        connection.query(
+            'SELECT * FROM IncidentReports WHERE location_lat BETWEEN ? AND ? AND location_lng BETWEEN ? AND ?',
+            [parseFloat(swLat), parseFloat(neLat), parseFloat(swLng), parseFloat(neLng)],
+            (error, results) => {
+                if (error) {
+                    console.error("Error fetching incident reports: ", error);
+                    res.status(500).send("Error fetching incident reports");
+                    return;
+                }
+                res.json(results);
+            }
+        );
+    } else {
+        connection.query('SELECT * FROM IncidentReports', (error, results) => {
+            if (error) {
+                console.error("Error fetching incident reports: ", error);
+                res.status(500).send("Error fetching incident reports");
+                return;
+            }
+            res.json(results);
+        });
+    }
 });
 
 // User Info Route
-app.get('/api/userinfo/:username', (req,res) => {
-    const authToken  = req.headers['authorization'];
+app.get('/api/userinfo/:username', (req, res) => {
+    const authToken = req.headers['authorization'];
     const { username } = req.params;
 
     if (authToken) {
-        
+
         const decodedToken = decodeToken(authToken, process.env.JWT_SECRET);
         if (decodedToken) {
             getUserDataUsername(username, (error, userData) => {
@@ -142,6 +161,7 @@ app.get('/api/userinfo/:username', (req,res) => {
                 res.json(userData);
             });
         } 
+
     } else {
         res.status(401);
     }
@@ -152,6 +172,7 @@ app.get('/api/posts/:username', (req, res) => {
 
     res.json(res);
 });
+
 
 app.get('/api/volunteering/:username', (req, res) => {
     const { username } = req.params;
@@ -166,6 +187,31 @@ app.get('/api/volunteering/:username', (req, res) => {
     });
 });
 
+// Route to get volunteers by region
+app.get('/api/volunteers/region', (req, res) => {
+    const { region } = req.query;
+    getVolunteersByRegion(region, (err, volunteers) => {
+        if (err) {
+            res.status(500).send('Failed to fetch volunteers');
+        } else {
+            res.json(volunteers);
+        }
+    });
+});
+
+
+
+// Route to get volunteers by skills
+app.get('/api/volunteers/skills', (req, res) => {
+    const { skill } = req.query;
+    getVolunteersBySkills(skill, (err, volunteers) => {
+        if (err) {
+            res.status(500).send('Failed to fetch volunteers');
+        } else {
+            res.json(volunteers);
+        }
+    });
+});
 
 /**
  * Define the PORT

@@ -49,6 +49,7 @@ function getUserData(user_id, callback) {
     });
 }
 
+// Function to get where a user volunteers
 function getUserVolunteering(username, callback){
     pool.getConnection((err, connection) => {
         if(err){
@@ -67,4 +68,27 @@ function getUserVolunteering(username, callback){
     });
 }
 
-module.exports = { getUserData, getUserDataUsername, getUserVolunteering }
+
+// Function to get volunteers by region
+function getVolunteersByRegion(region, callback) {
+    pool.query('CALL GetVolunteersByRegion(?)', [region], (error, results) => {
+        if (error) {
+            return callback(error, null);
+        }
+        callback(null, results[0]);
+    });
+}
+
+// Function to get volunteers by skills
+function getVolunteersBySkills(skill, callback) {
+    pool.query('CALL GetVolunteersBySkills(?)', [skill], (error, results) => {
+        if (error) {
+            return callback(error, null);
+        }
+        callback(null, results[0]);
+    });
+}
+// Route to fetch volunteer data
+
+
+module.exports = { getUserData,  getUserDataUsername, getUserVolunteering, getVolunteersByRegion, getVolunteersBySkills };

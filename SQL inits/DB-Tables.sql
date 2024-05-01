@@ -4,7 +4,6 @@ CREATE DATABASE IF NOT EXISTS USCCDB;
 -- Use the database
 USE USCCDB;
 
-
 DROP TABLE IF EXISTS Posts;
 
 DROP TABLE IF EXISTS UserVolunteeringLocation;
@@ -31,6 +30,7 @@ CREATE TABLE IF NOT EXISTS
         name VARCHAR(255) NOT NULL DEFAULT '',
         region INT NULL DEFAULT 1,
         date_joined DATE NULL,
+
         role ENUM('user', 'admin') DEFAULT 'user'
     );
 
@@ -112,6 +112,7 @@ CREATE TABLE IF NOT EXISTS
         location_lat DECIMAL(10, 6),
         location_lng DECIMAL(10, 6)
     );
+
 DELIMITER $$
 CREATE PROCEDURE IF NOT EXISTS `GetUserInfo`(IN `userid` INT) 
 BEGIN
@@ -190,4 +191,9 @@ WHERE
     FIND_IN_SET(skill, skills) > 0;
 
 END$$
+
+
+
+
+
 DELIMITER ;

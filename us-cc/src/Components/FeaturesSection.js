@@ -46,6 +46,7 @@ const FeaturesSection = () => {
           title="Resource Management"
           description="Efficient allocation of resources during crises."
           icon={MdSettings}
+          onClick={() => navigate('/resources')}
         />
         <FeatureCard
           title="Volunteer Coordination"
@@ -59,6 +60,9 @@ const FeaturesSection = () => {
           onClick={() => navigate('/mapview')}
         />
       </SimpleGrid>
+      <Text mt={10} textAlign="center" fontSize="xl" color="blue.500" cursor="pointer" onClick={() => navigate('/volunteering')}>
+        Visit our Volunteer Dashboard
+      </Text>
     </Box>
   );
 };
