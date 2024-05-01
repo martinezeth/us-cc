@@ -1,7 +1,7 @@
 const express = require('express');
 const mysql = require('mysql');
 const { validateCredentials, createUser, decodeToken } = require('./Controllers/AuthController');
-const { getUserData, getUserDataUsername, getVolunteersByRegion, getVolunteersBySkills } = require('./Controllers/UserController');
+const { getUserData, getUserVolunteering, getUserDataUsername, getVolunteersByRegion, getVolunteersBySkills } = require('./Controllers/UserController');
 
 const cors = require('cors');
 const jwt = require('jsonwebtoken');
