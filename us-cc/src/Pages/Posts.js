@@ -6,6 +6,8 @@ import { Grid, Card, CardHeader, CardBody, CardFooter, Text, Heading, Stack, Sta
 import { CardContent, Box } from '@mui/material';
 
 const Post = props => {
+    const [postData, setPostData] = useState(null);
+
     return (
         <Box 
             borderWidth="2px" 
@@ -36,7 +38,6 @@ const Post = props => {
 
 
 export default function Posts() {
-    const [postData, setPostData] = useState(null);
 
     return (
         <Grid
@@ -53,57 +54,3 @@ export default function Posts() {
         </Grid>
     );
 };
-
-{/* <>
-            <Grid
-                minH="100vh"
-                p={10}
-                templateColumns="repeat(1, 2fr)"  // One column layout
-                gap={2}
-                justifyContent="center"          // Centers the column in the grid horizontally
-                alignContent="center"
-            >
-
-                <Stack spacing={4}>
-                    {<Post />}
-                    {<Post />}
-                    {<Post />}
-                </Stack>
-
-            </Grid>
-        </> */}
-
-
-    //     <Card variant="outline" align="left" w="100%">
-    //     <CardHeader>
-    //         <Heading size='md'>User Post Title</Heading>
-    //     </CardHeader>
-    //     <CardBody>
-    //         <Stack divider={<StackDivider />} spacing='4'>
-    //             <Box>
-    //                 <Heading size='xs' textTransform='uppercase'>
-    //                     UserName
-    //                 </Heading>
-    //                 <Text pt='2' fontSize='sm'>
-    //                     Name of user
-    //                 </Text>
-    //             </Box>
-    //             <Box>
-    //                 <Heading size='xs' textTransform='uppercase'>
-    //                     Text
-    //                 </Heading>
-    //                 <Text pt='2' fontSize='sm'>
-    //                     Random report information in the .text
-    //                 </Text>
-    //             </Box>
-    //             <Box>
-    //                 <Heading size='xs' textTransform='uppercase'>
-    //                     Date
-    //                 </Heading>
-    //                 <Text pt='2' fontSize='sm'>
-    //                     Date of the user report
-    //                 </Text>
-    //             </Box>
-    //         </Stack>
-    //     </CardBody>
-    // </Card>

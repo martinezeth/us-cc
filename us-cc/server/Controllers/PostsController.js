@@ -15,7 +15,7 @@ function getPostData(user_id, callback) {
             callback(err, null);
             return;
         }
-        connection.query('SELECT * FROM posts WHERE user_id = ?', [user_id], (error, results, fields) => {
+        connection.query('SELECT * FROM posts WHERE user_id = ? ', [user_id], (error, results, fields) => {
             if (error) {
                 connection.release();
                 callback(error, null);
