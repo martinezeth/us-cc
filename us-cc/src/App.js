@@ -19,6 +19,7 @@ import Earthquake from './Pages/Earthquake';
 import { CookiesProvider, useCookies } from 'react-cookie';
 
 import theme from './Styles/theme';
+import ResourcesPage from './Pages/ResourcesPage';
 
 function App() {
 
@@ -41,6 +42,8 @@ function App() {
                 <Route path="/earthquake" element={<Earthquake/>} />
                 <Route path="/hurricane" element={<Hurricane/>} />
                 <Route path="/COVID" element={<Covid/>} />
+                <Route path="/resources" element={<ResourcesPage />} />
+
               </Routes>
             <FooterComponent />
           </div>

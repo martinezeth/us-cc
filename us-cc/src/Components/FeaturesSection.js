@@ -46,6 +46,7 @@ const FeaturesSection = () => {
           title="Resource Management"
           description="Efficient allocation of resources during crises."
           icon={MdSettings}
+          onClick={() => navigate('/resources')}
         />
         <FeatureCard
           title="Volunteer Coordination"
