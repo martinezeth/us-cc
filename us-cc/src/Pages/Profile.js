@@ -9,14 +9,16 @@ export default function Profile() {
     const [userData, setUserData] = useState(null);
     const { username } = useParams();
 
-    
+    // User is self
+    // USer is other
 
     useEffect(() => {
         const fetchUserData = async () => {
             try {
                 // Get the authToken cookie from the browser's cookies
-                const authToken = document.cookie.split('; ').find(row => row.startsWith('authToken=')).split('=')[1]
-                console.log("aa", authToken);
+                const authToken = document.cookie && document.cookie.split('; ')
+                .find(row => row.startsWith('authToken=')).split('=')[1];
+                // console.log("aa", authToken);
                 // Make the HTTP GET request to the profile endpoint
                 const response = await axios.get(`http://localhost:5000/api/userinfo/${username}`, {
                     headers: {
@@ -34,17 +36,21 @@ export default function Profile() {
     }, [username]);
 
     return (
-        <div>
-            <h1>User Profile: {username}</h1>
-            {userData ? (
-                <div>
-                    <p>Name: {userData.name}</p>
-                    <p>Email: {userData.email}</p>
-                    {/* Add other user profile information here */}
-                </div>
-            ) : (
-                <p>Loading user data...</p>
-            )}
-        </div>
+        <>
+            <div>
+                {userData ? (
+                    <div>
+                        {userData.map((user) => (
+                            <div key={user.user_id}>
+                                <p>User ID: {user.user_id}</p>
+                                <p>Role: {user.role}</p>
+                            </div>
+                        ))}
+                    </div>
+                ) : (
+                    <p>Loading user data...</p>
+                )}
+            </div>
+        </>
     );
 };
