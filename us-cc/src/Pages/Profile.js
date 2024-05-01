@@ -1,12 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useLocation, useParams } from 'react-router-dom';
-import CssBaseline from '@mui/material/CssBaseline';
-import { CardContent, Typography, Card, Box } from '@mui/material';
-
+import { Avatar } from '@chakra-ui/react';
+import profilecss from '../Styles/profilecss.css';
 
 export default function Profile() {
-    const [userData, setUserData] = useState(null);
+    const [userData, setUserData] = useState([]);
     const { username } = useParams();
 
     // User is self
@@ -39,31 +38,45 @@ export default function Profile() {
         <div className="user-profile">
             <div className="avatar-section">
                 <div className="avatar">
-                    {/* Placeholder for avatar image, replace 'avatarUrl' with your dynamic source */}
-                    <img src={'../Images/Icons/warningCircle.svg'} alt="User Avatar" />
+                   <Avatar ></Avatar>
                 </div>
             </div>
-            <div className="info-section">
-                <h2>{userData.username || 'Username'}</h2>
-                <p>{userData.role || 'Role'}</p>
-                <div className="additional-info">
-                    <p>Member since: {userData.memberSince || 'XX/XX/XXXX'}</p>
-                    <p>State: {userData.state || 'XXXXXXX'}</p>
-                    <p>City: {userData.city || 'XXXXXXX'}</p>
-                </div>
-                <div className="volunteering-section">
-                    <h3>Currently volunteering with:</h3>
-                    <ul>
-                        {userData.volunteeringPlaces && userData.volunteeringPlaces.length > 0 ? (
-                            userData.volunteeringPlaces.map((place, index) => (
-                                <li key={index}>{place}</li>
-                            ))
+            
+            {
+            userData.length > 0 ? 
+                <div className="info-section">
+                    <h2>{userData[0].username || 'Username'}</h2>
+                    <p>{userData[0].role || 'Role'}</p>
+                    <div className="additional-info">
+                        <p>Member since: {userData[0].date_joined ? new Date(userData[0].date_joined).toLocaleDateString() : 'XX/XX/XXXX'}</p>
+                        {/* Display state and city if available */}
+                        {userData[0].region && (
+                            <>
+                                <p>State: {userData[0].region.state || 'XXXXXXX'}</p>
+                                <p>City: {userData[0].region.city || 'XXXXXXX'}</p>
+                            </>
+                        )}
+                    </div>
+
+                    <div className="volunteering-section">
+                        <h3>Currently volunteering with:</h3>
+
+                        {userData[0].volunteeringPlaces && userData[0].volunteeringPlaces.length > 0 ? (
+                            <ul>
+                                {userData[0].volunteeringPlaces.map((place, index) => (
+                                    <li key={index}>{place}</li>
+                                ))}
+                            </ul>
                         ) : (
                             <p>No volunteering places listed.</p>
                         )}
-                    </ul>
-                </div>
-            </div>
+                    </div>
+
+                </div> 
+            :
+                <h1>Unauthorized Access</h1>
+            }
+            
         </div>
     );
 };
