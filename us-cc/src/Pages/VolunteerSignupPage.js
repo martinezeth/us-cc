@@ -73,9 +73,6 @@ function VolunteerPage() {
     );
 }
 
-<<<<<<< HEAD
+
 // export { VolunteerPage };
 export default VolunteerPage;
-=======
-export { VolunteerPage };
->>>>>>> f632df7dff65e8c8a346db05d9159e484c48294a
