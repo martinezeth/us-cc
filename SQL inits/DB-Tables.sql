@@ -113,7 +113,7 @@ CREATE TABLE IF NOT EXISTS
     );
 
 DELIMITER $$ 
-CREATE PROCEDURE `GetVolunteersByRegion`(IN regionName VARCHAR(255)) BEGIN
+CREATE PROCEDURE IF NOT EXISTS `GetVolunteersByRegion`(IN regionName VARCHAR(255)) BEGIN
 SELECT
     *
 FROM
@@ -123,7 +123,7 @@ WHERE
 
 END$$ 
 
-CREATE PROCEDURE `GetVolunteersBySkills`(IN skill VARCHAR(255)) BEGIN
+CREATE PROCEDURE IF NOT EXISTS `GetVolunteersBySkills`(IN skill VARCHAR(255)) BEGIN
 SELECT
     *
 FROM
@@ -135,8 +135,8 @@ END$$
 
 DELIMITER $$ 
 
-CREATE PROCEDURE GetUniqueSkills() BEGIN -- Create a temporary table to store unique skills
-CREATE TEMPORARY TABLE IF NOT EXISTS TempSkills (skill VARCHAR(255));
+CREATE PROCEDURE IF NOT EXISTS GetUniqueSkills() BEGIN -- Create a temporary table to store unique skills
+CREATE TABLE IF NOT EXISTS TempSkills (skill VARCHAR(255));
 
 DECLARE done INT DEFAULT 0;
 
