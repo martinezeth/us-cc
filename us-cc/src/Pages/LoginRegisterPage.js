@@ -1,7 +1,6 @@
 import React, { useState } from "react";
 import { Box, Button, Input, VStack, Text, Container } from "@chakra-ui/react";
 import axios from "axios";
-import { Axios } from "axios";
 import { useNavigate } from 'react-router-dom';
 
 function Register() {
@@ -23,9 +22,9 @@ function Register() {
       username: user,
       password: pass
     })
-      .then(response => {
-        // console.log(response.data);
-        document.cookie = `authToken=${response.data.authToken}; path=/`;
+      .then(() => {
+       
+        // document.cookie = `authToken=${response.data.authToken}; path=/`;
         navigate('/login'); // redirect login after registering.. remember your password
 
       })

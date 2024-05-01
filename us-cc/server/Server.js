@@ -1,7 +1,8 @@
 const express = require('express');
 const mysql = require('mysql');
 const { validateCredentials, createUser, decodeToken } = require('./Controllers/AuthController');
-const { getUserData, getVolunteersByRegion, getVolunteersBySkills } = require('./Controllers/UserController');
+const { getUserData, getUserDataUsername, getVolunteersByRegion, getVolunteersBySkills } = require('./Controllers/UserController');
+
 const cors = require('cors');
 const jwt = require('jsonwebtoken');
 const dotenv = require('dotenv');
@@ -62,7 +63,7 @@ app.post('/api/login', (req, res) => {
         }
         if (userExists) {
             // Assuming you have a function to retrieve user data from the database
-            getUserData(username, (userDataError, userData) => {
+            getUserDataUsername(username, (userDataError, userData) => {
                 if (userDataError) {
                     console.error('Error retrieving user data:', userDataError);
                     res.status(500).send('Error retrieving user data');
@@ -108,11 +109,11 @@ app.post('/api/register', (req, res) => {
                 res.status(500).send('Error creating user');
                 return;
             }
-            console.log("User created successfully");
+            res.sendStatus(200);
+
         });
     });
 });
-
 
 // Incident Reports Route 
 app.get('/api/incident-reports', (req, res) => {
@@ -142,7 +143,6 @@ app.get('/api/incident-reports', (req, res) => {
     }
 });
 
-
 // User Info Route
 app.get('/api/userinfo/:username', (req, res) => {
     const authToken = req.headers['authorization'];
@@ -151,9 +151,8 @@ app.get('/api/userinfo/:username', (req, res) => {
     if (authToken) {
 
         const decodedToken = decodeToken(authToken, process.env.JWT_SECRET);
-        if (username) {
-
-            getUserData(username, (error, userData) => {
+        if (decodedToken) {
+            getUserDataUsername(username, (error, userData) => {
                 if (error) {
                     console.error('Error retrieving user data:', error);
                     res.status(500).send('Error retrieving user data');
@@ -161,34 +160,34 @@ app.get('/api/userinfo/:username', (req, res) => {
                 }
                 res.json(userData);
             });
-        } else { // This feels redundant
+        } 
 
-            const currentUser = decodedToken.username;
-            getUserData(currentUser, (error, userData) => {
-                if (error) {
-                    console.error('Error retrieving user data:', error);
-                    res.status(500).send('Error retrieving user data');
-                    return;
-                }
-
-                res.json(userData);
-            });
-
-        }
     } else {
-        // If authToken is not provided in the request headers
         res.status(401);
     }
 });
 
-// User Posts Route
+// User Posts Route TODO
 app.get('/api/posts/:username', (req, res) => {
 
     res.json(res);
 });
 
-// Route to get volunteers by region
 
+app.get('/api/volunteering/:username', (req, res) => {
+    const { username } = req.params;
+
+    getUserVolunteering(username, (error, volunteeringData) => {
+        if (error) {
+            console.error('Error fetching volunteering data:', error);
+            res.status(500).json({ error: 'Internal server error' });
+            return;
+        }
+        res.json(volunteeringData);
+    });
+});
+
+// Route to get volunteers by region
 app.get('/api/volunteers/region', (req, res) => {
     const { region } = req.query;
     getVolunteersByRegion(region, (err, volunteers) => {
@@ -203,7 +202,6 @@ app.get('/api/volunteers/region', (req, res) => {
 
 
 // Route to get volunteers by skills
-
 app.get('/api/volunteers/skills', (req, res) => {
     const { skill } = req.query;
     getVolunteersBySkills(skill, (err, volunteers) => {
