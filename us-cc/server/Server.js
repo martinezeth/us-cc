@@ -5,9 +5,11 @@ const { getUserData, getUserVolunteering, getUserDataUsername, getVolunteersByRe
 const { getUserPostData, getRecentPostData, createUserPost } = require('./Controllers/PostsController');
 const cors = require('cors');
 const jwt = require('jsonwebtoken');
-const dotenv = require('dotenv');
-dotenv.config();
+// const dotenv = require('dotenv');
+// dotenv.config();
 const app = express();
+
+require('dotenv').config({ path: './dbConnection.env' });
 
 /**
  * This file will contain:
@@ -28,13 +30,21 @@ app.use(cors({
 app.use(express.json());
 
 /**
- * Database connection
+ * Database connection OLD METHOD
  */
+// const connection = mysql.createConnection({
+//     host: 'localhost',
+//     user: 'root',
+//     password: 'root',
+//     database: 'usccdb'
+// });
+
+
+// AWS Database connection setup
 const connection = mysql.createConnection({
-    host: 'localhost',
-    user: 'root',
-    password: 'root',
-    database: 'usccdb'
+    host: process.env.DB_HOST,
+    user: process.env.DB_USER,
+    password: process.env.DB_PASS,
 });
 
 connection.connect(err => {

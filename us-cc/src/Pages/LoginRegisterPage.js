@@ -18,7 +18,7 @@ function Register() {
   };
 
   const registerCheck = () => {
-    axios.post('http://localhost:5000/api/register', {
+    axios.post('http://localhost:8000/api/register', {
       username: user,
       password: pass
     })
@@ -60,7 +60,7 @@ function Login() {
   };
 
   const loginCheck = () => {
-    axios.post('http://localhost:5000/api/login', {
+    axios.post('http://localhost:8000/api/login', {
       username: user,
       password: pass
     })

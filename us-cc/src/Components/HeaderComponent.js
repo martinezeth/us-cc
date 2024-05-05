@@ -55,7 +55,7 @@ const HeaderComponent = () => {
   };
 
   const handleLogout = () => {
-    axios.post('http://localhost:5000/api/logout')
+    axios.post('http://localhost:8000/api/logout')
       .then((response) => {
         // console.log(response.data); 
         // Remove the authToken cookie

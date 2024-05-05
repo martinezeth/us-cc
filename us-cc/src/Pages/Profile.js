@@ -21,7 +21,7 @@ export default function Profile() {
                 .find(row => row.startsWith('authToken=')).split('=')[1];
                 // console.log("aa", authToken);
                 // Make the HTTP GET request to the profile endpoint
-                const response = await axios.get(`http://localhost:5000/api/userinfo/${username}`, {
+                const response = await axios.get(`http://localhost:8000/api/userinfo/${username}`, {
                     headers: {
                         Authorization: `${authToken}` // Include the authToken in the Authorization header
                     }
@@ -35,7 +35,7 @@ export default function Profile() {
         };
         const fetchVolunteering = (username) => {
             // Define the URL for the API endpoint
-            const apiUrl = `http://localhost:5000/api/volunteering/${username}`;
+            const apiUrl = `http://localhost:8000/api/volunteering/${username}`;
 
             // Make the Axios GET request
             axios.get(apiUrl)

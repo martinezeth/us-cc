@@ -52,13 +52,13 @@ export default function Posts() {
             try {
                 let response;
                 if (username) {
-                    response = await axios.get(`http://localhost:5000/api/posts/${username}`, {
+                    response = await axios.get(`http://localhost:8000/api/posts/${username}`, {
                         headers: {
                             Authorization: `${authToken}`
                         }
                     });
                 } else {
-                    response = await axios.get(`http://localhost:5000/api/posts`, {
+                    response = await axios.get(`http://localhost:8000/api/posts`, {
                         headers: {
                             Authorization: `${authToken}`
                         }
