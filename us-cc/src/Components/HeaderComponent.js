@@ -78,7 +78,7 @@ const HeaderComponent = () => {
         />
         <ChakraLink as={Link} to="/" display="flex" alignItems="center">
           <Image src={Logo} alt="logo" boxSize="50px" />
-          <Text marginLeft="2" fontWeight="bold">US Crisis Coordination</Text>
+          <Text marginLeft="2" fontWeight="bold">Crisis Companion</Text>
         </ChakraLink>
         
         {/* Spacer */}

@@ -29,7 +29,7 @@ const Hero = () => {
       >
         {/*padding top is what is shifting the Welcome title down so it is not hidden */}
         <Text paddingTop="100px" fontSize="4xl" fontWeight="bold" color={textColor} textAlign="center">
-          Welcome to US Crisis Coordination
+          Welcome to Crisis Companion
         </Text>
         <Text fontSize="xl" color={textColor} textAlign="center" maxW="lg">
           Empower Your Community in Crisis Response
