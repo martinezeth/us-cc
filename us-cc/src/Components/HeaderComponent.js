@@ -89,7 +89,7 @@ const HeaderComponent = () => {
           <Stack direction="row" spacing={4} justifyContent="left">
             <DropDown/>
             <Button  padding="8px 16px" variant="ghost" as={Link} to="/posts">Posts</Button>
-            <Button  padding="8px 16px" variant="ghost" onClick={() => handleNavigation('about-section')}>About</Button>
+            {/* <Button  padding="8px 16px" variant="ghost" onClick={() => handleNavigation('about-section')}>About</Button> */}
             {username ? (
               
               <>
