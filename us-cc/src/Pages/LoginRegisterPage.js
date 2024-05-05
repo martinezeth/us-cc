@@ -1,7 +1,7 @@
 import React, { useState, useRef, forwardRef } from "react";
 import { Box, Button, Container, FormControl, FormLabel, Heading,
   Input, InputGroup, InputRightElement, IconButton, Stack, Text,
-  VStack, useDisclosure, useMergeRefs,} from "@chakra-ui/react";
+  VStack, useDisclosure, useMergeRefs, Link, } from "@chakra-ui/react";
 import { HiEye, HiEyeOff } from 'react-icons/hi';
 import axios from "axios";
 import { useNavigate } from 'react-router-dom';
@@ -43,7 +43,7 @@ const PasswordField = forwardRef((props, ref) => {
 
 PasswordField.displayName = 'PasswordField';
 
-function Register() {
+function Register({ onSwitch }) {
   const navigate = useNavigate();
   const [user, setUser] = useState("");
   const [pass, setPass] = useState("");
@@ -68,21 +68,24 @@ function Register() {
     <Container maxW="lg" py={{ base: '12', md: '24' }} px={{ base: '0', sm: '8' }} centerContent>
       <Stack spacing={4} align="center">
         <Logo />
+        <Heading size="lg" mb="8">Create an account</Heading>
         <VStack spacing={4} bg="bg.surface" p={{ base: '4', sm: '8' }} borderRadius="xl" boxShadow="md">
-          <Heading size="sm">Register</Heading>
           <FormControl>
             <FormLabel>Username</FormLabel>
-            <Input placeholder="Enter your username" onChange={userName} />
+            <Input placeholder="Create a username" onChange={userName} />
           </FormControl>
           <PasswordField onChange={passWord} />
           <Button colorScheme="blue" onClick={registerCheck}>Register</Button>
+          <Text mt="4">
+            Already have an account? <Link color="teal.500" onClick={onSwitch}>Log in</Link>
+          </Text>
         </VStack>
       </Stack>
     </Container>
   );
 }
 
-function Login() {
+function Login({ onSwitch }) {
   const navigate = useNavigate();
   const [user, setUser] = useState("");
   const [pass, setPass] = useState("");
@@ -108,26 +111,28 @@ function Login() {
     <Container maxW="lg" py={{ base: '12', md: '24' }} px={{ base: '0', sm: '8' }} centerContent>
       <Stack spacing={4} align="center">
         <Logo />
+        <Heading size="lg" mb="8">Log in to your account</Heading>
         <VStack spacing={4} bg="bg.surface" p={{ base: '4', sm: '8' }} borderRadius="xl" boxShadow="md">
-          <Heading size="sm">Login</Heading>
           <FormControl>
             <FormLabel>Username</FormLabel>
             <Input placeholder="Enter your username" onChange={userName} />
           </FormControl>
           <PasswordField onChange={passWord} />
-          <Button colorScheme="blue" onClick={loginCheck}>Login</Button>
+          <Button colorScheme="blue" onClick={loginCheck}>Sign In</Button>
+          <Text mt="4">
+            Don't have an account? <Link color="teal.500" onClick={onSwitch}>Sign up</Link>
+          </Text>
         </VStack>
       </Stack>
     </Container>
   );
 }
 
-function AuthenticationPage({ RegoOrLogin }) {
-  return (
-    <>
-      {RegoOrLogin === "Register" ? <Register /> : <Login />}
-    </>
-  );
+function AuthenticationPage() {
+  const [isRegister, setIsRegister] = useState(false);
+  const toggleForm = () => setIsRegister(!isRegister);
+
+  return isRegister ? <Register onSwitch={toggleForm} /> : <Login onSwitch={toggleForm} />;
 }
 
 export { AuthenticationPage, Login, Register };
