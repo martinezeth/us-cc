@@ -24,7 +24,7 @@ const CreatePostModal = ({ isOpen, onClose, onCreatePost }) => {
         const authToken = document.cookie && document.cookie.split('; ')
             .find(row => row.startsWith('authToken=')).split('=')[1];
         // Make the axios POST request
-        axios.post('http://localhost:5000/api/createpost', postInfo, {
+        axios.post('http://localhost:8000/api/createpost', postInfo, {
             headers: {
                 Authorization: authToken
             }

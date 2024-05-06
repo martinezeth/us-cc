@@ -12,7 +12,7 @@ import hailIconUrl from '../Images/Icons/hailEventIcon.svg';
 import highWindsIconUrl from '../Images/Icons/highWindEventIcon.svg';
 import blizzardIconUrl from '../Images/Icons/blizzardEventIcon.svg';
 import lightningIconUrl from '../Images/Icons/lightningEventIcon.svg';
-import locationIconUrl from '../Images/Icons/locationIcon.svg';
+
 
 var baseIcon = L.Icon.extend({
   options: {
@@ -29,12 +29,10 @@ var earthquakeIcon = new baseIcon({iconUrl: earthquakeIconUrl}),
     hailIcon = new baseIcon({iconUrl: hailIconUrl}),
     highWindsIcon = new baseIcon({iconUrl: highWindsIconUrl}),
     blizzardIcon = new baseIcon({iconUrl: blizzardIconUrl}),
-    lightningIcon = new baseIcon({iconUrl: lightningIconUrl}),
-    locationIcon = new baseIcon({iconUrl: locationIconUrl});
+    lightningIcon = new baseIcon({iconUrl: lightningIconUrl});
 
 
   const mapIcons = {
-    location: locationIcon,
     earthquake: earthquakeIcon,
     fire: fireIcon,
     firstAid: aidIcon,
@@ -94,20 +92,7 @@ function MapEvents({ setIncidents }) {
   return null;
 }
 
-function RecenterButton({ position }) {
-  const map = useMapEvents({});
-  const handleClick = () => {
-    if (map && position) {
-      map.flyTo([position.lat, position.lng], map.getZoom());
-    }
-  };
 
-  return (
-    <Button onClick={handleClick} position="absolute" top="10px" right="10px" zIndex="1000" background="white" p="2">
-      <img src={locationIconUrl} alt="Locate me" style={{ width: '24px', height: '24px' }} />
-    </Button>
-  );
-}
 
 function MapPage() {
   const [incidents, setIncidents] = useState([]);
@@ -148,7 +133,7 @@ function MapPage() {
             />
             <LocationMarker />
             <MapEvents setIncidents={setIncidents} />
-            {position && <RecenterButton position={position} />}
+            {/* {position && <RecenterButton position={position} />} */}
             {incidents.map(incident => (
               <Marker key={incident.incident_id}
                 position={[incident.location_lat, incident.location_lng]}

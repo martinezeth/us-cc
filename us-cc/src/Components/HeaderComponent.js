@@ -55,7 +55,7 @@ const HeaderComponent = () => {
   };
 
   const handleLogout = () => {
-    axios.post('http://localhost:5000/api/logout')
+    axios.post('http://localhost:8000/api/logout')
       .then((response) => {
         // console.log(response.data); 
         // Remove the authToken cookie
@@ -78,7 +78,7 @@ const HeaderComponent = () => {
         />
         <ChakraLink as={Link} to="/" display="flex" alignItems="center">
           <Image src={Logo} alt="logo" boxSize="50px" />
-          <Text marginLeft="2" fontWeight="bold">US Crisis Coordination</Text>
+          <Text marginLeft="2" fontWeight="bold">Crisis Companion</Text>
         </ChakraLink>
         
         {/* Spacer */}
@@ -89,7 +89,7 @@ const HeaderComponent = () => {
           <Stack direction="row" spacing={4} justifyContent="left">
             <DropDown/>
             <Button  padding="8px 16px" variant="ghost" as={Link} to="/posts">Posts</Button>
-            <Button  padding="8px 16px" variant="ghost" onClick={() => handleNavigation('about-section')}>About</Button>
+            {/* <Button  padding="8px 16px" variant="ghost" onClick={() => handleNavigation('about-section')}>About</Button> */}
             {username ? (
               
               <>
