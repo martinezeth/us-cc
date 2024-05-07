@@ -40,15 +40,6 @@ app.use(cors({
 
 app.use(express.json());
 
-/**
- * Database connection OLD METHOD
- */
-// const connection = mysql.createConnection({
-//     host: 'localhost',
-//     user: 'root',
-//     password: 'root',
-//     database: 'usccdb'
-// });
 
 
 // AWS Database connection setup
@@ -75,43 +66,6 @@ connection.connect(err => {
     }
     console.log('Connected to database.');
 });
-
-
-/**
- * Routes
- */
-
-// LOGIN Route
-// app.post('/api/login', (req, res) => {
-//     const { username, password } = req.body;
-
-//     validateCredentials(username, password, (error, userExists) => {
-//         if (error) {
-//             console.error('Error validating credentials:', error);
-//             res.status(500).send('Error validating credentials');
-//             return;
-//         }
-//         if (userExists) {
-//             // Assuming you have a function to retrieve user data from the database
-//             getUserDataUsername(username, (userDataError, userData) => {
-//                 if (userDataError) {
-//                     console.error('Error retrieving user data:', userDataError);
-//                     res.status(500).send('Error retrieving user data');
-//                     return;
-//                 }
-
-//                 const key = process.env.JWT_SECRET;
-//                 const authToken = jwt.sign({ username, userData }, key, { expiresIn: '14h' });
-
-//                 // Send the authToken in the response
-//                 res.send({ authToken: authToken });
-//             });
-//         } else {
-//             res.status(401).send('Invalid username or password');
-//         }
-//     });
-// });
-
 
 
 app.post('/api/login', (req, res) => {
