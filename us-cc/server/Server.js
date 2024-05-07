@@ -20,17 +20,6 @@ require('dotenv').config({ path: './dbConnection.env' });
  * - env variables
  */
 
-
-
-// DEBUG: Confirm environment variables are loaded correctly
-console.log('Server.js Environment Variables:');
-console.log('DB Host:', process.env.DB_HOST);
-console.log('DB User:', process.env.DB_USER); 
-console.log('DB Name:', process.env.DB_NAME);
-console.log('PORT:', process.env.PORT);
-console.log('JWT_SECRET:', process.env.JWT_SECRET);
-
-
 app.use(cors({
     origin: 'http://localhost:3000',
     methods: ['GET', 'POST'],
@@ -56,17 +45,7 @@ const connection = mysql.createConnection({
     host: process.env.DB_HOST,
     user: process.env.DB_USER,
     password: process.env.DB_PASS,
-    database: process.env.DB_NAME
 });
-
-
-// DEBUG: Check the database connection settings right before connecting
-console.log('Server.js Database Connection Settings:');
-console.log('DB Host:', connection.config.host);
-console.log('DB User:', connection.config.user);
-console.log('DB Name:', connection.config.database);
-
-
 
 connection.connect(err => {
     if (err) {
@@ -82,69 +61,35 @@ connection.connect(err => {
  */
 
 // LOGIN Route
-// app.post('/api/login', (req, res) => {
-//     const { username, password } = req.body;
-
-//     validateCredentials(username, password, (error, userExists) => {
-//         if (error) {
-//             console.error('Error validating credentials:', error);
-//             res.status(500).send('Error validating credentials');
-//             return;
-//         }
-//         if (userExists) {
-//             // Assuming you have a function to retrieve user data from the database
-//             getUserDataUsername(username, (userDataError, userData) => {
-//                 if (userDataError) {
-//                     console.error('Error retrieving user data:', userDataError);
-//                     res.status(500).send('Error retrieving user data');
-//                     return;
-//                 }
-
-//                 const key = process.env.JWT_SECRET;
-//                 const authToken = jwt.sign({ username, userData }, key, { expiresIn: '14h' });
-
-//                 // Send the authToken in the response
-//                 res.send({ authToken: authToken });
-//             });
-//         } else {
-//             res.status(401).send('Invalid username or password');
-//         }
-//     });
-// });
-
-
-
 app.post('/api/login', (req, res) => {
-  const { username, password } = req.body;
-  console.log(`Login attempt for user: ${username}`);
+    const { username, password } = req.body;
 
-  validateCredentials(username, password, (error, userExists) => {
-      if (error) {
-          console.error('Error validating credentials:', error);
-          res.status(500).send('Error validating credentials');
-          return;
-      }
-      console.log(`Credentials valid: ${userExists}`);
-      if (userExists) {
-          getUserDataUsername(username, (userDataError, userData) => {
-              if (userDataError) {
-                  console.error('Error retrieving user data:', userDataError);
-                  res.status(500).send('Error retrieving user data');
-                  return;
-              }
+    validateCredentials(username, password, (error, userExists) => {
+        if (error) {
+            console.error('Error validating credentials:', error);
+            res.status(500).send('Error validating credentials');
+            return;
+        }
+        if (userExists) {
+            // Assuming you have a function to retrieve user data from the database
+            getUserDataUsername(username, (userDataError, userData) => {
+                if (userDataError) {
+                    console.error('Error retrieving user data:', userDataError);
+                    res.status(500).send('Error retrieving user data');
+                    return;
+                }
 
-              const key = process.env.JWT_SECRET;
-              const authToken = jwt.sign({ username, userData }, key, { expiresIn: '14h' });
+                const key = process.env.JWT_SECRET;
+                const authToken = jwt.sign({ username, userData }, key, { expiresIn: '14h' });
 
-              console.log('Auth token created:', authToken);
-              res.send({ authToken: authToken });
-          });
-      } else {
-          res.status(401).send('Invalid username or password');
-      }
-  });
+                // Send the authToken in the response
+                res.send({ authToken: authToken });
+            });
+        } else {
+            res.status(401).send('Invalid username or password');
+        }
+    });
 });
-
 
 
 app.post('/api/logout', (req, res) => {
