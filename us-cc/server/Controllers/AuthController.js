@@ -1,13 +1,16 @@
 const mysql = require('mysql');
 const jwt = require('jsonwebtoken');
+require('dotenv').config({ path: './dbConnection.env' });
+
 
 const pool = mysql.createPool({
     connectionLimit: 10,
-    host: 'localhost',
-    user: 'root',
-    password: 'root',
-    database: 'usccdb'
+    host: process.env.DB_HOST,
+    user: process.env.DB_USER,
+    password: process.env.DB_PASS,
+    database: process.env.DB_NAME
 });
+
 
 /**
  * 
@@ -38,6 +41,8 @@ function validateCredentials(username, password, callback) {
     });
 
 }
+
+
 /**
  * 
  * @param {string} username 
@@ -61,7 +66,6 @@ function createUser(username, password, callback) {
                 callback(error);
                 return;
             }
-            // console.log("AuthController: Created User!");
             callback(null);
             connection.release();
         });
@@ -71,7 +75,6 @@ function createUser(username, password, callback) {
 
 function decodeToken(authToken, secretKey) {
     try {
-        // console.log('Decoded token:', decodedToken);
         return jwt.verify(authToken, secretKey);
     } catch (error) {
         console.error('Error decoding token:', error);
