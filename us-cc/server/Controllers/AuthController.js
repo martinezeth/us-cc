@@ -26,7 +26,7 @@ function validateCredentials(username, password, callback) {
             return;
         }
 
-        connection.query('SELECT * FROM Users WHERE username = ? AND password_hash = ?', [username, password], (error, results, fields) => {
+        connection.query('SELECT * FROM users WHERE username = ? AND password_hash = ?', [username, password], (error, results, fields) => {
             if (error) {
                 connection.release();
                 callback(error, null);
