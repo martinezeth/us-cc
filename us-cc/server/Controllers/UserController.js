@@ -1,13 +1,28 @@
 const mysql = require('mysql');
 const jwt = require('jsonwebtoken');
 
+// const pool = mysql.createPool({
+//     connectionLimit: 10, 
+//     host: 'localhost',
+//     user: 'root',
+//     password: 'root',
+//     database: 'usccdb'
+// });
+
 const pool = mysql.createPool({
-    connectionLimit: 10, 
-    host: 'localhost',
-    user: 'root',
-    password: 'root',
-    database: 'usccdb'
+    connectionLimit: 10,
+    host: process.env.DB_HOST,
+    user: process.env.DB_USER,
+    password: process.env.DB_PASS,
+    database: process.env.DB_NAME
 });
+
+
+console.log('UserController.js Pool Config:');
+console.log('DB Host:', process.env.DB_HOST);
+console.log('DB User:', process.env.DB_USER);
+
+console.log('DB Name:', process.env.DB_NAME);
 
 function getUserDataUsername(username, callback) {
     pool.getConnection((err, connection) => {
