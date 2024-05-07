@@ -52,6 +52,7 @@ const FeaturesSection = () => {
           title="Volunteer Coordination"
           description="Coordinate volunteer efforts effectively."
           icon={MdGroupWork}
+          onClick={() => navigate('/volunteering')}
         />
         <FeatureCard
           title="Real-time Data Visualization"
@@ -60,9 +61,6 @@ const FeaturesSection = () => {
           onClick={() => navigate('/mapview')}
         />
       </SimpleGrid>
-      <Text mt={10} textAlign="center" fontSize="xl" color="blue.500" cursor="pointer" onClick={() => navigate('/volunteering')}>
-        Visit our Volunteer Dashboard
-      </Text>
     </Box>
   );
 };

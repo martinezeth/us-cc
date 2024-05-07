@@ -61,7 +61,7 @@ function createUser(username, password, callback) {
             callback(err);
             return;
         }
-        connection.query('INSERT INTO users (username, password_hash) VALUES (?, ?)', [username, password], (error, results, fields) => {
+        connection.query('INSERT INTO Users (username, password_hash) VALUES (?, ?)', [username, password], (error, results, fields) => {
             if (error) {
                 callback(error);
                 return;
