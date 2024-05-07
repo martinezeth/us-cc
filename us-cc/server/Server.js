@@ -5,10 +5,7 @@ const { getUserData, getUserVolunteering, getUserDataUsername, getVolunteersByRe
 const { getUserPostData, getRecentPostData, createUserPost } = require('./Controllers/PostsController');
 const cors = require('cors');
 const jwt = require('jsonwebtoken');
-// const dotenv = require('dotenv');
-// dotenv.config();
 const app = express();
-
 require('dotenv').config({ path: './dbConnection.env' });
 
 /**
@@ -20,17 +17,6 @@ require('dotenv').config({ path: './dbConnection.env' });
  * - env variables
  */
 
-
-
-// DEBUG: Confirm environment variables are loaded correctly
-console.log('Server.js Environment Variables:');
-console.log('DB Host:', process.env.DB_HOST);
-console.log('DB User:', process.env.DB_USER); 
-console.log('DB Name:', process.env.DB_NAME);
-console.log('PORT:', process.env.PORT);
-console.log('JWT_SECRET:', process.env.JWT_SECRET);
-
-
 app.use(cors({
     origin: 'http://localhost:3000',
     methods: ['GET', 'POST'],
@@ -41,7 +27,6 @@ app.use(cors({
 app.use(express.json());
 
 
-
 // AWS Database connection setup
 const connection = mysql.createConnection({
     host: process.env.DB_HOST,
@@ -49,13 +34,6 @@ const connection = mysql.createConnection({
     password: process.env.DB_PASS,
     database: process.env.DB_NAME
 });
-
-
-// DEBUG: Check the database connection settings right before connecting
-console.log('Server.js Database Connection Settings:');
-console.log('DB Host:', connection.config.host);
-console.log('DB User:', connection.config.user);
-console.log('DB Name:', connection.config.database);
 
 
 

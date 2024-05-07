@@ -1,13 +1,6 @@
 const mysql = require('mysql');
 const jwt = require('jsonwebtoken');
 
-// const pool = mysql.createPool({
-//     connectionLimit: 10, 
-//     host: 'localhost',
-//     user: 'root',
-//     password: 'root',
-//     database: 'usccdb'
-// });
 
 const pool = mysql.createPool({
     connectionLimit: 10,
@@ -17,12 +10,6 @@ const pool = mysql.createPool({
     database: process.env.DB_NAME
 });
 
-
-console.log('UserController.js Pool Config:');
-console.log('DB Host:', process.env.DB_HOST);
-console.log('DB User:', process.env.DB_USER);
-
-console.log('DB Name:', process.env.DB_NAME);
 
 function getUserDataUsername(username, callback) {
     pool.getConnection((err, connection) => {
@@ -56,7 +43,6 @@ function getUserData(user_id, callback) {
                 callback(error, null);
                 return;
             }
-            // console.log("Got user info: ", results);
             callback(null, results);
             connection.release();
 
@@ -103,7 +89,6 @@ function getVolunteersBySkills(skill, callback) {
         callback(null, results[0]);
     });
 }
-// Route to fetch volunteer data
 
 
 module.exports = { getUserData,  getUserDataUsername, getUserVolunteering, getVolunteersByRegion, getVolunteersBySkills };

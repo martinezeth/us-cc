@@ -2,14 +2,6 @@ const mysql = require('mysql');
 const jwt = require('jsonwebtoken');
 require('dotenv').config({ path: './dbConnection.env' });
 
-// const pool = mysql.createPool({
-//     connectionLimit: 10,
-//     host: 'localhost',
-//     user: 'root',
-//     password: 'root',
-//     database: 'usccdb'
-// });
-
 
 const pool = mysql.createPool({
     connectionLimit: 10,
@@ -19,11 +11,6 @@ const pool = mysql.createPool({
     database: process.env.DB_NAME
 });
 
-
-console.log('AuthController.js Database Connection Pool Config:');
-console.log('DB Host:', process.env.DB_HOST);
-console.log('DB User:', process.env.DB_USER);
-console.log('DB Name:', process.env.DB_NAME);
 
 /**
  * 
@@ -56,42 +43,6 @@ function validateCredentials(username, password, callback) {
 }
 
 
-// function validateCredentials(username, password, callback) {
-//     pool.getConnection((err, connection) => {
-//         if (err) {
-//             console.error('Database connection error:', err);
-//             callback(err, null);
-//             return;
-//         }
-
-//         console.log(`Checking credentials for username: ${username}`);
-//         connection.query('SELECT * FROM Users WHERE username = ?', [username], (error, results, fields) => {
-//             if (error) {
-//                 console.error('SQL error:', error);
-//                 connection.release();
-//                 callback(error, null);
-//                 return;
-//             }
-//             console.log('Query results:', results);
-//             if (results.length === 0) {
-//                 console.log('No user found with that username.');
-//                 callback(null, false);
-//                 connection.release();
-//                 return;
-//             }
-
-//             const userExists = results[0].password_hash === password;  // This assumes passwords are stored in plaintext for now.
-//             console.log(`User exists: ${userExists}`);
-//             connection.release();
-//             callback(null, userExists);
-//         });
-//     });
-// }
-
-
-
-
-
 /**
  * 
  * @param {string} username 
@@ -115,7 +66,6 @@ function createUser(username, password, callback) {
                 callback(error);
                 return;
             }
-            // console.log("AuthController: Created User!");
             callback(null);
             connection.release();
         });
@@ -125,7 +75,6 @@ function createUser(username, password, callback) {
 
 function decodeToken(authToken, secretKey) {
     try {
-        // console.log('Decoded token:', decodedToken);
         return jwt.verify(authToken, secretKey);
     } catch (error) {
         console.error('Error decoding token:', error);

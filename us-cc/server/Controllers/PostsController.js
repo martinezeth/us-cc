@@ -2,14 +2,6 @@ const mysql = require('mysql');
 const jwt = require('jsonwebtoken');
 
 
-// const pool = mysql.createPool({
-//     connectionLimit: 10,
-//     host: 'localhost',
-//     user: 'root',
-//     password: 'root',
-//     database: 'usccdb'
-// });
-
 const pool = mysql.createPool({
     connectionLimit: 10,
     host: process.env.DB_HOST,
@@ -30,7 +22,6 @@ function getUserPostData(user_id, callback) {
                 callback(error, null);
                 return;
             }
-            // console.log("Got post info: ", results);
             callback(null, results);
             connection.release();
 
@@ -50,7 +41,6 @@ function getRecentPostData(callback) {
                 callback(error, null);
                 return;
             }
-            // console.log("Got post info: ", results);
             callback(null, results);
             connection.release();
 
@@ -72,7 +62,6 @@ function createUserPost(postInfo, callback) {
                 callback(error, null);
                 return;
             }
-            // console.log("Got post info: ", results);
             callback(null, results);
             connection.release();
 
