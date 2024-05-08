@@ -33,9 +33,9 @@ function getRecentPostData(callback) {
         if (err) {
             callback(err, null);
             return;
-        }
+        }//'CALL GetRecentPosts()'
         connection.query('CALL GetRecentPosts()', (error, results, fields) => {
-            if (error) {
+        if (error) {
                 connection.release();
                 callback(error, null);
                 return;
@@ -49,22 +49,24 @@ function getRecentPostData(callback) {
 
 function createUserPost(postInfo, callback) {
     const {user_id, title, body, region} = postInfo;
-    console.log("po", postInfo);
+    // console.log("po", postInfo);
     pool.getConnection((err, connection) => {
         if (err) {
             callback(err, null);
             return;
         }
-        connection.query(`INSERT INTO posts (${user_id}, ${title}, ${body}, ${region})`, (error, results, fields) => {
-            if (error) {
+        
+        connection.query(
+            'INSERT INTO Posts (user_id, title, body, region) VALUES (?, ?, ?, ?)',
+            [user_id, title, body, region],
+            (error, results, fields) => {
                 connection.release();
-                callback(error, null);
-                return;
-            }
-            callback(null, results);
-            connection.release();
-
-        })
+                if (error) {
+                    callback(error, null);
+                    return;
+                }
+                callback(null, results);
+            });
     });
 }
 

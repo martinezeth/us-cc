@@ -50,7 +50,7 @@ connection.connect(err => {
 
 app.post('/api/login', (req, res) => {
   const { username, password } = req.body;
-  console.log(`Login attempt for user: ${username}`);
+//   console.log(`Login attempt for user: ${username}`);
 
   validateCredentials(username, password, (error, userExists) => {
       if (error) {
@@ -58,7 +58,7 @@ app.post('/api/login', (req, res) => {
           res.status(500).send('Error validating credentials');
           return;
       }
-      console.log(`Credentials valid: ${userExists}`);
+    //   console.log(`Credentials valid: ${userExists}`);
       if (userExists) {
           getUserDataUsername(username, (userDataError, userData) => {
               if (userDataError) {
@@ -70,7 +70,7 @@ app.post('/api/login', (req, res) => {
               const key = process.env.JWT_SECRET;
               const authToken = jwt.sign({ username, userData }, key, { expiresIn: '14h' });
 
-              console.log('Auth token created:', authToken);
+            //   console.log('Auth token created:', authToken);
               res.send({ authToken: authToken });
           });
       } else {
@@ -223,23 +223,33 @@ app.get('/api/posts', (req, res) => {
         }
         console.log("post data all", postData[0]);
         res.json(postData[0]);
+        
     });
 });
 
 app.post('/api/createpost', (req, res) => {
     const authToken = req.headers['authorization'];
+    if (!authToken) {
+        return res.status(401).send('Unauthorized');
+    }
     const postInfo = req.body;
     const decodedToken = decodeToken(authToken, process.env.JWT_SECRET);
-    console.log("dd", decodedToken);
-    postInfo['user_id'] = decodedToken.user_id;
-    console.log(postInfo);
+    if (!decodedToken || !decodedToken.userData || !decodedToken.userData[0] || !decodedToken.userData[0][0]) {
+        return res.status(401).send('Unauthorized');
+    }
+
+    const user = decodedToken.userData[0][0];
+    
+    postInfo.user_id = user.user_id;
+    postInfo.region_id = user.region_id;
+    // console.log(postInfo);
     createUserPost(postInfo, (err, result) => {
         if(err){
             console.error('Error creating post:', err);
             res.status(500).send('Error creating post:');
             return;
         }
-        res.sendStatus(200);
+        res.json(postInfo).status(200);
     });
 });
 
