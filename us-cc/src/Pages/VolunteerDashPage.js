@@ -68,7 +68,7 @@ const VolunteerDashboardPage = () => {
     const fetchVolunteersBySkills = (skill) => {
         axios.get(`http://localhost:8000/api/volunteers/skills?skill=${skill}`)
             .then(response => setVolunteers(response.data))
-            .catch(error => console.error('Error fetching volunteers:', error));
+            .catch(error => console.error('Error fetching volunteer skills:', error));
     };
 
 

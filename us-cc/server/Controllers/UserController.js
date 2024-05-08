@@ -72,23 +72,89 @@ function getUserVolunteering(username, callback){
 
 // Function to get volunteers by region
 function getVolunteersByRegion(region, callback) {
-    pool.query('CALL GetVolunteersByRegion(?)', [region], (error, results) => {
-        if (error) {
-            return callback(error, null);
+    pool.getConnection((err, connection) => {
+        if (err) {
+            callback(err, null);
+            return;
         }
-        callback(null, results[0]);
+
+        connection.query('CALL GetVolunteersByRegion(?)', [region], (error, results, fields) => {
+            connection.release();
+
+            if (error) {
+                callback(error, null);
+                return;
+            }
+
+            callback(null, results[0]);
+        });
     });
 }
 
 // Function to get volunteers by skills
 function getVolunteersBySkills(skill, callback) {
-    pool.query('CALL GetVolunteersBySkills(?)', [skill], (error, results) => {
-        if (error) {
-            return callback(error, null);
+    pool.getConnection((err, connection) => {
+        if (err) {
+            callback(err, null);
+            return;
         }
-        callback(null, results[0]);
+
+        connection.query('CALL GetVolunteersBySkills(?)', [skill], (error, results, fields) => {
+            connection.release();
+
+            if (error) {
+                callback(error, null);
+                return;
+            }
+
+            callback(null, results[0]);
+        });
+    });
+}
+
+function makeUserVolunteer(userData, callback) {
+    const { name, region, region_id, skills, availability } = userData;
+
+    pool.getConnection((err, connection) => {
+        if (err) {
+            callback(err, null);
+            return;
+        }
+        connection.query('CALL AddUserAsVolunteer(?, ?, ?, ?, ?)', [name, region, region_id, skills, availability], (error, results, fields) => {
+            connection.release();
+            if (error) {
+                callback(error, null);
+                return;
+            }
+            callback(null, results);
+        });
+    });
+}
+
+function getRegions(callback){
+    pool.getConnection((err, connection) => {
+        if (err) {
+            callback(err, null);
+            return;
+        }
+
+        connection.query('SELECT region_id, region_name FROM Region', (error, results, fields) => {
+            connection.release();
+
+            if (error) {
+                callback(error, null);
+                return;
+            }
+            callback(null, results);
+        });
     });
 }
 
 
-module.exports = { getUserData,  getUserDataUsername, getUserVolunteering, getVolunteersByRegion, getVolunteersBySkills };
+module.exports = { getUserData, 
+                   getUserDataUsername, 
+                   getUserVolunteering, 
+                   getVolunteersByRegion, 
+                   getVolunteersBySkills, 
+                   makeUserVolunteer,
+                   getRegions };

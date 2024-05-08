@@ -1,5 +1,5 @@
-import React, { useState } from "react";
-import { Box, Button, Input, VStack, Text, Container, Checkbox } from "@chakra-ui/react";
+import React, { useState, useEffect } from "react";
+import { Box, Button, Input, VStack, Text, Container, Checkbox, Select } from "@chakra-ui/react";
 import axios from "axios";
 import { useNavigate } from 'react-router-dom';
 
@@ -7,9 +7,26 @@ function VolunteerPage() {
     const navigate = useNavigate();
     const [name, setName] = useState('');
     const [region, setRegion] = useState('');
+    const [regionid, setRegionid] = useState();
+    const [regions, setRegions] = useState([]);
     const [skills, setSkills] = useState('');
     const [availability, setAvailability] = useState([]);
     const [error, setError] = useState('');
+
+
+    useEffect(() => {
+        // Fetch regions when the component mounts
+        const fetchRegions = async () => {
+            try {
+                const response = await axios.get('http://localhost:8000/api/regions');
+                setRegions(response.data);
+            } catch (error) {
+                console.error('Error fetching regions:', error);
+            }
+        };
+
+        fetchRegions();
+    }, []);
 
     const availabilityOptions = [
         "Weekdays",
@@ -17,18 +34,20 @@ function VolunteerPage() {
         "Mornings",
         "Afternoons",
         "Evenings",
+        "Flexible"
     ];
 
     const handleRegister = async () => {
         try {
-            const response = await axios.post('/api/volunteers', {
-                name,
-                region,
-                skills,
-                availability,
+            const response = await axios.post('http://localhost:8000/api/volunteering/register', {
+                userData: {
+                    name,
+                    region,
+                    regionid,
+                    skills,
+                    availability,
+                }
             });
-            // Optionally, you can redirect the user to a different page after successful registration
-            // navigate('/thank-you');
             navigate('/');
         } catch (error) {
             console.error('Error registering volunteer:', error.response.data);
@@ -46,11 +65,22 @@ function VolunteerPage() {
 
     return (
         <>
-            <h1>Volunteering Sign Up</h1>
-            <Container centerContent>
+            <Container  my={10}>
                 <VStack spacing={4}>
                     <Input placeholder="Name" value={name} onChange={(e) => setName(e.target.value)} />
-                    <Input placeholder="Region" focusBorderColor='blue' value={region} onChange={(e) => setRegion(e.target.value)} />
+                    <Box>
+                        <Select
+                            placeholder="Select region"
+                            value={region}
+                            onChange={(e) => {setRegion(e.target.value); setRegionid(e.target.key)}}
+                        >
+                            {regions.map(region => (
+                                <option key={region.region_id} value={region.region_id}>
+                                    {region.region_name}
+                                </option>
+                            ))}
+                        </Select>
+                    </Box>
                     <Input placeholder="Skills" value={skills} onChange={(e) => setSkills(e.target.value)} />
                     <Box>
                         <Text>Availability:</Text>

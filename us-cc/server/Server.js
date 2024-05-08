@@ -1,7 +1,7 @@
 const express = require('express');
 const mysql = require('mysql');
 const { validateCredentials, createUser, decodeToken } = require('./Controllers/AuthController');
-const { getUserData, getUserVolunteering, getUserDataUsername, getVolunteersByRegion, getVolunteersBySkills } = require('./Controllers/UserController');
+const { getUserData, getUserVolunteering, getUserDataUsername, getRegions, getVolunteersByRegion, getVolunteersBySkills, makeUserVolunteer } = require('./Controllers/UserController');
 const { getUserPostData, getRecentPostData, createUserPost } = require('./Controllers/PostsController');
 const cors = require('cors');
 const jwt = require('jsonwebtoken');
@@ -166,6 +166,17 @@ app.get('/api/incident-reports', (req, res) => {
     }
 });
 
+app.get('/api/regions', (req,res) => {
+    getRegions((error, regions) => {
+        if(error){
+            console.error('Error retrieving region data:', error);
+            res.status(500).send('Error retrieving region data');
+            return;
+        }
+        res.json(regions);
+    });
+});
+
 // User Info Route
 app.get('/api/userinfo/:username', (req, res) => {
     const authToken = req.headers['authorization'];
@@ -213,7 +224,7 @@ app.get('/api/posts/:username', (req, res) => {
 });
 
 app.get('/api/posts', (req, res) => {
-    const authToken = req.headers['authorization'];
+    //const authToken = req.headers['authorization'];
     // Call the function to get post data based on user ID
     getRecentPostData((error, postData) => {
         if (error) {
@@ -267,6 +278,18 @@ app.get('/api/volunteering/:username', (req, res) => {
     });
 });
 
+app.post('/api/volunteering/register',(req, res) => {
+    const { userData } = req.body;
+    makeUserVolunteer(userData, (error, success) => {
+        if(error) {
+            console.error("Could not register user.", error);
+            res.status(500).json({ error: 'Internal server error' });
+            return;
+        }
+        res.json(userData).status(200);
+    });
+});
+
 // Route to get volunteers by region
 app.get('/api/volunteers/region', (req, res) => {
     const { region } = req.query;
@@ -296,7 +319,7 @@ app.get('/api/volunteers/skills', (req, res) => {
 
 // Endpoint for getting number of volunteers by region
 app.get('/api/volunteers/region-chart', (req, res) => {
-    connection.query('SELECT region, COUNT(*) AS count FROM Volunteers GROUP BY region', (error, results) => {
+    connection.query('SELECT region_id, COUNT(*) AS count FROM Volunteers GROUP BY region_id', (error, results) => {
         if (error) {
             console.error('Error fetching aggregated volunteers:', error);
             res.status(500).send('Error fetching data');
@@ -306,6 +329,8 @@ app.get('/api/volunteers/region-chart', (req, res) => {
     });
 });
 
+
+// Write endpoint for /api/volunteers/region?region=${region} here
 
 // Endpoint for getting number of volunteers by skill
 app.get('/api/volunteers/skill-chart', (req, res) => {
