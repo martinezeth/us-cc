@@ -1,7 +1,7 @@
 const express = require('express');
 const mysql = require('mysql');
 const { validateCredentials, createUser, decodeToken } = require('./Controllers/AuthController');
-const { getUserData, getUserVolunteering, getUserDataUsername, getVolunteersByRegion, getVolunteersBySkills } = require('./Controllers/UserController');
+const { getUserData, getUserVolunteering, getUserDataUsername, getRegions, getVolunteersByRegion, getVolunteersBySkills, makeUserVolunteer } = require('./Controllers/UserController');
 const { getUserPostData, getRecentPostData, createUserPost } = require('./Controllers/PostsController');
 const cors = require('cors');
 const jwt = require('jsonwebtoken');
@@ -32,6 +32,7 @@ const connection = mysql.createConnection({
     host: process.env.DB_HOST,
     user: process.env.DB_USER,
     password: process.env.DB_PASS,
+    database: process.env.DB_NAME
 });
 
 
@@ -40,7 +41,7 @@ connection.connect(err => {
         console.error('Error connecting to database: ', err);
         return;
     }
-    console.log('Connected to database.');
+    console.log(`Connected to database ${process.env.DB_NAME}.`);
 });
 
 /*
@@ -49,7 +50,7 @@ connection.connect(err => {
 
 app.post('/api/login', (req, res) => {
   const { username, password } = req.body;
-  console.log(`Login attempt for user: ${username}`);
+//   console.log(`Login attempt for user: ${username}`);
 
   validateCredentials(username, password, (error, userExists) => {
       if (error) {
@@ -57,7 +58,7 @@ app.post('/api/login', (req, res) => {
           res.status(500).send('Error validating credentials');
           return;
       }
-      console.log(`Credentials valid: ${userExists}`);
+    //   console.log(`Credentials valid: ${userExists}`);
       if (userExists) {
           getUserDataUsername(username, (userDataError, userData) => {
               if (userDataError) {
@@ -69,7 +70,7 @@ app.post('/api/login', (req, res) => {
               const key = process.env.JWT_SECRET;
               const authToken = jwt.sign({ username, userData }, key, { expiresIn: '14h' });
 
-              console.log('Auth token created:', authToken);
+            //   console.log('Auth token created:', authToken);
               res.send({ authToken: authToken });
           });
       } else {
@@ -165,6 +166,17 @@ app.get('/api/incident-reports', (req, res) => {
     }
 });
 
+app.get('/api/regions', (req,res) => {
+    getRegions((error, regions) => {
+        if(error){
+            console.error('Error retrieving region data:', error);
+            res.status(500).send('Error retrieving region data');
+            return;
+        }
+        res.json(regions);
+    });
+});
+
 // User Info Route
 app.get('/api/userinfo/:username', (req, res) => {
     const authToken = req.headers['authorization'];
@@ -212,7 +224,7 @@ app.get('/api/posts/:username', (req, res) => {
 });
 
 app.get('/api/posts', (req, res) => {
-    const authToken = req.headers['authorization'];
+    //const authToken = req.headers['authorization'];
     // Call the function to get post data based on user ID
     getRecentPostData((error, postData) => {
         if (error) {
@@ -222,23 +234,33 @@ app.get('/api/posts', (req, res) => {
         }
         console.log("post data all", postData[0]);
         res.json(postData[0]);
+        
     });
 });
 
 app.post('/api/createpost', (req, res) => {
     const authToken = req.headers['authorization'];
+    if (!authToken) {
+        return res.status(401).send('Unauthorized');
+    }
     const postInfo = req.body;
     const decodedToken = decodeToken(authToken, process.env.JWT_SECRET);
-    console.log("dd", decodedToken);
-    postInfo['user_id'] = decodedToken.user_id;
-    console.log(postInfo);
+    if (!decodedToken || !decodedToken.userData || !decodedToken.userData[0] || !decodedToken.userData[0][0]) {
+        return res.status(401).send('Unauthorized');
+    }
+
+    const user = decodedToken.userData[0][0];
+    
+    postInfo.user_id = user.user_id;
+    postInfo.region_id = user.region_id;
+    // console.log(postInfo);
     createUserPost(postInfo, (err, result) => {
         if(err){
             console.error('Error creating post:', err);
             res.status(500).send('Error creating post:');
             return;
         }
-        res.sendStatus(200);
+        res.json(postInfo).status(200);
     });
 });
 
@@ -253,6 +275,18 @@ app.get('/api/volunteering/:username', (req, res) => {
             return;
         }
         res.json(volunteeringData);
+    });
+});
+
+app.post('/api/volunteering/register',(req, res) => {
+    const { userData } = req.body;
+    makeUserVolunteer(userData, (error, success) => {
+        if(error) {
+            console.error("Could not register user.", error);
+            res.status(500).json({ error: 'Internal server error' });
+            return;
+        }
+        res.json(userData).status(200);
     });
 });
 
@@ -285,7 +319,7 @@ app.get('/api/volunteers/skills', (req, res) => {
 
 // Endpoint for getting number of volunteers by region
 app.get('/api/volunteers/region-chart', (req, res) => {
-    connection.query('SELECT region, COUNT(*) AS count FROM Volunteers GROUP BY region', (error, results) => {
+    connection.query('SELECT region_id, COUNT(*) AS count FROM Volunteers GROUP BY region_id', (error, results) => {
         if (error) {
             console.error('Error fetching aggregated volunteers:', error);
             res.status(500).send('Error fetching data');
@@ -295,6 +329,16 @@ app.get('/api/volunteers/region-chart', (req, res) => {
     });
 });
 
+app.get('/api/volunteers/getregions', (req, res) => {
+    connection.query('CALL GetRegions()', (error, results) => {
+        if(error){
+            console.error('Error calling GetRegions', error);
+            res.sendStatus(500);
+            return;
+        }
+        res.json(results);
+    });
+});
 
 // Endpoint for getting number of volunteers by skill
 app.get('/api/volunteers/skill-chart', (req, res) => {

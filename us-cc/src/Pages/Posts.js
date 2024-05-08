@@ -51,7 +51,7 @@ export default function Posts() {
             }
             try {
                 let response;
-                if (username) {
+                if (username) { 
                     response = await axios.get(`http://localhost:8000/api/posts/${username}`, {
                         headers: {
                             Authorization: `${authToken}`
@@ -81,18 +81,22 @@ export default function Posts() {
         setIsModalOpen(false);
     };
     
+    const handleCreatePost = (newPost) => {
+        console.log("new", newPost);
+        setPosts(prevPosts => [...prevPosts, newPost]);
+    };
+
     return (
         <>
-        { loggedIn ?
-        <>
+        { loggedIn &&
+            <>
                 <Button className="newPostButton" colorScheme='blue' onClick={showModal}>
                     New Post
                 </Button>
-                    <CreatePostModal isOpen={isModalOpen} onClose={hideModal} />
-                </>
+                <CreatePostModal isOpen={isModalOpen} onClose={hideModal} onCreatePost={handleCreatePost} />
+            </>
                 
-            :
-            <div></div>
+            
          }
             
 
@@ -104,9 +108,6 @@ export default function Posts() {
                 justifyContent="center"          // Centers the column in the grid horizontally
                 alignContent="center"
             >
-                
-
-
                 <VStack spacing={4} align="stretch">
                     {posts.map((post, index) => (
                         <Post key={index} postData={post} />

@@ -54,6 +54,7 @@ const VolunteersTable = ({ volunteers }) => (
 const VolunteerDashboardPage = () => {
     const [volunteers, setVolunteers] = useState([]);
     const [regionChartData, setRegionChartData] = useState([]);
+    const [regions, setRegions] = useState([]);
     const [skillChartData, setSkillChartData] = useState([]);
     const [activeChartData, setActiveChartData] = useState([]);
 
@@ -68,7 +69,7 @@ const VolunteerDashboardPage = () => {
     const fetchVolunteersBySkills = (skill) => {
         axios.get(`http://localhost:8000/api/volunteers/skills?skill=${skill}`)
             .then(response => setVolunteers(response.data))
-            .catch(error => console.error('Error fetching volunteers:', error));
+            .catch(error => console.error('Error fetching volunteer skills:', error));
     };
 
 
@@ -85,6 +86,14 @@ const VolunteerDashboardPage = () => {
             .catch(error => console.error('Error fetching chart data:', error));
     };
 
+    const fetchRegions = () => {
+        axios.get(`http://localhost:8000/api/volunteers/getregions`)
+        .then(response => {
+            setRegions(response.data[0]);
+        })
+        .catch(error => console.error("Error fetching regions:", error));
+    }
+
     const fetchAllSkillsForChart = () => {
         axios.get(`http://localhost:8000/api/volunteers/skill-chart`)
             .then(response => {
@@ -100,9 +109,10 @@ const VolunteerDashboardPage = () => {
             .catch(error => console.error('Error fetching chart data:', error));
     };
     useEffect(() => {
-        fetchVolunteersByRegion('All'); // Initially load all volunteers
+        fetchVolunteersByRegion(0); // Initially load all volunteers
         fetchAllRegionsForChart(); // Fetch region data for the pie chart
         fetchAllSkillsForChart(); // Fetch skills data for the pie chart
+        fetchRegions();
     }, []);
 
 
@@ -121,10 +131,11 @@ const VolunteerDashboardPage = () => {
                         <TabPanels>
                             <TabPanel>
                                 <Select placeholder="Select region" onChange={(e) => fetchVolunteersByRegion(e.target.value)}>
-                                    <option value="North">North</option>
-                                    <option value="South">South</option>
-                                    <option value="East">East</option>
-                                    <option value="West">West</option>
+                                    { regions.map((region) => (
+                                        <option key={region.region_id} value={region.region_id}>
+                                            {region.region_name}
+                                        </option>
+                                    )) }
                                 </Select>
                                 <VolunteersTable volunteers={volunteers} />
                                 <PieChart width={400} height={400}>
