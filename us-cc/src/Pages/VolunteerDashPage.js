@@ -24,7 +24,6 @@ const Sidebar = ({ onSelect }) => {
 
 const VolunteerRow = ({ volunteer, regions }) => {
     const [regionName, setRegionName] = useState([]);
-    console.log(regions);
 
     useEffect(() => {
         // Find the region object corresponding to volunteer's region_id
@@ -89,15 +88,19 @@ const VolunteerDashboardPage = () => {
     const fetchAllRegionsForChart = () => {
         axios.get(`http://localhost:8000/api/volunteers/region-chart`)
             .then(response => {
-                const formattedData = response.data.map(item => ({
-                    name: item.region,
-                    value: item.count
-                }));
+                const formattedData = response.data.map(item => {
+                    const region = regions.find(region => region.region_id === item.region); 
+                    return {
+                        name: region ? region.region_name : '', 
+                        value: item.count
+                    };
+                });
                 setRegionChartData(formattedData);
-                setActiveChartData(formattedData); // Set initial chart data to regions
+                setActiveChartData(formattedData); 
             })
             .catch(error => console.error('Error fetching chart data:', error));
     };
+
 
     const fetchRegions = () => {
         axios.get(`http://localhost:8000/api/volunteers/getregions`)
@@ -127,7 +130,6 @@ const VolunteerDashboardPage = () => {
             .then(response => {
                 
                 const skillsArray = response.data.map(skill => skill.skills);
-                console.log("skills", skillsArray);
                 setSkills(skillsArray);
             })
             .catch(error => console.error('Error fetching skills:', error));
