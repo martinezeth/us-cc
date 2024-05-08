@@ -329,8 +329,16 @@ app.get('/api/volunteers/region-chart', (req, res) => {
     });
 });
 
-
-// Write endpoint for /api/volunteers/region?region=${region} here
+app.get('/api/volunteers/getregions', (req, res) => {
+    connection.query('CALL GetRegions()', (error, results) => {
+        if(error){
+            console.error('Error calling GetRegions', error);
+            res.sendStatus(500);
+            return;
+        }
+        res.json(results);
+    });
+});
 
 // Endpoint for getting number of volunteers by skill
 app.get('/api/volunteers/skill-chart', (req, res) => {
