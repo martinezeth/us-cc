@@ -1,6 +1,5 @@
 import * as React from 'react';
 import { VStack, Box, Text, useColorModeValue, ListItem, OrderedList } from '@chakra-ui/react'
-import { useLocation } from 'react-router-dom';
 import earthquake from '../Images/earthquake.png';
 
 

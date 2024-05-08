@@ -1,7 +1,5 @@
 import * as React from 'react';
 import {VStack, Box, Text, useColorModeValue} from '@chakra-ui/react'
-import { useLocation } from 'react-router-dom';
-import CssBaseline from '@mui/material/CssBaseline';
 import covid from '../Images/covid.png';
 
 

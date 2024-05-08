@@ -1,6 +1,5 @@
 import * as React from 'react';
-import { VStack, Box, Text, useColorModeValue, OrderedList, ListItem, UnorderedList, List } from '@chakra-ui/react'
-import { useLocation } from 'react-router-dom';
+import { VStack, Box, Text, useColorModeValue, OrderedList, ListItem, UnorderedList } from '@chakra-ui/react'
 import hurricane from '../Images/hurricane.png';
 
 

@@ -1,6 +1,5 @@
 import * as React from 'react';
 import { VStack, Box, Text, useColorModeValue, OrderedList, ListItem } from '@chakra-ui/react'
-import { useLocation } from 'react-router-dom';
 import flood from '../Images/flood.png';
 
 
