@@ -22,17 +22,29 @@ const Sidebar = ({ onSelect }) => {
   
 
 
-const VolunteerRow = ({ volunteer }) => (
+const VolunteerRow = ({ volunteer, regions }) => {
+    const [regionName, setRegionName] = useState([]);
+    console.log(regions);
+
+    useEffect(() => {
+        // Find the region object corresponding to volunteer's region_id
+        const selectedRegion = regions.find(region => region.region_id === volunteer.region_id);
+        // If region is found, set the region name
+        if (selectedRegion) {
+            setRegionName(selectedRegion.region_name);
+        }
+    }, [volunteer, regions]);
+    return(
     <Tr>
         <Td>{volunteer.volunteer_id}</Td>
         <Td>{volunteer.user_id}</Td>
         <Td>{volunteer.skills}</Td>
         <Td>{volunteer.availability}</Td>
-        <Td>{volunteer.region}</Td>
+        <Td>{regionName}</Td>
     </Tr>
-);
+);}
 
-const VolunteersTable = ({ volunteers }) => (
+const VolunteersTable = ({ volunteers,regions }) => (
     <Table variant="simple">
         <Thead>
             <Tr>
@@ -45,7 +57,7 @@ const VolunteersTable = ({ volunteers }) => (
         </Thead>
         <Tbody>
             {volunteers.map(volunteer => (
-                <VolunteerRow key={volunteer.volunteer_id} volunteer={volunteer} />
+                <VolunteerRow key={volunteer.volunteer_id} volunteer={volunteer} regions={regions}/>
             ))}
         </Tbody>
     </Table>
@@ -56,6 +68,7 @@ const VolunteerDashboardPage = () => {
     const [regionChartData, setRegionChartData] = useState([]);
     const [regions, setRegions] = useState([]);
     const [skillChartData, setSkillChartData] = useState([]);
+    const [skills, setSkills] = useState([]);
     const [activeChartData, setActiveChartData] = useState([]);
 
 
@@ -108,11 +121,24 @@ const VolunteerDashboardPage = () => {
             })
             .catch(error => console.error('Error fetching chart data:', error));
     };
+    const fetchSkills = () => {
+        
+        axios.get(`http://localhost:8000/api/volunteers/skills`)
+            .then(response => {
+                
+                const skillsArray = response.data.map(skill => skill.skills);
+                console.log("skills", skillsArray);
+                setSkills(skillsArray);
+            })
+            .catch(error => console.error('Error fetching skills:', error));
+    };
+
     useEffect(() => {
         fetchVolunteersByRegion(0); // Initially load all volunteers
         fetchAllRegionsForChart(); // Fetch region data for the pie chart
         fetchAllSkillsForChart(); // Fetch skills data for the pie chart
         fetchRegions();
+        fetchSkills();
     }, []);
 
 
@@ -137,7 +163,7 @@ const VolunteerDashboardPage = () => {
                                         </option>
                                     )) }
                                 </Select>
-                                <VolunteersTable volunteers={volunteers} />
+                                {regions.length > 0 && <VolunteersTable volunteers={volunteers} regions={regions} />}
                                 <PieChart width={400} height={400}>
                                     <Pie
                                         data={activeChartData}
@@ -157,13 +183,14 @@ const VolunteerDashboardPage = () => {
                                 </PieChart>
                             </TabPanel>
                             <TabPanel>
-                                <Select placeholder="Select skill" onChange={(e) => fetchVolunteersBySkills(e.target.value)}>
-                                    <option value="Medical">Medical</option>
-                                    <option value="Technical">Technical</option>
-                                    <option value="Logistical">Logistical</option
-                                    >
+                                <Select placeholder="Select skill" >
+                                    {skills.map((skill) => (
+                                        <option key={skill} value={skill}>
+                                            {skill}
+                                        </option>
+                                    ))}
                                 </Select>
-                                <VolunteersTable volunteers={volunteers} />
+                                {regions.length > 0 && <VolunteersTable volunteers={volunteers} regions={regions} />}
                                 <PieChart width={400} height={400}>
                                     <Pie
                                         data={activeChartData}

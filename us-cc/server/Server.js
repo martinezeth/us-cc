@@ -352,6 +352,17 @@ app.get('/api/volunteers/skill-chart', (req, res) => {
     });
 });
 
+app.get('/api/volunteers/skills', (req,res) => {
+    connection.query('SELECT skills FROM Volunteers', (error, results) => {
+        if (error) {
+            console.error('Error fetching skills:', error);
+            res.status(500).send('Error fetching data');
+            return;
+        }
+        
+        res.sendStatus(200);
+    });
+});
 
 /**
  * Define the PORT
