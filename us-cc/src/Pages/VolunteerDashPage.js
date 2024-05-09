@@ -86,29 +86,42 @@ const VolunteerDashboardPage = () => {
 
 
     const fetchAllRegionsForChart = () => {
+        if (regions.length === 0) {
+            console.error("Regions not loaded yet.");
+            return;
+        }
+    
         axios.get(`http://localhost:8000/api/volunteers/region-chart`)
             .then(response => {
                 const formattedData = response.data.map(item => {
-                    const region = regions.find(region => region.region_id === item.region); 
+                    const region = regions.find(region => region.region_id === item.region_id);  // Ensure you match the right property name
                     return {
-                        name: region ? region.region_name : '', 
+                        name: region ? region.region_name : 'Unknown region',  // Fallback to 'Unknown region' if not found
                         value: item.count
                     };
                 });
+                console.log("Formatted chart data:", formattedData);  // Check what your formatted data looks like
                 setRegionChartData(formattedData);
-                setActiveChartData(formattedData); 
+                setActiveChartData(formattedData);
             })
             .catch(error => console.error('Error fetching chart data:', error));
     };
 
 
+
+
+// Modified fetchRegions to ensure chart data is loaded after regions
     const fetchRegions = () => {
-        axios.get(`http://localhost:8000/api/volunteers/getregions`)
+    axios.get(`http://localhost:8000/api/volunteers/getregions`)
         .then(response => {
             setRegions(response.data[0]);
+            fetchAllRegionsForChart();  // Call this here after regions are set
         })
         .catch(error => console.error("Error fetching regions:", error));
-    }
+    };
+
+
+
 
     const fetchAllSkillsForChart = () => {
         axios.get(`http://localhost:8000/api/volunteers/skill-chart`)

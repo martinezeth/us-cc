@@ -115,7 +115,7 @@ app.post('/api/register', (req, res) => {
     });
 });
 
-// // Route for Creating Incident Reports
+// Route for Creating Incident Reports
 app.post('/api/create-incident-report', (req, res) => {
   const { incident_type, description, location_lat, location_lng } = req.body;
   if (!incident_type || !description || location_lat === undefined || location_lng === undefined) {
@@ -123,8 +123,7 @@ app.post('/api/create-incident-report', (req, res) => {
       return res.status(400).send('Missing required fields');
   }
 
-  // Assuming `decodeToken` correctly decodes the token to get the user's ID
-  const authToken = req.headers.authorization.split(' ')[1]; // Assuming "Bearer TOKEN_STRING"
+  const authToken = req.headers.authorization.split(' ')[1];
   try {
       const decodedToken = decodeToken(authToken, process.env.JWT_SECRET);
       const user_id = decodedToken && decodedToken.userData && decodedToken.userData[0][0].user_id;

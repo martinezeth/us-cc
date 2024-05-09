@@ -20,7 +20,7 @@ export default function AboutPage() {
                 <Text fontSize="5xl">
                     About
                 </Text>
-                <Text fontSize="lg"> Welcome to the United States Crisis Coordination (USCC), your dedicated resource hub for navigating natural disasters across the nation. At USCC, our mission is to empower individuals, families, and communities by providing timely, accessible, and accurate information during crises.
+                <Text fontSize="lg"> Welcome to Crisis Companion, your dedicated resource hub for navigating natural disasters across the nation. At Crisis Companion, our mission is to empower individuals, families, and communities by providing timely, accessible, and accurate information during crises.
                 </Text>
                 <Text fontSize="4xl">
                     What We Do
@@ -31,7 +31,7 @@ export default function AboutPage() {
                         We provide real-time updates and alerts on natural disasters, including hurricanes, wildfires, floods, and earthquakes. Our platform ensures you receive the latest information as events unfold.
                     </ListItem>
                     <ListItem>
-                        <b>Resource Distribution:</b> USCC collaborates with federal, state, and local agencies to compile and distribute resources crucial for disaster preparedness and recovery. This includes emergency kit checklists, evacuation routes, shelter locations, and recovery assistance services.
+                        <b>Resource Distribution:</b> Crisis Companion collaborates with federal, state, and local agencies to compile and distribute resources crucial for disaster preparedness and recovery. This includes emergency kit checklists, evacuation routes, shelter locations, and recovery assistance services.
                     </ListItem>
                     <ListItem>
                         <b>Community Engagement:</b>
@@ -45,10 +45,10 @@ export default function AboutPage() {
                     Our Commitment
                 </Text>
                 <Text fontSize="lg">
-                    The United States Crisis Coordination is committed to upholding the highest standards of information accuracy and reliability. We work tirelessly to ensure our content is vetted, updated, and aligned with the latest safety protocols and scientific advice.
+                    Crisis Companion is committed to upholding the highest standards of information accuracy and reliability. We work tirelessly to ensure our content is vetted, updated, and aligned with the latest safety protocols and scientific advice.
                     <br></br>
                     <br></br>
-                    Join us in our journey to create a safer, well-prepared society. Stay informed, stay prepared, and stay connected with USCC.
+                    Join us in our journey to create a safer, well-prepared society. Stay informed, stay prepared, and stay connected with Crisis Companion.
                 </Text>
             </VStack>
         </>
