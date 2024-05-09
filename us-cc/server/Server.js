@@ -154,10 +154,7 @@ app.post('/api/create-incident-report', (req, res) => {
 });
 
 
-
-
-
-// Incident Reports Route 
+// Route for getting Incident Reports  
 app.get('/api/incident-reports', (req, res) => {
     const { swLat, swLng, neLat, neLng } = req.query;
     if (swLat && swLng && neLat && neLng) {
@@ -209,6 +206,7 @@ app.get('/api/incident-reports', (req, res) => {
     }
 });
 
+
 app.get('/api/regions', (req,res) => {
     getRegions((error, regions) => {
         if(error){
@@ -243,7 +241,7 @@ app.get('/api/userinfo/:username', (req, res) => {
         res.status(401);
     }
 });
-
+// Route to update a user
 app.post('/api/userinfo/update-user', (req, res) => {
     const {userid, newUsername, newName, newPassword} = req.body;
     const userdata = {userid: userid, newUsername: newUsername, newName: newName, newPassword: newPassword};
@@ -259,7 +257,7 @@ app.post('/api/userinfo/update-user', (req, res) => {
     
 });
 
-// User Posts Route TODO
+// User Posts Route 
 app.get('/api/posts/:username', (req, res) => {
     const authToken = req.headers['authorization'];
 
@@ -281,6 +279,7 @@ app.get('/api/posts/:username', (req, res) => {
     });
 });
 
+// Route to get all posts that are "recent"
 app.get('/api/posts', (req, res) => {
     //const authToken = req.headers['authorization'];
     // Call the function to get post data based on user ID
@@ -296,6 +295,7 @@ app.get('/api/posts', (req, res) => {
     });
 });
 
+// Route for creating a post
 app.post('/api/createpost', (req, res) => {
     const authToken = req.headers['authorization'];
     if (!authToken) {
@@ -322,7 +322,7 @@ app.post('/api/createpost', (req, res) => {
     });
 });
 
-
+// Route to get where a user is volunteering
 app.get('/api/volunteering/:username', (req, res) => {
     const { username } = req.params;
 
@@ -336,6 +336,7 @@ app.get('/api/volunteering/:username', (req, res) => {
     });
 });
 
+// Route to register for volunteering
 app.post('/api/volunteering/register',(req, res) => {
     const { userData } = req.body;
     makeUserVolunteer(userData, (error, success) => {
@@ -359,7 +360,6 @@ app.get('/api/volunteers/region', (req, res) => {
         }
     });
 });
-
 
 
 // Route to get volunteers by skills

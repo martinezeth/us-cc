@@ -41,6 +41,7 @@ const FeaturesSection = () => {
           title="Incident Reporting"
           description="Report and track incidents in real-time."
           icon={MdReportProblem}
+          onClick={() => navigate('/posts')}
         />
         <FeatureCard
           title="Resource Management"
