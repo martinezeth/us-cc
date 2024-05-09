@@ -31,6 +31,27 @@ function getUserDataUsername(username, callback) {
     });
 }
 
+function getIDFromUsername(username){
+    console.log("user", username);
+    pool.getConnection((err, connection) => {
+        if(err){
+            connection.release();
+            console.error("Error connection to database. UserController::getIDFromUserName");
+            return;
+        }
+        connection.query(`SELECT user_id FROM Users WHERE username = ?`, [username], (err, results) => {
+            connection.release();
+            if(err){
+                connection.release();
+                console.log("error selecting user id. UserController::getIDFromUserName");
+                return;
+            }
+            console.log("aa", results[0].user_id);
+            return results[0].user_id;
+        })
+    });
+}
+
 function getUserData(user_id, callback) {
     pool.getConnection((err, connection) => {
         if (err) {
@@ -49,6 +70,31 @@ function getUserData(user_id, callback) {
         })
     });
 }
+
+function updateUserInformation(userInfo, callback){
+    const { userid, newUsername, newName, newPassword } = userInfo;
+    const values = [];
+    let sql = 'CALL UpdateUser(?)'; 
+    values.push(userid !== null ? userid : null);
+    values.push(newName !== null ? newName : null);
+    values.push(newUsername !== null ? newUsername : null)
+    values.push(newPassword !== null ? newPassword : null);
+    pool.getConnection((err, connection) => {
+        if (err) {
+            callback(err, null);
+            return;
+        }
+        connection.query(sql, [values], (error, results) => {
+            connection.release();
+            if (error) {
+                callback(error, null);
+                return;
+            }
+            callback(null, results);
+        });
+    });
+    
+};
 
 // Function to get where a user volunteers
 function getUserVolunteering(username, callback){
@@ -113,14 +159,13 @@ function getVolunteersBySkills(skill, callback) {
 }
 
 function makeUserVolunteer(userData, callback) {
-    const { name, region, region_id, skills, availability } = userData;
-
+    const { name, region, regionid, skills, availability } = userData;
     pool.getConnection((err, connection) => {
         if (err) {
             callback(err, null);
             return;
         }
-        connection.query('CALL AddUserAsVolunteer(?, ?, ?, ?, ?)', [name, region, region_id, skills, availability], (error, results, fields) => {
+        connection.query('CALL AddUserAsVolunteer(?, ?, ?, ?, ?)', [name, region, regionid, skills, availability], (error, results, fields) => {
             connection.release();
             if (error) {
                 callback(error, null);
@@ -152,6 +197,8 @@ function getRegions(callback){
 
 
 module.exports = { getUserData, 
+                   updateUserInformation,
+                   getIDFromUsername,
                    getUserDataUsername, 
                    getUserVolunteering, 
                    getVolunteersByRegion, 

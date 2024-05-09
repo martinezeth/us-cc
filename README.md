@@ -1,4 +1,4 @@
-# US Crisis Coordination (USCC)
+# Crisis Companion
 
 ## Team Members
 - Ethan Martinez
@@ -6,7 +6,7 @@
 - Jacob Franco
 
 ## Project Overview
-The US Crisis Coordination (USCC) project aims to deliver a web-based platform that empowers communities and local authorities to respond quickly to disasters. It facilitates the reporting of incidents, management of resources, coordination of volunteer efforts, and utilization of real-time data for informed decision-making. The primary goal is to enable users within communities to report, confirm, converse about, and share information regarding weather anomalies and disaster response resources before losing internet connectivity.
+The Crisis Companion project aims to deliver a web-based platform that empowers communities and local authorities to respond quickly to disasters. It facilitates the reporting of incidents, management of resources, coordination of volunteer efforts, and utilization of real-time data for informed decision-making. The primary goal is to enable users within communities to report, confirm, converse about, and share information regarding weather anomalies and disaster response resources before losing internet connectivity.
 
 ## Technology Stack
 

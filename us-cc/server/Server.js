@@ -1,7 +1,7 @@
 const express = require('express');
 const mysql = require('mysql');
 const { validateCredentials, createUser, decodeToken } = require('./Controllers/AuthController');
-const { getUserData, getUserVolunteering, getUserDataUsername, getRegions, getVolunteersByRegion, getVolunteersBySkills, makeUserVolunteer } = require('./Controllers/UserController');
+const { getUserData, updateUserInformation, getIDFromUsername, getUserVolunteering, getUserDataUsername, getRegions, getVolunteersByRegion, getVolunteersBySkills, makeUserVolunteer } = require('./Controllers/UserController');
 const { getUserPostData, getRecentPostData, createUserPost } = require('./Controllers/PostsController');
 const { fetchIncidents, createIncidentReport, incidentsByRadius } = require('./Controllers/IncidentController');
 const cors = require('cors');
@@ -20,7 +20,7 @@ require('dotenv').config({ path: './dbConnection.env' });
 
 app.use(cors({
     origin: 'http://localhost:3000',
-    methods: ['GET', 'POST'],
+    methods: ['GET', 'POST', 'PUT'],
     credentials: true,
     allowedHeaders: ['Content-Type', 'Authorization']
 }));
@@ -189,7 +189,8 @@ app.get('/api/incidents-by-radius', (req, res) => {
 });
 
 
-// Incident Reports Route 
+
+// Route for getting Incident Reports  
 app.get('/api/incident-reports', (req, res) => {
     const { swLat, swLng, neLat, neLng } = req.query;
     if (swLat && swLng && neLat && neLng) {
@@ -218,6 +219,7 @@ app.get('/api/incident-reports', (req, res) => {
     }
 });
 
+
 app.get('/api/regions', (req,res) => {
     getRegions((error, regions) => {
         if(error){
@@ -244,7 +246,6 @@ app.get('/api/userinfo/:username', (req, res) => {
                     res.status(500).send('Error retrieving user data');
                     return;
                 }
-                console.log("userDataUsername:", userData);
                 res.json(userData);
             });
         } 
@@ -253,8 +254,23 @@ app.get('/api/userinfo/:username', (req, res) => {
         res.status(401);
     }
 });
+// Route to update a user
+app.post('/api/userinfo/update-user', (req, res) => {
+    const {userid, newUsername, newName, newPassword} = req.body;
+    const userdata = {userid: userid, newUsername: newUsername, newName: newName, newPassword: newPassword};
+    updateUserInformation(userdata, (err) => {
+        if(err){
+            console.log("Error updating user info:", err);
+            res.sendStatus(500);
+            return;
+        }
+        res.sendStatus(200);
+    })
 
-// User Posts Route TODO
+    
+});
+
+// User Posts Route 
 app.get('/api/posts/:username', (req, res) => {
     const authToken = req.headers['authorization'];
 
@@ -276,6 +292,7 @@ app.get('/api/posts/:username', (req, res) => {
     });
 });
 
+// Route to get all posts that are "recent"
 app.get('/api/posts', (req, res) => {
     //const authToken = req.headers['authorization'];
     // Call the function to get post data based on user ID
@@ -291,6 +308,7 @@ app.get('/api/posts', (req, res) => {
     });
 });
 
+// Route for creating a post
 app.post('/api/createpost', (req, res) => {
     const authToken = req.headers['authorization'];
     if (!authToken) {
@@ -317,7 +335,7 @@ app.post('/api/createpost', (req, res) => {
     });
 });
 
-
+// Route to get where a user is volunteering
 app.get('/api/volunteering/:username', (req, res) => {
     const { username } = req.params;
 
@@ -331,6 +349,7 @@ app.get('/api/volunteering/:username', (req, res) => {
     });
 });
 
+// Route to register for volunteering
 app.post('/api/volunteering/register',(req, res) => {
     const { userData } = req.body;
     makeUserVolunteer(userData, (error, success) => {
@@ -339,7 +358,7 @@ app.post('/api/volunteering/register',(req, res) => {
             res.status(500).json({ error: 'Internal server error' });
             return;
         }
-        res.json(userData).status(200);
+        res.status(200).json(userData);
     });
 });
 
@@ -354,7 +373,6 @@ app.get('/api/volunteers/region', (req, res) => {
         }
     });
 });
-
 
 
 // Route to get volunteers by skills
@@ -389,7 +407,7 @@ app.get('/api/volunteers/getregions', (req, res) => {
             res.sendStatus(500);
             return;
         }
-        res.json(results);
+        res.status(200).json(results);
     });
 });
 

@@ -1,4 +1,4 @@
-# US Crisis Coordination (USCC)
+# Crisis Companion
 
 ## Team Members
 - Ethan Martinez
@@ -6,7 +6,7 @@
 - Jacob Franco
 
 ## Project Overview
-The US Crisis Coordination (USCC) project aims to deliver a web-based platform that empowers communities and local authorities to respond quickly to disasters. It facilitates the reporting of incidents, management of resources, coordination of volunteer efforts, and utilization of real-time data for informed decision-making. The primary goal is to enable users within communities to report, confirm, converse about, and share information regarding weather anomalies and disaster response resources before losing internet connectivity.
+The Crisis Companion project aims to deliver a web-based platform that empowers communities and local authorities to respond quickly to disasters. It facilitates the reporting of incidents, management of resources, coordination of volunteer efforts, and utilization of real-time data for informed decision-making. The primary goal is to enable users within communities to report, confirm, converse about, and share information regarding weather anomalies and disaster response resources before losing internet connectivity.
 
 ## Technology Stack
 
@@ -83,7 +83,7 @@ This command allows for legacy code (as proposed by Prof).
 ---
 
 ## How to Contribute
-Contributions to the USCC project are welcome. Please refer to the [CONTRIBUTING.md](CONTRIBUTING.md) file for more information on how to submit pull requests, report issues, or suggest enhancements.
+Contributions to the Crisis Companion project are welcome. Please refer to the [CONTRIBUTING.md](CONTRIBUTING.md) file for more information on how to submit pull requests, report issues, or suggest enhancements.
 
 ## License
 This project is licensed under the MIT License - see the [LICENSE.md](LICENSE.md) file for details.
