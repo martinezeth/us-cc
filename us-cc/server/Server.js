@@ -344,7 +344,7 @@ app.post('/api/volunteering/register',(req, res) => {
             res.status(500).json({ error: 'Internal server error' });
             return;
         }
-        res.json(userData).status(200);
+        res.status(200).json(userData);
     });
 });
 
@@ -394,7 +394,7 @@ app.get('/api/volunteers/getregions', (req, res) => {
             res.sendStatus(500);
             return;
         }
-        res.json(results);
+        res.status(200).json(results);
     });
 });
 

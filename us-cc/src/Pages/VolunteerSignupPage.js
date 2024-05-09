@@ -16,14 +16,13 @@ function VolunteerPage() {
 
     useEffect(() => {
         // Fetch regions when the component mounts
-        const fetchRegions = async () => {
-            try {
-                const response = await axios.get('http://localhost:8000/api/regions');
-                setRegions(response.data);
-            } catch (error) {
-                console.error('Error fetching regions:', error);
-            }
-        };
+        const fetchRegions = () => {
+            axios.get(`http://localhost:8000/api/volunteers/getregions`)
+                .then(response => {
+                    setRegions(response.data[0]);
+                })
+                .catch(error => console.error("Error fetching regions:", error));
+        }
 
         fetchRegions();
     }, []);
@@ -37,9 +36,8 @@ function VolunteerPage() {
         "Flexible"
     ];
 
-    const handleRegister = async () => {
-        try {
-            const response = await axios.post('http://localhost:8000/api/volunteering/register', {
+    const handleRegister = () => {
+            axios.post('http://localhost:8000/api/volunteering/register', {
                 userData: {
                     name,
                     region,
@@ -47,12 +45,15 @@ function VolunteerPage() {
                     skills,
                     availability,
                 }
-            });
-            navigate('/');
-        } catch (error) {
-            console.error('Error registering volunteer:', error.response.data);
-            setError('An error occurred. Please try again later.');
-        }
+            }).then(response => {
+                
+                navigate('/'); 
+            })
+                .catch(error => {
+                    console.error('Error registering volunteer:', error.response.data);
+                    setError('An error occurred. Please try again later.'); 
+                });
+
     };
 
     const handleAvailabilityChange = (option) => {
@@ -72,10 +73,10 @@ function VolunteerPage() {
                         <Select
                             placeholder="Select region"
                             value={region}
-                            onChange={(e) => {setRegion(e.target.value); setRegionid(e.target.key)}}
+                            onChange={(e) => { setRegion(e.target.value); setRegionid(regions.find(region => region.region_name === e.target.value).region_id); }}
                         >
                             {regions.map(region => (
-                                <option key={region.region_id} value={region.region_id}>
+                                <option key={region.region_id} value={region.region_name}>
                                     {region.region_name}
                                 </option>
                             ))}

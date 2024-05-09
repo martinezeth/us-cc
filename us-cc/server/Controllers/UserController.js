@@ -159,14 +159,13 @@ function getVolunteersBySkills(skill, callback) {
 }
 
 function makeUserVolunteer(userData, callback) {
-    const { name, region, region_id, skills, availability } = userData;
-
+    const { name, region, regionid, skills, availability } = userData;
     pool.getConnection((err, connection) => {
         if (err) {
             callback(err, null);
             return;
         }
-        connection.query('CALL AddUserAsVolunteer(?, ?, ?, ?, ?)', [name, region, region_id, skills, availability], (error, results, fields) => {
+        connection.query('CALL AddUserAsVolunteer(?, ?, ?, ?, ?)', [name, region, regionid, skills, availability], (error, results, fields) => {
             connection.release();
             if (error) {
                 callback(error, null);
