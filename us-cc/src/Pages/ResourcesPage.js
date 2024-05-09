@@ -1,11 +1,12 @@
 import React from 'react';
 import { Box, Text, Container, Heading, Link, Accordion, AccordionItem, AccordionButton, AccordionPanel, AccordionIcon } from '@chakra-ui/react';
+import { ReactComponent as Logo } from '../Images/crisisCompanionLogo.svg';
 
 function ResourcesPage() {
   return (
     <Container maxW="container.xl" p={0}>
       <Box bg="brand.light" color="neutral.white" p={10} textAlign="center">
-        <Heading as="h1" size="2xl">USCC Resources Directory</Heading>
+        <Heading as="h1" size="2xl">Crisis Companion Resources Directory</Heading>
         <Text fontSize="xl" mt={3}>A comprehensive guide to help you find the right resources.</Text>
       </Box>
       

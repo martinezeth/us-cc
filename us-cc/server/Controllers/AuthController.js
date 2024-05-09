@@ -76,6 +76,7 @@ function createUser(username, password, callback) {
 function decodeToken(authToken, secretKey) {
     try {
         return jwt.verify(authToken, secretKey);
+        
     } catch (error) {
         console.error('Error decoding token:', error);
         return; 
