@@ -50,7 +50,7 @@ function validateCredentials(username, password, callback) {
  * @param {(createError)} callback 
  * @returns 
  */
-function createUser(username, password, callback) {
+function createUser(username, password, name, callback) {
     
     if(username === '' || password === ''){
         callback(1);
@@ -61,7 +61,7 @@ function createUser(username, password, callback) {
             callback(err);
             return;
         }
-        connection.query('INSERT INTO Users (username, password_hash) VALUES (?, ?)', [username, password], (error, results, fields) => {
+        connection.query('INSERT INTO Users (username, password_hash, name) VALUES (?, ?, ?)', [username, password, name], (error, results, fields) => {
             if (error) {
                 callback(error);
                 return;

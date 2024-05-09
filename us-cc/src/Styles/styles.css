@@ -1,3 +1,9 @@
+.App {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh; /* Ensure the app takes up at least the full height of the viewport */
+}
+
 .headerContainer{
     background-color: blanchedalmond;
     text-align: center;
@@ -28,7 +34,13 @@
     padding: 100px;
     text-align: center;
   }
+.footerSpacer {
+  flex: 1; /* Allow the spacer to fill up remaining space */
+}
 
+.footer {
+  flex-shrink: 0; /* Prevent the footer from shrinking */
+}
 
   .newPostButton {
     color: blue;

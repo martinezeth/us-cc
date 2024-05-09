@@ -99,7 +99,6 @@ const HeaderComponent = () => {
             ) : (
               <>
                 <Button padding="8px 16px" variant="ghost" as={Link} to="/login">Login</Button>
-                <Button padding="8px 16px" variant="ghost" as={Link} to="/register">Join Now</Button>
               </>
             )}
           </Stack>

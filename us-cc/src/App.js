@@ -22,6 +22,7 @@ import AboutPage from './Pages/About';
 import { CookiesProvider, useCookies } from 'react-cookie';
 
 import theme from './Styles/theme';
+import './Styles/styles.css';
 import ResourcesPage from './Pages/ResourcesPage';
 
 function App() {
@@ -52,6 +53,7 @@ function App() {
                 <Route path="/volunteering" element={<VolunteerDashPage />} />
                 <Route path="/volunteer-register" element={<VolunteerSignupPage />} />
               </Routes>
+              <div className="footerSpacer"> </div>
             <FooterComponent />
           </div>
         </Router>

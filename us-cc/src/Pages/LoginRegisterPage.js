@@ -45,16 +45,19 @@ PasswordField.displayName = 'PasswordField';
 
 function Register({ onSwitch }) {
   const navigate = useNavigate();
+  const [name, setName] = useState("");
   const [user, setUser] = useState("");
   const [pass, setPass] = useState("");
 
   const userName = (event) => setUser(event.target.value);
   const passWord = (event) => setPass(event.target.value);
+  const nAme = (event) => setName(event.target.value);
 
   const registerCheck = () => {
     axios.post('http://localhost:8000/api/register', {
       username: user,
-      password: pass
+      password: pass,
+      name: name
     })
       .then(() => {
         navigate('/login');
@@ -71,6 +74,8 @@ function Register({ onSwitch }) {
         <Heading size="lg" mb="8">Create an account</Heading>
         <VStack spacing={4} bg="bg.surface" p={{ base: '4', sm: '8' }} borderRadius="xl" boxShadow="md">
           <FormControl>
+            <FormLabel>Name</FormLabel>
+            <Input placeholder="Enter your name" onChange={nAme} />
             <FormLabel>Username</FormLabel>
             <Input placeholder="Create a username" onChange={userName} />
           </FormControl>
@@ -102,8 +107,8 @@ function Login({ onSwitch }) {
         document.cookie = `authToken=${response.data.authToken}; path=/`;
         navigate('/');
       })
-      .catch(() => {
-        console.log("User does not exist");
+      .catch((err) => {
+        console.log("error logging in", err);
       });
   };
 

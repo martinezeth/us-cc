@@ -112,7 +112,7 @@ function MapPage() {
 
   return (
     <ChakraProvider>
-      <Box position="relative" height="100vh" width="100%">
+      <Box position="relative" height="80vh" width="100%" >
         <Button onClick={() => setShowList(!showList)} mb={4}>
           {showList ? 'Show Map View' : 'Show List View'}
         </Button>

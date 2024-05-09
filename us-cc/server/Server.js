@@ -90,7 +90,7 @@ app.post('/api/logout', (req, res) => {
 
 // REGISTER Route
 app.post('/api/register', (req, res) => {
-    const { username, password } = req.body;
+    const { username, password, name } = req.body;
     validateCredentials(username, password, (error, userExists) => {
         if (error) {
             console.error('Error validating credentials:', error);
@@ -103,7 +103,7 @@ app.post('/api/register', (req, res) => {
         }
 
         // If user does not exist, create the user
-        createUser(username, password, (createError) => {
+        createUser(username, password, name, (createError) => {
             if (createError) {
                 console.error('Error creating user:', createError);
                 res.status(500).send('Error creating user');
@@ -235,6 +235,7 @@ app.get('/api/userinfo/:username', (req, res) => {
                     res.status(500).send('Error retrieving user data');
                     return;
                 }
+                console.log("userDataUsername:", userData);
                 res.json(userData);
             });
         } 
