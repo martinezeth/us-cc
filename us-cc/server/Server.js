@@ -1,7 +1,7 @@
 const express = require('express');
 const mysql = require('mysql');
 const { validateCredentials, createUser, decodeToken } = require('./Controllers/AuthController');
-const { getUserData, getUserVolunteering, getUserDataUsername, getRegions, getVolunteersByRegion, getVolunteersBySkills, makeUserVolunteer } = require('./Controllers/UserController');
+const { getUserData, updateUserInformation, getIDFromUsername, getUserVolunteering, getUserDataUsername, getRegions, getVolunteersByRegion, getVolunteersBySkills, makeUserVolunteer } = require('./Controllers/UserController');
 const { getUserPostData, getRecentPostData, createUserPost } = require('./Controllers/PostsController');
 const { fetchIncidents, createIncidentReport } = require('./Controllers/IncidentController');
 const cors = require('cors');
@@ -20,7 +20,7 @@ require('dotenv').config({ path: './dbConnection.env' });
 
 app.use(cors({
     origin: 'http://localhost:3000',
-    methods: ['GET', 'POST'],
+    methods: ['GET', 'POST', 'PUT'],
     credentials: true,
     allowedHeaders: ['Content-Type', 'Authorization']
 }));
@@ -235,7 +235,6 @@ app.get('/api/userinfo/:username', (req, res) => {
                     res.status(500).send('Error retrieving user data');
                     return;
                 }
-                // console.log("userDataUsername:", userData);
                 res.json(userData);
             });
         } 
@@ -243,6 +242,21 @@ app.get('/api/userinfo/:username', (req, res) => {
     } else {
         res.status(401);
     }
+});
+
+app.post('/api/userinfo/update-user', (req, res) => {
+    const {userid, newUsername, newName, newPassword} = req.body;
+    const userdata = {userid: userid, newUsername: newUsername, newName: newName, newPassword: newPassword};
+    updateUserInformation(userdata, (err) => {
+        if(err){
+            console.log("Error updating user info:", err);
+            res.sendStatus(500);
+            return;
+        }
+        res.sendStatus(200);
+    })
+
+    
 });
 
 // User Posts Route TODO

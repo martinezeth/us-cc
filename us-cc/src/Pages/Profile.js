@@ -1,25 +1,57 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { useLocation, useParams } from 'react-router-dom';
-import { Avatar, Box, Text } from '@chakra-ui/react';
+import { useParams, useNavigate } from 'react-router-dom';
+import { Avatar, Box, Text, Modal, ModalOverlay, ModalContent, ModalHeader, ModalFooter, ModalBody, ModalCloseButton, Button, Input } from '@chakra-ui/react';
 import '../Styles/profilecss.css';
+
+const EditProfileModal = ({ isOpen, onClose, userData, onUpdate }) => {
+    const [newUsername, setNewUsername] = useState(userData.username || '');
+    const [newName, setNewName] = useState(userData.name || '');
+    const [newPassword, setNewPassword] = useState('');
+    
+    const handleUpdate = () => {
+        onUpdate({ newUsername, newName, newPassword });
+        onClose(); 
+    };
+
+    return (
+        <Modal isOpen={isOpen} onClose={onClose}>
+            <ModalOverlay />
+            <ModalContent>
+                <ModalHeader>Edit Profile</ModalHeader>
+                <ModalCloseButton />
+                <ModalBody>
+                    <Input placeholder="New Username" value={newUsername} onChange={(e) => setNewUsername(e.target.value)} />
+                    <Input placeholder="New Name" value={newName} onChange={(e) => setNewName(e.target.value)} />
+                    <Input placeholder="New Password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} />
+                </ModalBody>
+                <ModalFooter>
+                    <Button colorScheme="blue" mr={3} onClick={handleUpdate}>
+                        Save
+                    </Button>
+                    <Button onClick={onClose}>Cancel</Button>
+                </ModalFooter>
+            </ModalContent>
+        </Modal>
+    );
+};
 
 export default function Profile() {
     const [userData, setUserData] = useState();
     const { username } = useParams();
     const [volunteering, setVolunteering] = useState([]);
+    const [isEditing, setIsEditing] = useState(false);
+    const navigate = useNavigate();
 
     useEffect(() => {
         const fetchUserData = async () => {
             try {
                 const authToken = document.cookie && document.cookie.split('; ').find(row => row.startsWith('authToken=')).split('=')[1];
-
                 const response = await axios.get(`http://localhost:8000/api/userinfo/${username}`, {
                     headers: {
                         Authorization: `${authToken}` // Include the authToken in the Authorization header
                     }
-                });
-                
+                }); 
                 setUserData(response.data[0][0]);
             } catch (error) {
                 console.error('Error fetching user data:', error);
@@ -28,15 +60,13 @@ export default function Profile() {
         const fetchVolunteering = (username) => {
             
             const apiUrl = `http://localhost:8000/api/volunteering/${username}`;
-
-            
+     
             axios.get(apiUrl)
                 .then(response => {
-                    
+
                     setVolunteering(response.data); 
                 })
                 .catch(error => {
-                    
                     console.error('Error fetching volunteering data:', error);
                 });
         };
@@ -44,9 +74,32 @@ export default function Profile() {
         fetchVolunteering(username);
     }, [username]);
     
+    const handleProfileEdit = () => {
+        setIsEditing(true);
+    }
+    
 
-
-    // Call the fetchVolunteering function with the desired username
+    const handleUpdateProfile = ({ newUsername, newName, newPassword }) => {
+        newUsername = newUsername === '' ? username : newUsername;
+        newName = newName === '' ? userData.name : newName;
+        newPassword = newPassword === '' ? null : newPassword;
+        axios.post('http://localhost:8000/api/userinfo/update-user', {
+            userid: userData.user_id,
+            newUsername: newUsername ,
+            newName: newName,
+            newPassword: newPassword
+        })
+        .then(() => {
+            
+            setIsEditing(false); 
+        })
+        .catch(error => {
+            console.error('Error updating user info:', error);
+            });
+        navigate('/profile/' + newUsername);
+        setIsEditing(false); 
+    };
+    
 
 
     return (
@@ -59,6 +112,12 @@ export default function Profile() {
             backgroundColor="blue.200"
             padding="20px"
         >
+            <EditProfileModal
+                isOpen={isEditing}
+                onClose={() => setIsEditing(false)}
+                userData={userData || {}} 
+                onUpdate={handleUpdateProfile}
+            />
             {userData ? (
                 <Box
                     display="flex"
@@ -66,13 +125,16 @@ export default function Profile() {
                     alignItems="center"
                     flexDirection="column"
                 >
+                    
                     <Box>
                         <Avatar size="lg" />
                     </Box>
                     <Box textAlign="center" marginY="10px">
                         <Text fontSize="xl" fontWeight="bold">
-                         {userData.username || 'Username'}
+                             {userData.name || ""}
                         </Text>
+                            {userData.username || 'Username'}
+                        
                         <Text>{userData.role || 'Role'}</Text>
                     </Box>
                     <Box textAlign="center" marginY="10px">
@@ -107,6 +169,7 @@ export default function Profile() {
                         )}
 
                     </Box>
+                    <Button onClick={handleProfileEdit}>Edit Profile</Button>
                 </Box>
             ) : (
                 <Text fontSize="xl" fontWeight="bold">
