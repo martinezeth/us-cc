@@ -55,5 +55,27 @@ const createIncidentReport = (incidentData, callback) => {
     });
 };
 
+const incidentsByRadius = (bounds, callback) => {
+    pool.getConnection((error, connection) => {
+        if(error){
+            callback(error, null);
+            return;
+        }
+        connection.query('SELECT * FROM IncidentReports WHERE location_lat BETWEEN ? AND ? OR location_lng BETWEEN ? AND ?',
+        [bounds.minLat, bounds.maxLat, bounds.minLng, bounds.maxLng],
+        (error, results) => {
+            connection.release();
+            if (error) {
+                console.error("Error fetching incident reports: ", error);
+                callback(error, null);
+                return;
+            }
+            callback(null, results);
+            return;
+        }
+    );
+    })
 
-module.exports = { fetchIncidents, createIncidentReport };
+}
+
+module.exports = { fetchIncidents, createIncidentReport, incidentsByRadius};
