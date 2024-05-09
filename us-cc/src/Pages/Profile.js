@@ -63,7 +63,6 @@ export default function Profile() {
      
             axios.get(apiUrl)
                 .then(response => {
-
                     setVolunteering(response.data); 
                 })
                 .catch(error => {
@@ -138,7 +137,6 @@ export default function Profile() {
                                     ? new Date(userData.date_joined).toLocaleDateString()
                                     : 'Unknown join date'}
                             </Text>
-                            {/* Display state and city if available */}
                             {userData.region_id && (
                                 <>
                                     <Text fontSize="md" fontWeight="bold">State: {userData.state || 'XXXXXXX'}</Text>

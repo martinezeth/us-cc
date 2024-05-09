@@ -100,7 +100,7 @@ function updateUserInformation(userInfo, callback){
 function getUserVolunteering(username, callback){
     pool.getConnection((err, connection) => {
         if(err){
-            callback(err)
+            callback(err, null)
             return;
         }
         connection.query(`CALL GetUserVolunteering(?)`, [username], (error, results, fields) => {
@@ -109,7 +109,7 @@ function getUserVolunteering(username, callback){
                 callback(error, null);
                 return;
             }
-            callback(null);
+            callback(null, results);
             connection.release();
         });
     });
