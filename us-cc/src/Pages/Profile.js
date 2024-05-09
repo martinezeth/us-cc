@@ -12,16 +12,15 @@ export default function Profile() {
     useEffect(() => {
         const fetchUserData = async () => {
             try {
-                const authToken = document.cookie && document.cookie.split('; ')
-                .find(row => row.startsWith('authToken=')).split('=')[1];
+                const authToken = document.cookie && document.cookie.split('; ').find(row => row.startsWith('authToken=')).split('=')[1];
 
                 const response = await axios.get(`http://localhost:8000/api/userinfo/${username}`, {
                     headers: {
                         Authorization: `${authToken}` // Include the authToken in the Authorization header
                     }
                 });
-                console.log("response Profile", response.data);
-                setUserData(response.data);
+                
+                setUserData(response.data[0][0]);
             } catch (error) {
                 console.error('Error fetching user data:', error);
             }
@@ -60,7 +59,7 @@ export default function Profile() {
             backgroundColor="blue.200"
             padding="20px"
         >
-            {userData.length > 0 ? (
+            {userData ? (
                 <Box
                     display="flex"
                     justifyContent="center"
@@ -72,23 +71,22 @@ export default function Profile() {
                     </Box>
                     <Box textAlign="center" marginY="10px">
                         <Text fontSize="xl" fontWeight="bold">
-                            {/* {userData[0][0].username || 'Username'} */}
-                            {console.log(userData)}
+                         {userData.username || 'Username'}
                         </Text>
-                        <Text>{userData[0][0].role || 'Role'}</Text>
+                        <Text>{userData.role || 'Role'}</Text>
                     </Box>
                     <Box textAlign="center" marginY="10px">
-                        <Text>
+                        <Text fontSize="lg" fontWeight="bold">
                             Member since:{' '}
-                            {userData[0][0].date_joined
-                                ? new Date(userData[0][0].date_joined).toLocaleDateString()
+                            {userData.date_joined
+                                ? new Date(userData.date_joined).toLocaleDateString()
                                 : 'Unknown join date'}
                         </Text>
                         {/* Display state and city if available */}
-                        {userData[0][0].region && (
+                        {userData.region_id && (
                             <>
-                                <Text>State: {userData[0][0].region.state || 'XXXXXXX'}</Text>
-                                <Text>City: {userData[0][0].region.city || 'XXXXXXX'}</Text>
+                                <Text fontSize="md" fontWeight="bold">State: {userData.state || 'XXXXXXX'}</Text>
+                                <Text fontSize="md" fontWeight="bold">City: {userData.city || 'XXXXXXX'}</Text>
                             </>
                         )}
                     </Box>

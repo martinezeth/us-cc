@@ -235,7 +235,7 @@ app.get('/api/userinfo/:username', (req, res) => {
                     res.status(500).send('Error retrieving user data');
                     return;
                 }
-                console.log("userDataUsername:", userData);
+                // console.log("userDataUsername:", userData);
                 res.json(userData);
             });
         } 
