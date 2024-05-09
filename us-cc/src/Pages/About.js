@@ -45,7 +45,7 @@ export default function AboutPage() {
                     Our Commitment
                 </Text>
                 <Text fontSize="lg">
-                    The United States Crisis Coordination is committed to upholding the highest standards of information accuracy and reliability. We work tirelessly to ensure our content is vetted, updated, and aligned with the latest safety protocols and scientific advice.
+                    Crisis Companion is committed to upholding the highest standards of information accuracy and reliability. We work tirelessly to ensure our content is vetted, updated, and aligned with the latest safety protocols and scientific advice.
                     <br></br>
                     <br></br>
                     Join us in our journey to create a safer, well-prepared society. Stay informed, stay prepared, and stay connected with Crisis Companion.

@@ -3,7 +3,7 @@ const mysql = require('mysql');
 const { validateCredentials, createUser, decodeToken } = require('./Controllers/AuthController');
 const { getUserData, updateUserInformation, getIDFromUsername, getUserVolunteering, getUserDataUsername, getRegions, getVolunteersByRegion, getVolunteersBySkills, makeUserVolunteer } = require('./Controllers/UserController');
 const { getUserPostData, getRecentPostData, createUserPost } = require('./Controllers/PostsController');
-const { fetchIncidents, createIncidentReport } = require('./Controllers/IncidentController');
+const { fetchIncidents, createIncidentReport, incidentsByRadius } = require('./Controllers/IncidentController');
 const cors = require('cors');
 const jwt = require('jsonwebtoken');
 const app = express();
@@ -115,7 +115,7 @@ app.post('/api/register', (req, res) => {
     });
 });
 
-// // Route for Creating Incident Reports
+// Route for Creating Incident Reports
 app.post('/api/create-incident-report', (req, res) => {
   const { incident_type, description, location_lat, location_lng } = req.body;
   if (!incident_type || !description || location_lat === undefined || location_lng === undefined) {
@@ -123,8 +123,7 @@ app.post('/api/create-incident-report', (req, res) => {
       return res.status(400).send('Missing required fields');
   }
 
-  // Assuming `decodeToken` correctly decodes the token to get the user's ID
-  const authToken = req.headers.authorization.split(' ')[1]; // Assuming "Bearer TOKEN_STRING"
+  const authToken = req.headers.authorization.split(' ')[1];
   try {
       const decodedToken = decodeToken(authToken, process.env.JWT_SECRET);
       const user_id = decodedToken && decodedToken.userData && decodedToken.userData[0][0].user_id;
@@ -153,6 +152,43 @@ app.post('/api/create-incident-report', (req, res) => {
   }
 });
 
+// Function to calculate the change in latitude and longitude based on the given radius in miles
+function calculateBounds(lat, lng, radiusInMiles) {
+    let rad = radiusInMiles //6371.01 is the earth radius in KM
+    let minLat = lat - rad;
+    let maxLat = lat + rad;
+    let minLon = lng - rad;
+    let maxLon = lng + rad;
+    return {
+        minLat: minLat,
+        maxLat: maxLat,
+        minLng: minLon,
+        maxLng: maxLon
+    };
+    
+}
+
+
+// New route to fetch incidents by radius in miles
+app.get('/api/incidents-by-radius', (req, res) => {
+    const { lat, lng, radius } = req.query;
+    if (!lat || !lng || !radius) {
+        return res.status(400).send("Missing required parameters: lat, lng, or radius");
+    }
+
+    const bounds = calculateBounds(parseFloat(lat), parseFloat(lng), parseFloat(radius));
+    
+    incidentsByRadius(bounds, (err, incidents) => {
+        if(err){
+            console.log("Server.js:: incidents-by-radius", err);
+            res.sendStatus(500);
+        }
+        res.json(incidents);
+    })
+    
+});
+
+
 
 // Route for getting Incident Reports  
 app.get('/api/incident-reports', (req, res) => {
@@ -170,29 +206,6 @@ app.get('/api/incident-reports', (req, res) => {
                 res.json(results);
             }
         );
-    } else if (lat && lng && radius) {
-        const query = `
-            SELECT *, (
-                3959 * acos (
-                    cos ( radians(?) ) *
-                    cos ( radians( location_lat ) ) *
-                    cos ( radians( location_lng ) - radians(?) ) +
-                    sin ( radians(?) ) *
-                    sin ( radians( location_lat ) )
-                )
-            ) AS distance
-            FROM IncidentReports
-            HAVING distance < ?
-            ORDER BY distance;
-        `;
-        connection.query(query, [parseFloat(lat), parseFloat(lng), parseFloat(lat), parseFloat(radius)], (error, results) => {
-            if (error) {
-                console.error("Error fetching incident reports within radius: ", error);
-                res.status(500).send("Error fetching incident reports");
-                return;
-            }
-            res.json(results);
-        });
     } else {
         // Fallback to fetching all incidents if no specific parameters are provided
         connection.query('SELECT * FROM IncidentReports', (error, results) => {

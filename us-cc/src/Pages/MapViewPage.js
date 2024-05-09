@@ -9,7 +9,7 @@ import fireIconUrl from '../Images/Icons/fireEventIcon.svg';
 import aidIconUrl from '../Images/Icons/aidEventIcon.svg';
 import floodIconUrl from '../Images/Icons/floodEventIcon.svg';
 import hailIconUrl from '../Images/Icons/hailEventIcon.svg';
-import highWindsIconUrl from '../Images/Icons/highWindEventIcon.svg';
+import windyIconUrl from '../Images/Icons/windyEventIcon.svg';
 import blizzardIconUrl from '../Images/Icons/blizzardEventIcon.svg';
 import lightningIconUrl from '../Images/Icons/lightningEventIcon.svg';
 
@@ -27,7 +27,7 @@ var earthquakeIcon = new baseIcon({iconUrl: earthquakeIconUrl}),
     aidIcon = new baseIcon({iconUrl: aidIconUrl}),
     floodIcon = new baseIcon({iconUrl: floodIconUrl}),
     hailIcon = new baseIcon({iconUrl: hailIconUrl}),
-    highWindsIcon = new baseIcon({iconUrl: highWindsIconUrl}),
+    windyIcon = new baseIcon({iconUrl: windyIconUrl}),
     blizzardIcon = new baseIcon({iconUrl: blizzardIconUrl}),
     lightningIcon = new baseIcon({iconUrl: lightningIconUrl});
 
@@ -38,13 +38,14 @@ var earthquakeIcon = new baseIcon({iconUrl: earthquakeIconUrl}),
     firstAid: aidIcon,
     flood: floodIcon,
     hail: hailIcon,
-    high_winds: highWindsIcon,
+    windy: windyIcon,
     blizzard: blizzardIcon,
     lightning: lightningIcon,
   };
 
 
   const ListView = ({ incidents }) => (
+    
     <VStack spacing={4} align="stretch">
       {incidents.map(incident => (
         <Box key={incident.incident_id} p={5} shadow="md" borderWidth="1px">
@@ -72,7 +73,7 @@ function LocationMarker() {
   return null;
 }
 
-function MapEvents({ setIncidents }) {
+function MapEvents({ setIncidents, radius }) {
   const map = useMapEvents({
     moveend: () => {
       const bounds = map.getBounds();
@@ -81,8 +82,9 @@ function MapEvents({ setIncidents }) {
         swLng: bounds.getSouthWest().lng,
         neLat: bounds.getNorthEast().lat,
         neLng: bounds.getNorthEast().lng,
+        radius
       };
-
+      
       axios.get(`http://localhost:8000/api/incident-reports`, { params })
         .then(response => setIncidents(response.data))
         .catch(error => console.error("Error fetching incidents:", error));
@@ -99,16 +101,75 @@ function MapPage() {
   const [showList, setShowList] = useState(false);
   const [radius, setRadius] = useState('10');
   const [position, setPosition] = useState(null);
+  const [key, setKey] = useState(Date.now());
   const zoom = 13;
 
   useEffect(() => {
+    console.log('Requesting current position...');
     navigator.geolocation.getCurrentPosition(function(pos) {
+      console.log('Position found:', pos.coords);
       setPosition({
         lat: pos.coords.latitude,
         lng: pos.coords.longitude
       });
     });
   }, []);
+
+  // useEffect(() => {
+  //   // Fetch incidents whenever the radius changes
+  //   const fetchIncidents = async () => {
+  //     try {
+  //       const response = await axios.get(`http://localhost:8000/api/incidents?radius=${radius}`);
+  //       setIncidents(response.data);  // Update state with fetched data
+  //     } catch (error) {
+  //       console.error('Error fetching incidents:', error);
+  //     }
+  //   };
+
+  //   fetchIncidents();
+  // }, [radius]); // Dependency array includes radius
+
+
+  useEffect(() => {
+    const fetchIncidents = async () => {
+      if (position) {
+        console.log(`Fetching incidents with radius: ${radius} and position:`, position);
+        try {
+          const response = await axios.get(`http://localhost:8000/api/incidents-by-radius`, {
+            params: { lat: position.lat, lng: position.lng, radius }
+          });
+          
+          setIncidents(response.data);
+          setKey(Date.now());
+          
+        } catch (error) {
+          console.error('Error fetching incidents:', error);
+        }
+      }
+      
+    };
+
+    fetchIncidents();
+  }, [radius, position]);
+
+  const handleRadiusChange = radius => {
+    setRadius(radius);
+
+    
+    axios.get(`http://localhost:8000/api/incidents-by-radius`, {
+      lat: position.lat,
+      lng: position.lng,
+      radius: radius
+    })
+    .then((response) => {
+      setIncidents(response.data);
+      return;
+    })
+    .catch((err) =>{
+      console.log("error changing radius MapViewPage::handleRadiusChange", err);
+      return;
+    })
+  }
 
   return (
     <ChakraProvider>
@@ -118,13 +179,13 @@ function MapPage() {
         </Button>
         {showList ? (
           <>
-            <Select placeholder="Select radius" value={radius} onChange={e => setRadius(e.target.value)} mb={4}>
+            <Select placeholder="Select radius" value={radius} onChange={e => handleRadiusChange(e.target.value)} mb={4}>
               <option value="3">3 miles</option>
               <option value="5">5 miles</option>
               <option value="10">10 miles</option>
               <option value="20">20 miles</option>
             </Select>
-            <ListView incidents={incidents} />
+            <ListView incidents={incidents} /> 
           </>
         ) : (
           <MapContainer center={[37.819, -122.478]} zoom={zoom} style={{ height: '100%', width: '100%' }}>
@@ -138,6 +199,7 @@ function MapPage() {
               <Marker key={incident.incident_id}
                 position={[incident.location_lat, incident.location_lng]}
                 icon={mapIcons[incident.incident_type.toLowerCase().replace(/ /g, '_')] || new L.Icon()}>
+                  {console.log("eee",mapIcons[incident.incident_type.toLowerCase().replace(/ /g, '_')])}
                 <Popup>
                   <strong>{incident.incident_type}</strong><br />
                   {incident.description}<br />
