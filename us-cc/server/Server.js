@@ -3,6 +3,7 @@ const mysql = require('mysql');
 const { validateCredentials, createUser, decodeToken } = require('./Controllers/AuthController');
 const { getUserData, getUserVolunteering, getUserDataUsername, getRegions, getVolunteersByRegion, getVolunteersBySkills, makeUserVolunteer } = require('./Controllers/UserController');
 const { getUserPostData, getRecentPostData, createUserPost } = require('./Controllers/PostsController');
+const { fetchIncidents, createIncidentReport } = require('./Controllers/IncidentController');
 const cors = require('cors');
 const jwt = require('jsonwebtoken');
 const app = express();
@@ -25,6 +26,7 @@ app.use(cors({
 }));
 
 app.use(express.json());
+
 
 
 // AWS Database connection setup
@@ -112,6 +114,47 @@ app.post('/api/register', (req, res) => {
         });
     });
 });
+
+// // Route for Creating Incident Reports
+app.post('/api/create-incident-report', (req, res) => {
+  const { incident_type, description, location_lat, location_lng } = req.body;
+  if (!incident_type || !description || location_lat === undefined || location_lng === undefined) {
+      console.error('Missing required fields:', req.body);
+      return res.status(400).send('Missing required fields');
+  }
+
+  // Assuming `decodeToken` correctly decodes the token to get the user's ID
+  const authToken = req.headers.authorization.split(' ')[1]; // Assuming "Bearer TOKEN_STRING"
+  try {
+      const decodedToken = decodeToken(authToken, process.env.JWT_SECRET);
+      const user_id = decodedToken && decodedToken.userData && decodedToken.userData[0][0].user_id;
+      if (!user_id) {
+          throw new Error('Invalid or missing user ID in token');
+      }
+
+      const incidentData = {
+          user_id,
+          incident_type,
+          description,
+          location_lat,
+          location_lng
+      };
+
+      createIncidentReport(incidentData, (error, insertId) => {
+          if (error) {
+              console.error('Failed to create incident report:', error);
+              return res.status(500).send('Failed to create incident report');
+          }
+          res.status(200).json({ message: 'Incident report created successfully', id: insertId });
+      });
+  } catch (err) {
+      console.error('Authorization error:', err.message);
+      res.status(401).send('Unauthorized: ' + err.message);
+  }
+});
+
+
+
 
 
 // Incident Reports Route 

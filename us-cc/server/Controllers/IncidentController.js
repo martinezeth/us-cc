@@ -3,7 +3,8 @@ const mysql = require('mysql');
 const pool = mysql.createPool({
     host: process.env.DB_HOST,
     user: process.env.DB_USER,
-    password: process.env.DB_PASS
+    password: process.env.DB_PASS,
+    database: process.env.DB_NAME
 });
 
 
@@ -28,4 +29,31 @@ const fetchIncidents = (callback) => {
     
 };
 
-module.exports = { fetchIncidents };
+
+const createIncidentReport = (incidentData, callback) => {
+    const { user_id, incident_type, description, location_lat, location_lng } = incidentData;
+    console.log('Received incident data:', incidentData);
+    pool.getConnection((err, connection) => {
+        if (err) {
+            console.error('Database connection error:', err);
+            callback(err, null);
+            return;
+        }
+        const query = `
+            INSERT INTO IncidentReports (user_id, incident_type, description, location_lat, location_lng)
+            VALUES (?, ?, ?, ?, ?);
+        `;
+        connection.query(query, [user_id, incident_type, description, parseFloat(location_lat), parseFloat(location_lng)], (error, results) => {
+            connection.release();
+            if (error) {
+                console.error('SQL error inserting incident report:', error);
+                callback(error, null);
+                return;
+            }
+            callback(null, results.insertId); // Returns the ID of the newly created incident report
+        });
+    });
+};
+
+
+module.exports = { fetchIncidents, createIncidentReport };
