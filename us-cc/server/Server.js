@@ -183,7 +183,7 @@ app.get('/api/incidents-by-radius', (req, res) => {
             console.log("Server.js:: incidents-by-radius", err);
             res.sendStatus(500);
         }
-        res.json(incidents);
+        res.status(200).json(incidents);
     })
     
 });

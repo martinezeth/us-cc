@@ -36,7 +36,7 @@ const HeaderComponent = () => {
     else {
       setUsername(null);
     }
-  }, [cookies.authToken]);
+  }, [cookies.authToken, username]);
 
 
   const handleNavigation = (sectionId) => {
