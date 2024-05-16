@@ -173,7 +173,7 @@ function MapPage() {
 
   return (
     <ChakraProvider>
-      <Box position="relative" height="80vh" width="100%" >
+      <Box position="relative" height="80vh" width="100%" mb={10} mt={2} >
         <Button onClick={() => setShowList(!showList)} mb={4}>
           {showList ? 'Show Map View' : 'Show List View'}
         </Button>
@@ -188,7 +188,7 @@ function MapPage() {
             <ListView incidents={incidents} /> 
           </>
         ) : (
-          <MapContainer center={[37.819, -122.478]} zoom={zoom} style={{ height: '100%', width: '100%' }}>
+          <MapContainer center={[37.819, -122.478]} zoom={zoom} style={{ height: '100%', width: '100%'}}>
             <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
               attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
             />
