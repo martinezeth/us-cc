@@ -24,6 +24,7 @@ const Sidebar = ({ onSelect }) => {
 
 const VolunteerRow = ({ volunteer, regions }) => {
     const [regionName, setRegionName] = useState([]);
+    const [userName, setUserName] = useState('');
 
     useEffect(() => {
         // Find the region object corresponding to volunteer's region_id
@@ -32,23 +33,30 @@ const VolunteerRow = ({ volunteer, regions }) => {
         if (selectedRegion) {
             setRegionName(selectedRegion.region_name);
         }
+        axios.get(`http://localhost:8000/api/users/${volunteer.user_id}`)
+            .then(response => {
+                setUserName(response.data[0].name);
+                
+            })
+            .catch(error => console.error('Error fetching user:', error));
     }, [volunteer, regions]);
-    return(
-    <Tr>
-        <Td>{volunteer.volunteer_id}</Td>
-        <Td>{volunteer.user_id}</Td>
-        <Td>{volunteer.skills}</Td>
-        <Td>{volunteer.availability}</Td>
-        <Td>{regionName}</Td>
-    </Tr>
-);}
+    return (
+        <Tr>
+            <Td>{volunteer.volunteer_id}</Td>
+            <Td>{userName}</Td>
+            <Td>{volunteer.skills}</Td>
+            <Td>{volunteer.availability}</Td>
+            <Td>{regionName}</Td>
+        </Tr>
+    );
+}
 
 const VolunteersTable = ({ volunteers,regions }) => (
     <Table variant="simple">
         <Thead>
             <Tr>
                 <Th>Volunteer ID</Th>
-                <Th>User ID</Th>
+                <Th>User Name</Th>
                 <Th>Skills</Th>
                 <Th>Availability</Th>
                 <Th>Region</Th>
@@ -151,7 +159,7 @@ const fetchRegions = async () => {
             if (loadedRegions && loadedRegions.length > 0) {
                 await fetchAllRegionsForChart(loadedRegions); // Fetch chart data for regions
             }
-            fetchAllSkillsForChart(); // Fetch skills data for the pie chart
+            // fetchAllSkillsForChart(); // Fetch skills data for the pie chart
             fetchVolunteersByRegion(0); // Fetch all volunteers initially or a sensible default
         };
     
@@ -163,12 +171,12 @@ const fetchRegions = async () => {
         <Flex>
             <Sidebar onSelect={() => fetchVolunteersByRegion('All')} />
             <Box flex="1" p={5}>
-                <Tabs variant="enclosed" defaultIndex={1} onChange={(index) => {
-                    setActiveChartData(index === 0 ? regionChartData : skillChartData);
+                <Tabs variant="enclosed" defaultIndex={0} onChange={(index) => {
+                    setActiveChartData(regionChartData);
                 }}>
                     <TabList>
                         <Tab>By Region</Tab>
-                        <Tab>By Skills</Tab>
+                        {/* <Tab>By Skills</Tab> */}
                     </TabList>
                     <TabPanels>
                         <TabPanel>
@@ -198,7 +206,7 @@ const fetchRegions = async () => {
                                 <Legend />
                             </PieChart>
                         </TabPanel>
-                        <TabPanel>
+                        {/* <TabPanel>
                             <Select placeholder="Select skill" onChange={(e) => fetchVolunteersBySkills(e.target.value)}>
                                 {skills.map((skill) => (
                                     <option key={skill} value={skill}>
@@ -224,7 +232,7 @@ const fetchRegions = async () => {
                                 <Tooltip />
                                 <Legend />
                             </PieChart>
-                        </TabPanel>
+                        </TabPanel> */}
                     </TabPanels>
                 </Tabs>
             </Box>

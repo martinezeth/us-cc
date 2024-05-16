@@ -160,6 +160,10 @@ function getVolunteersBySkills(skill, callback) {
 
 function makeUserVolunteer(userData, callback) {
     const { name, region, regionid, skills, availability } = userData;
+    if (!validateSkillsFormat(skills)) {
+        callback('Invalid skills format', null);
+        return;
+    }
     pool.getConnection((err, connection) => {
         if (err) {
             callback(err, null);
@@ -174,6 +178,33 @@ function makeUserVolunteer(userData, callback) {
             callback(null, results);
         });
     });
+}
+
+function validateSkillsFormat(skills) {
+    if (typeof skills !== 'string' || skills.trim() === '') {
+        return false;
+    }
+
+    const MAX_SKILLS_LENGTH = 255;
+
+    const normalizedSkills = skills.split(',').map(skill => skill.trim());
+
+   if (skills.length > MAX_SKILLS_LENGTH) {
+        return false;
+    }
+
+    // Validate that skills field is not empty after normalization
+    if (normalizedSkills.length < 1) {
+        return false;
+    }
+
+    // Validate character set (allow letters, numbers, spaces, and commas)
+    const allowedCharactersRegex = /^[a-zA-Z0-9\s,]*$/;
+    if (!allowedCharactersRegex.test(skills)) {
+        return false;
+    }
+
+    return true;
 }
 
 function getRegions(callback){

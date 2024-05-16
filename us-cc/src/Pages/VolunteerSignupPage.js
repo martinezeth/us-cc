@@ -12,6 +12,8 @@ function VolunteerPage() {
     const [skills, setSkills] = useState('');
     const [availability, setAvailability] = useState([]);
     const [error, setError] = useState('');
+    const [nameError, setNameError] = useState('');
+    const [availabilityError, setAvailabilityError] = useState('');
 
 
     useEffect(() => {
@@ -37,6 +39,21 @@ function VolunteerPage() {
     ];
 
     const handleRegister = () => {
+        setNameError('');
+        setAvailabilityError('');
+
+        // Form validation
+        let isValid = true;
+        if (!name.trim()) {
+            setNameError('Name is required');
+            isValid = false;
+        }
+        if (availability.length === 0) {
+            setAvailabilityError('Please select at least one availability option');
+            isValid = false;
+        }
+
+        if(isValid) {
             axios.post('http://localhost:8000/api/volunteering/register', {
                 userData: {
                     name,
@@ -46,13 +63,12 @@ function VolunteerPage() {
                     availability,
                 }
             }).then(response => {
-                
-                navigate('/'); 
-            })
-                .catch(error => {
-                    console.error('Error registering volunteer:', error.response.data);
-                    setError('An error occurred. Please try again later.'); 
-                });
+                navigate('/');
+            }).catch(error => {
+                console.error('Error registering volunteer:', error.response.data);
+                setError('An error occurred. Please try again later.');
+            });
+        }
 
     };
 
@@ -68,15 +84,25 @@ function VolunteerPage() {
         <>
             <Container  my={10}>
                 <VStack spacing={4}>
-                    <Input placeholder="Name" value={name} onChange={(e) => setName(e.target.value)} />
+                    <Input 
+                        placeholder="Name" 
+                        value={name} 
+                        onChange={(e) => setName(e.target.value)}
+                        isInvalid={!!nameError} 
+                    />
+                    {nameError && <Text color="red">{nameError}</Text>}
                     <Box>
                         <Select
                             placeholder="Select region"
                             value={region}
-                            onChange={(e) => { setRegion(e.target.value); setRegionid(regions.find(region => region.region_name === e.target.value).region_id); }}
+                            onChange={(e) => {
+                                const selectedRegionId = e.target.selectedOptions[0].id;
+                                setRegion(e.target.value);
+                                setRegionid(selectedRegionId);
+                            }}
                         >
                             {regions.map(region => (
-                                <option key={region.region_id} value={region.region_name}>
+                                <option key={region.region_id} id={region.region_id} value={region.region_name}>
                                     {region.region_name}
                                 </option>
                             ))}
@@ -95,6 +121,7 @@ function VolunteerPage() {
                             </Checkbox>
                         ))}
                     </Box>
+                    {availabilityError && <Text color="red">{availabilityError}</Text>}
                     {error && <Text color="red">{error}</Text>}
                     <Button colorScheme="blue" onClick={handleRegister}>Register as a volunteer</Button>
                 </VStack>

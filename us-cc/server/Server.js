@@ -254,6 +254,33 @@ app.get('/api/userinfo/:username', (req, res) => {
         res.status(401);
     }
 });
+
+app.get('/api/users/:userId', (req, res) => {
+    const userId = req.params.userId;
+
+    getUserById(userId, (error, results) => {
+        if (error) {
+            console.error('Error fetching user:', error);
+            return;
+        }
+        if (results.length > 0) {
+            res.json(results);
+            
+        }
+    });
+});
+
+function getUserById(userId, callback) {
+    connection.query(`SELECT name FROM Users WHERE user_id = ?`, [userId], (error, results) => {
+        if (error) {
+            console.error("Error fetching user name: ", error);
+            callback(error, null);
+            return;
+        }
+        callback(null, results);
+    });
+}
+
 // Route to update a user
 app.post('/api/userinfo/update-user', (req, res) => {
     const {userid, newUsername, newName, newPassword} = req.body;
