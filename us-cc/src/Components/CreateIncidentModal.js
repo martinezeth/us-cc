@@ -22,7 +22,6 @@ import LocationMapPreview from './LocationMapPreview';
 import { MdMyLocation } from 'react-icons/md';
 import { INCIDENT_TYPES } from '../constants/incidentTypes';
 
-
 const CreateIncidentModal = ({ isOpen, onClose, onCreateSuccess }) => {
     const [incidentType, setIncidentType] = useState('');
     const [description, setDescription] = useState('');

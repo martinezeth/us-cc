@@ -115,7 +115,7 @@ const CreateVolunteerOpportunityModal = ({ isOpen, onClose, onSuccess }) => {
                     location_lng: formData.position.lng,
                     radius_miles: formData.radius_miles,
                     required_skills: formData.required_skills,
-                    status: 'active'
+                    status: 'open'
                 }])
                 .select();
 

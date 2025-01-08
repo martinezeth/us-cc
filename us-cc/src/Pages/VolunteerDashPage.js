@@ -97,7 +97,7 @@ const VolunteerRegistrationModal = ({ isOpen, onClose, onRegister }) => {
                     <VStack spacing={4} pb={6}>
                         <FormControl isRequired>
                             <FormLabel>Region</FormLabel>
-                            <Input 
+                            <Input
                                 value={formData.region}
                                 onChange={(e) => setFormData({
                                     ...formData,
@@ -164,10 +164,10 @@ const VolunteerRegistrationModal = ({ isOpen, onClose, onRegister }) => {
 const OpportunityCard = ({ opportunity, userSkills, isDemoMode, isResponseTab = false }) => {
     const [isResponding, setIsResponding] = useState(false);
     const toast = useToast();
-    const matchedSkills = userSkills.filter(skill => 
+    const matchedSkills = userSkills.filter(skill =>
         opportunity.required_skills.includes(skill)
     );
-    const hasAllRequiredSkills = matchedSkills.length === opportunity.required_skills.length;
+    const hasRequiredSkills = matchedSkills.length > 0;
 
     const handleVolunteerClick = async () => {
         setIsResponding(true);
@@ -228,7 +228,7 @@ const OpportunityCard = ({ opportunity, userSkills, isDemoMode, isResponseTab = 
                     Responded
                 </Badge>
             )}
-            
+
             <Flex align="center" mb={4}>
                 <Icon as={FaBuilding} mr={2} color="blue.500" />
                 <Text fontWeight="bold" color="gray.700">
@@ -265,7 +265,7 @@ const OpportunityCard = ({ opportunity, userSkills, isDemoMode, isResponseTab = 
                         colorScheme="blue"
                         isLoading={isResponding}
                         onClick={handleVolunteerClick}
-                        isDisabled={!hasAllRequiredSkills}
+                        isDisabled={!hasRequiredSkills}
                     >
                         Volunteer
                     </Button>
@@ -309,21 +309,28 @@ export default function VolunteerDashPage() {
 
     const fetchOpportunities = async () => {
         try {
-            const { data, error } = await supabase
+            // First, fetch opportunities
+            const { data: opportunities, error: opportunitiesError } = await supabase
                 .from('volunteer_opportunities')
-                .select(`
-                    *,
-                    organizations:organization_id (
-                        name
-                    )
-                `)
+                .select('*')
+                .eq('status', 'open')
                 .order('created_at', { ascending: false });
 
-            if (error) throw error;
-            setOpportunities(data.map(opp => ({
-                ...opp,
-                organization_name: opp.organizations.name
-            })));
+            if (opportunitiesError) throw opportunitiesError;
+
+            // Get organization data from auth.users using organization_ids
+            const organizationIds = opportunities.map(opp => opp.organization_id);
+
+            // For each opportunity, get the organization's metadata from auth
+            const opportunitiesWithOrgs = await Promise.all(opportunities.map(async (opp) => {
+                const { data: { user }, error: userError } = await supabase.auth.admin.getUserById(opp.organization_id);
+                return {
+                    ...opp,
+                    organization_name: user?.user_metadata?.name || 'Unknown Organization'
+                };
+            }));
+
+            setOpportunities(opportunitiesWithOrgs);
         } catch (error) {
             toast({
                 title: "Error loading opportunities",
@@ -336,27 +343,37 @@ export default function VolunteerDashPage() {
     const fetchResponses = async () => {
         try {
             const { data: { user } } = await supabase.auth.getUser();
-            const { data, error } = await supabase
+
+            // Get responses for the current user
+            const { data: responses, error: responsesError } = await supabase
                 .from('opportunity_responses')
                 .select(`
                     *,
-                    opportunity:opportunity_id (
-                        *,
-                        organizations:organization_id (
-                            name
-                        )
-                    )
+                    opportunity:opportunity_id (*)
                 `)
                 .eq('volunteer_id', user.id)
-                .order('created_at', { ascending: false });
+                .eq('status', 'accepted');
 
-            if (error) throw error;
-            setResponses(data.map(response => ({
-                ...response.opportunity,
-                organization_name: response.opportunity.organizations.name
-            })));
+            if (responsesError) throw responsesError;
+
+            // Get organization names for each opportunity
+            const responsesWithOrgs = await Promise.all(responses.map(async (response) => {
+                const { data: { user }, error: userError } = await supabase.auth.admin.getUserById(response.opportunity.organization_id);
+                return {
+                    ...response.opportunity,
+                    organization_name: user?.user_metadata?.name || 'Unknown Organization'
+                };
+            }));
+
+            setResponses(responsesWithOrgs);
         } catch (error) {
             console.error('Error fetching responses:', error);
+            toast({
+                title: "Error",
+                description: "Failed to load responses",
+                status: "error",
+                duration: 5000
+            });
         }
     };
 
@@ -380,7 +397,7 @@ export default function VolunteerDashPage() {
                             Register as a Volunteer
                         </AlertTitle>
                         <AlertDescription maxWidth="sm">
-                            Register as a volunteer to view and respond to opportunities 
+                            Register as a volunteer to view and respond to opportunities
                             in your area that match your skills.
                         </AlertDescription>
                         <Button
@@ -392,7 +409,7 @@ export default function VolunteerDashPage() {
                         </Button>
                     </Alert>
                 </Box>
-                <VolunteerRegistrationModal 
+                <VolunteerRegistrationModal
                     isOpen={isOpen}
                     onClose={onClose}
                     onRegister={checkUserStatus}

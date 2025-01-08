@@ -32,6 +32,7 @@ import CreateVolunteerOpportunityModal from '../Components/CreateVolunteerOpport
 import CreateIncidentModal from '../Components/CreateIncidentModal';
 import CreatePostModal from '../Components/CreatePostModal';
 
+
 const DashboardCard = ({ children, title }) => (
     <Card>
         <CardHeader>
