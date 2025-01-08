@@ -33,19 +33,9 @@ import {
     Select,
     useDisclosure,
 } from '@chakra-ui/react';
-import { FaBuilding, FaCheckCircle, FaClock } from 'react-icons/fa';
+import { FaBuilding, FaCheckCircle } from 'react-icons/fa';
 import { supabase } from '../supabaseClient';
-
-const STANDARD_SKILLS = [
-    "Medical Aid",
-    "Transportation",
-    "Search and Rescue",
-    "Emergency Response",
-    "First Aid",
-    "Crisis Communication",
-    "Logistics Support",
-    "Equipment Operation"
-];
+import { STANDARD_SKILLS, AVAILABILITY_OPTIONS } from '../constants/incidentTypes';
 
 const VolunteerRegistrationModal = ({ isOpen, onClose, onRegister }) => {
     const [formData, setFormData] = useState({
@@ -143,11 +133,11 @@ const VolunteerRegistrationModal = ({ isOpen, onClose, onRegister }) => {
                                 }}
                                 multiple
                             >
-                                <option value="Weekdays">Weekdays</option>
-                                <option value="Weekends">Weekends</option>
-                                <option value="Mornings">Mornings</option>
-                                <option value="Evenings">Evenings</option>
-                                <option value="On-Call">On-Call</option>
+                                {AVAILABILITY_OPTIONS.map(option => (
+                                    <option key={option} value={option}>
+                                        {option}
+                                    </option>
+                                ))}
                             </Select>
                         </FormControl>
 
@@ -309,7 +299,6 @@ export default function VolunteerDashPage() {
 
     const fetchOpportunities = async () => {
         try {
-            // First, fetch opportunities
             const { data: opportunities, error: opportunitiesError } = await supabase
                 .from('volunteer_opportunities')
                 .select('*')
@@ -318,10 +307,6 @@ export default function VolunteerDashPage() {
 
             if (opportunitiesError) throw opportunitiesError;
 
-            // Get organization data from auth.users using organization_ids
-            const organizationIds = opportunities.map(opp => opp.organization_id);
-
-            // For each opportunity, get the organization's metadata from auth
             const opportunitiesWithOrgs = await Promise.all(opportunities.map(async (opp) => {
                 const { data: { user }, error: userError } = await supabase.auth.admin.getUserById(opp.organization_id);
                 return {
@@ -344,7 +329,6 @@ export default function VolunteerDashPage() {
         try {
             const { data: { user } } = await supabase.auth.getUser();
 
-            // Get responses for the current user
             const { data: responses, error: responsesError } = await supabase
                 .from('opportunity_responses')
                 .select(`
@@ -356,7 +340,6 @@ export default function VolunteerDashPage() {
 
             if (responsesError) throw responsesError;
 
-            // Get organization names for each opportunity
             const responsesWithOrgs = await Promise.all(responses.map(async (response) => {
                 const { data: { user }, error: userError } = await supabase.auth.admin.getUserById(response.opportunity.organization_id);
                 return {
