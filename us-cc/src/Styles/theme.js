@@ -1,24 +1,57 @@
-import { extendTheme } from "@chakra-ui/react";
+import { extendTheme } from '@chakra-ui/react';
 
-const colors = {
-  brand: {
-    light: '#FFAD66',    // Light Orange
-    primary: '#FF7F50',  // Vibrant Orange
-    dark: '#E65100',     // Dark Orange
+const theme = extendTheme({
+  colors: {
+    brand: {
+      50: '#E6F6FF',
+      100: '#BAE3FF',
+      200: '#7CC4FA',
+      300: '#47A3F3',
+      400: '#2186EB',
+      500: '#0967D2',  // Primary brand color
+      600: '#0552B5',
+      700: '#03449E',
+      800: '#01337D',
+      900: '#002159',
+    },
   },
-  secondary: {
-    light: '#E1F5FE',    // Light Blue
-    primary: '#039BE5',  // Mid Blue
-    dark: '#01579B',     // Dark Blue
+  components: {
+    Button: {
+      baseStyle: {
+        fontWeight: 'semibold',
+        borderRadius: 'lg',
+      },
+    },
+    Card: {
+      baseStyle: {
+        container: {
+          borderRadius: 'lg',
+          bg: 'white',
+          boxShadow: 'sm',
+          border: '1px solid',
+          borderColor: 'gray.100',
+        },
+      },
+    },
+    Heading: {
+      baseStyle: {
+        fontWeight: 'semibold',
+        color: 'gray.800',
+      },
+    },
   },
-  neutral: {
-    white: '#FFFFFF',    // White
-    lightGray: '#F4F4F4', // Light Grey
-    mediumGray: '#9E9E9E', // Medium Grey
-    darkGray: '#424242', // Dark Grey
-  }
-};
-
-const theme = extendTheme({ colors });
+  styles: {
+    global: {
+      body: {
+        bg: 'gray.50',
+        color: 'gray.800',
+      },
+    },
+  },
+  fonts: {
+    heading: 'Inter, system-ui, sans-serif',
+    body: 'Inter, system-ui, sans-serif',
+  },
+});
 
 export default theme;

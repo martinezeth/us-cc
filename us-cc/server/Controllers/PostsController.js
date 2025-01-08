@@ -1,73 +1,22 @@
-const mysql = require('mysql');
+const { createClient } = require('@supabase/supabase-js');
 require('dotenv').config({ path: './dbConnection.env' });
 
-const pool = mysql.createPool({
-    connectionLimit: 10,
-    host: process.env.DB_HOST,
-    user: process.env.DB_USER,
-    password: process.env.DB_PASS,
-    database: process.env.DB_NAME
-});
+const supabase = createClient(process.env.REACT_APP_SUPABASE_URL, process.env.REACT_APP_SUPABASE_ANON_KEY);
 
-function getUserPostData(user_id, callback) {
-    pool.getConnection((err, connection) => {
-        if (err) {
-            callback(err, null);
-            return;
-        }
-        connection.query('CALL GetUserPosts(?)', [user_id], (error, results, fields) => {
-            if (error) {
-                connection.release();
-                callback(error, null);
-                return;
-            }
-            callback(null, results);
-            connection.release();
-
-        })
-    });
+async function getUserPostData(userId) {
+    try {
+        const { data, error } = await supabase
+            .from('posts')
+            .select('*')
+            .eq('user_id', userId);
+        if (error) throw error;
+        return data;
+    } catch (error) {
+        console.error('Error fetching user post data:', error);
+        throw error;
+    }
 }
 
-function getRecentPostData(callback) {
-    pool.getConnection((err, connection) => {
-        if (err) {
-            callback(err, null);
-            return;
-        }//'CALL GetRecentPosts()'
-        connection.query('CALL GetRecentPosts()', (error, results, fields) => {
-        if (error) {
-                connection.release();
-                callback(error, null);
-                return;
-            }
-            callback(null, results);
-            connection.release();
+// Update other functions similarly...
 
-        })
-    });
-}
-
-function createUserPost(postInfo, callback) {
-    const {user_id, title, body, region} = postInfo;
-    // console.log("po", postInfo);
-    pool.getConnection((err, connection) => {
-        if (err) {
-            callback(err, null);
-            return;
-        }
-        
-        connection.query(
-            'INSERT INTO Posts (user_id, title, body, region) VALUES (?, ?, ?, ?)',
-            [user_id, title, body, region],
-            (error, results, fields) => {
-                connection.release();
-                if (error) {
-                    callback(error, null);
-                    return;
-                }
-                callback(null, results);
-            });
-    });
-}
-
-module.exports = { getUserPostData, getRecentPostData, createUserPost }
+module.exports = { getUserPostData, /* other functions */ };
