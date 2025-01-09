@@ -41,6 +41,7 @@ import {
 } from '@chakra-ui/react';
 import { EditIcon, CheckIcon, AddIcon } from '@chakra-ui/icons';
 import { supabase } from '../supabaseClient';
+import { STANDARD_SKILLS, AVAILABILITY_OPTIONS } from '../constants/incidentTypes';
 
 // Reusable styled components
 const SectionCard = ({ children, title }) => (
@@ -115,7 +116,7 @@ export default function Profile() {
     const fetchProfileData = async () => {
         try {
             const { data: authUser } = await supabase.auth.getUser();
-            
+
             if (!authUser.user) {
                 toast({
                     title: "Not authorized",
@@ -167,7 +168,7 @@ export default function Profile() {
     const handleEditSubmit = async () => {
         try {
             const { data: authUser } = await supabase.auth.getUser();
-            
+
             // Update volunteer data
             const { error: volunteerError } = await supabase
                 .from('volunteer_signups')
@@ -367,7 +368,7 @@ export default function Profile() {
                                             <SectionCard title="Recent Responses">
                                                 <Text color="gray.600">No recent responses</Text>
                                             </SectionCard>
-                                            
+
                                             <SectionCard title="Certifications">
                                                 <Text color="gray.600">No certifications added yet</Text>
                                             </SectionCard>
@@ -461,21 +462,29 @@ export default function Profile() {
                                             ))}
                                         </Wrap>
                                         <HStack>
-                                            <Input
+                                            <Select
                                                 value={editForm.newSkill}
                                                 onChange={(e) => setEditForm({
                                                     ...editForm,
                                                     newSkill: e.target.value
                                                 })}
-                                                placeholder="Add a new skill"
-                                            />
+                                                placeholder="Select a skill"
+                                            >
+                                                {STANDARD_SKILLS
+                                                    .filter(skill => !editForm.skills.includes(skill))
+                                                    .map((skill) => (
+                                                        <option key={skill} value={skill}>
+                                                            {skill}
+                                                        </option>
+                                                    ))}
+                                            </Select>
                                             <IconButton
                                                 icon={<AddIcon />}
                                                 onClick={() => {
-                                                    if (editForm.newSkill.trim()) {
+                                                    if (editForm.newSkill) {
                                                         setEditForm({
                                                             ...editForm,
-                                                            skills: [...editForm.skills, editForm.newSkill.trim()],
+                                                            skills: [...editForm.skills, editForm.newSkill],
                                                             newSkill: ''
                                                         });
                                                     }
@@ -519,11 +528,13 @@ export default function Profile() {
                                                 })}
                                                 placeholder="Select availability"
                                             >
-                                                {availabilityOptions.map((option) => (
-                                                    <option key={option} value={option}>
-                                                        {option}
-                                                    </option>
-                                                ))}
+                                                {AVAILABILITY_OPTIONS
+                                                    .filter(option => !editForm.availability.includes(option))
+                                                    .map((option) => (
+                                                        <option key={option} value={option}>
+                                                            {option}
+                                                        </option>
+                                                    ))}
                                             </Select>
                                             <IconButton
                                                 icon={<AddIcon />}

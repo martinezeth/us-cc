@@ -1,10 +1,25 @@
 import React, { useState, useEffect } from "react";
 import {
-    Box, Button, Input, VStack, Text, Container, Checkbox, Select,
-    useToast, Tag, TagLabel, TagCloseButton, Wrap, WrapItem
+    Box,
+    Button,
+    Input,
+    VStack,
+    Text,
+    Container,
+    Checkbox,
+    Select,
+    useToast,
+    Tag,
+    TagLabel,
+    TagCloseButton,
+    Wrap,
+    WrapItem,
+    FormControl,
+    FormLabel,
 } from "@chakra-ui/react";
 import { supabase } from '../supabaseClient';
 import { useNavigate } from 'react-router-dom';
+import { STANDARD_SKILLS, AVAILABILITY_OPTIONS } from '../constants/incidentTypes';
 
 function VolunteerPage() {
     const navigate = useNavigate();
@@ -12,11 +27,10 @@ function VolunteerPage() {
     const [loading, setLoading] = useState(false);
     const [user, setUser] = useState(null);
     const [specialSkills, setSpecialSkills] = useState([]);
-    const [newSkill, setNewSkill] = useState('');
+    const [selectedSkill, setSelectedSkill] = useState('');
     const [selectedAreas, setSelectedAreas] = useState([]);
     const [availability, setAvailability] = useState([]);
 
-    // Fetch current user on mount
     useEffect(() => {
         const getCurrentUser = async () => {
             const { data: { user }, error } = await supabase.auth.getUser();
@@ -35,31 +49,10 @@ function VolunteerPage() {
         getCurrentUser();
     }, []);
 
-    const availabilityOptions = [
-        "Weekdays",
-        "Weekends",
-        "Mornings",
-        "Afternoons",
-        "Evenings",
-        "On-Call",
-        "Emergency Only"
-    ];
-
-    const serviceAreas = [
-        "Medical Support",
-        "Emergency Response",
-        "Transportation",
-        "Shelter Operations",
-        "Search and Rescue",
-        "Communications",
-        "Logistics",
-        "Community Outreach"
-    ];
-
     const handleAddSkill = () => {
-        if (newSkill.trim() && !specialSkills.includes(newSkill.trim())) {
-            setSpecialSkills([...specialSkills, newSkill.trim()]);
-            setNewSkill('');
+        if (selectedSkill && !specialSkills.includes(selectedSkill)) {
+            setSpecialSkills([...specialSkills, selectedSkill]);
+            setSelectedSkill(''); // Reset selection
         }
     };
 
@@ -72,7 +65,6 @@ function VolunteerPage() {
 
         setLoading(true);
         try {
-            // Register as volunteer
             const { data, error } = await supabase
                 .from('volunteer_signups')
                 .insert([{
@@ -80,7 +72,7 @@ function VolunteerPage() {
                     capabilities: selectedAreas,
                     service_areas: selectedAreas,
                     availability: availability,
-                    special_skills: specialSkills
+                    skills: specialSkills
                 }]);
 
             if (error) throw error;
@@ -113,7 +105,7 @@ function VolunteerPage() {
                 <Box>
                     <Text mb={2} fontWeight="semibold">Service Areas</Text>
                     <Wrap>
-                        {serviceAreas.map(area => (
+                        {selectedAreas.map(area => (
                             <WrapItem key={area}>
                                 <Checkbox
                                     isChecked={selectedAreas.includes(area)}
@@ -132,10 +124,44 @@ function VolunteerPage() {
                     </Wrap>
                 </Box>
 
+                <FormControl>
+                    <FormLabel>Skills</FormLabel>
+                    <VStack spacing={4} align="stretch">
+                        <Wrap mb={2}>
+                            {specialSkills.map(skill => (
+                                <WrapItem key={skill}>
+                                    <Tag size="md" borderRadius="full" variant="solid" colorScheme="blue">
+                                        <TagLabel>{skill}</TagLabel>
+                                        <TagCloseButton onClick={() => handleRemoveSkill(skill)} />
+                                    </Tag>
+                                </WrapItem>
+                            ))}
+                        </Wrap>
+                        <Box display="flex" gap={2}>
+                            <Select
+                                value={selectedSkill}
+                                onChange={(e) => setSelectedSkill(e.target.value)}
+                                placeholder="Select a skill"
+                            >
+                                {STANDARD_SKILLS
+                                    .filter(skill => !specialSkills.includes(skill))
+                                    .map(skill => (
+                                        <option key={skill} value={skill}>
+                                            {skill}
+                                        </option>
+                                    ))}
+                            </Select>
+                            <Button onClick={handleAddSkill} isDisabled={!selectedSkill}>
+                                Add
+                            </Button>
+                        </Box>
+                    </VStack>
+                </FormControl>
+
                 <Box>
                     <Text mb={2} fontWeight="semibold">Availability</Text>
                     <Wrap>
-                        {availabilityOptions.map(option => (
+                        {AVAILABILITY_OPTIONS.map(option => (
                             <WrapItem key={option}>
                                 <Checkbox
                                     isChecked={availability.includes(option)}
@@ -152,29 +178,6 @@ function VolunteerPage() {
                             </WrapItem>
                         ))}
                     </Wrap>
-                </Box>
-
-                <Box>
-                    <Text mb={2} fontWeight="semibold">Special Skills</Text>
-                    <Wrap mb={2}>
-                        {specialSkills.map(skill => (
-                            <WrapItem key={skill}>
-                                <Tag size="md" borderRadius="full" variant="solid" colorScheme="blue">
-                                    <TagLabel>{skill}</TagLabel>
-                                    <TagCloseButton onClick={() => handleRemoveSkill(skill)} />
-                                </Tag>
-                            </WrapItem>
-                        ))}
-                    </Wrap>
-                    <Box display="flex">
-                        <Input
-                            value={newSkill}
-                            onChange={(e) => setNewSkill(e.target.value)}
-                            placeholder="Enter a special skill"
-                            mr={2}
-                        />
-                        <Button onClick={handleAddSkill}>Add</Button>
-                    </Box>
                 </Box>
 
                 <Button

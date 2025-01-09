@@ -31,17 +31,7 @@ import {
 import { MdMyLocation } from 'react-icons/md';
 import { supabase } from '../supabaseClient';
 import LocationMapPreview from './LocationMapPreview';
-
-const STANDARD_SKILLS = [
-    "Medical Aid",
-    "Transportation",
-    "Search and Rescue",
-    "Emergency Response",
-    "First Aid",
-    "Crisis Communication",
-    "Logistics Support",
-    "Equipment Operation"
-];
+import { STANDARD_SKILLS } from '../constants/incidentTypes';
 
 const CreateVolunteerOpportunityModal = ({ isOpen, onClose, onSuccess }) => {
     const [formData, setFormData] = useState({
