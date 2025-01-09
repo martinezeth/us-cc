@@ -39,9 +39,10 @@ import {
     StatNumber,
     StatHelpText,
 } from '@chakra-ui/react';
-import { EditIcon, CheckIcon, AddIcon } from '@chakra-ui/icons';
+import { EditIcon, AddIcon } from '@chakra-ui/icons';
 import { supabase } from '../supabaseClient';
 import { STANDARD_SKILLS, AVAILABILITY_OPTIONS } from '../constants/incidentTypes';
+import LocationSearch from '../Components/LocationSearch';
 
 // Reusable styled components
 const SectionCard = ({ children, title }) => (
@@ -83,31 +84,27 @@ const StatCard = ({ label, value, helpText }) => (
 export default function Profile() {
     const [userData, setUserData] = useState(null);
     const [volunteerData, setVolunteerData] = useState(null);
-    const [isEditing, setIsEditing] = useState(false);
     const { username } = useParams();
     const navigate = useNavigate();
     const toast = useToast();
     const { isOpen, onOpen, onClose } = useDisclosure();
 
-    // Edit form states
+    // Edit form state
     const [editForm, setEditForm] = useState({
         name: '',
         skills: [],
         availability: [],
+        location: {
+            city: '',
+            state: '',
+            country: '',
+            lat: null,
+            lng: null
+        },
         region: '',
         newSkill: '',
         newAvailability: ''
     });
-
-    const availabilityOptions = [
-        "Weekdays",
-        "Weekends",
-        "Mornings",
-        "Afternoons",
-        "Evenings",
-        "On-Call",
-        "Emergency Only"
-    ];
 
     useEffect(() => {
         fetchProfileData();
@@ -133,7 +130,8 @@ export default function Profile() {
                 name: authUser.user.user_metadata?.name || 'User',
                 username: authUser.user.email.split('@')[0],
                 email: authUser.user.email,
-                date_joined: new Date(authUser.user.created_at).toLocaleDateString()
+                date_joined: new Date(authUser.user.created_at).toLocaleDateString(),
+                location: authUser.user.user_metadata?.location || null
             });
 
             // Fetch volunteer data if exists
@@ -149,6 +147,7 @@ export default function Profile() {
                     name: authUser.user.user_metadata?.name || '',
                     skills: volunteerInfo.skills || [],
                     availability: volunteerInfo.availability || [],
+                    location: authUser.user.user_metadata?.location || {},
                     region: volunteerInfo.region || '',
                     newSkill: '',
                     newAvailability: ''
@@ -167,7 +166,7 @@ export default function Profile() {
 
     const handleEditSubmit = async () => {
         try {
-            const { data: authUser } = await supabase.auth.getUser();
+            const { data: { user } } = await supabase.auth.getUser();
 
             // Update volunteer data
             const { error: volunteerError } = await supabase
@@ -175,16 +174,31 @@ export default function Profile() {
                 .update({
                     skills: editForm.skills,
                     availability: editForm.availability,
-                    region: editForm.region
+                    region: editForm.region,
+                    city: editForm.location.city,
+                    state: editForm.location.state,
+                    country: editForm.location.country,
+                    location_lat: editForm.location.lat,
+                    location_lng: editForm.location.lng
                 })
-                .eq('user_id', authUser.user.id);
+                .eq('user_id', user.id);
 
             if (volunteerError) throw volunteerError;
 
-            // Update user metadata if name changed
-            if (editForm.name !== userData.name) {
+            // Update user metadata if name or location changed
+            if (editForm.name !== userData.name ||
+                JSON.stringify(editForm.location) !== JSON.stringify(userData.location)) {
                 const { error: userError } = await supabase.auth.updateUser({
-                    data: { name: editForm.name }
+                    data: {
+                        name: editForm.name,
+                        location: {
+                            city: editForm.location.city,
+                            state: editForm.location.state,
+                            country: editForm.location.country,
+                            lat: editForm.location.lat,
+                            lng: editForm.location.lng
+                        }
+                    }
                 });
 
                 if (userError) throw userError;
@@ -219,17 +233,9 @@ export default function Profile() {
     }
 
     return (
-        <Box
-            minH="90vh"
-            bg="gray.50"
-            pt={8}
-            pb={12}
-        >
+        <Box minH="90vh" bg="gray.50" pt={8} pb={12}>
             <Box maxW="7xl" mx="auto" px={4}>
-                <Grid
-                    templateColumns={{ base: "1fr", lg: "300px 1fr" }}
-                    gap={8}
-                >
+                <Grid templateColumns={{ base: "1fr", lg: "300px 1fr" }} gap={8}>
                     {/* Left Sidebar */}
                     <GridItem>
                         <VStack spacing={6}>
@@ -247,6 +253,11 @@ export default function Profile() {
                                         <Text color="gray.500">
                                             @{userData.username}
                                         </Text>
+                                        {userData.location && (
+                                            <Text color="gray.500" fontSize="sm">
+                                                📍 {userData.location.city}, {userData.location.state}
+                                            </Text>
+                                        )}
                                         {volunteerData && (
                                             <Badge colorScheme="green" px={2} py={1}>
                                                 Verified Volunteer
@@ -264,22 +275,17 @@ export default function Profile() {
                             </SectionCard>
 
                             {volunteerData && (
-                                <SectionCard title="Quick Stats">
+                                <SectionCard title="Volunteer Stats">
                                     <VStack spacing={4}>
                                         <StatCard
                                             label="Incidents Responded"
-                                            value="12"
+                                            value={volunteerData.incidents_responded || "0"}
                                             helpText="Last 30 days"
                                         />
                                         <StatCard
                                             label="Hours Volunteered"
-                                            value="48"
+                                            value={volunteerData.hours_volunteered || "0"}
                                             helpText="Total hours"
-                                        />
-                                        <StatCard
-                                            label="Response Rate"
-                                            value="95%"
-                                            helpText="Average"
                                         />
                                     </VStack>
                                 </SectionCard>
@@ -294,7 +300,6 @@ export default function Profile() {
                                 <Tab>Overview</Tab>
                                 {volunteerData && <Tab>Volunteer Info</Tab>}
                                 <Tab>Activity</Tab>
-                                <Tab>Settings</Tab>
                             </TabList>
 
                             <TabPanels>
@@ -305,19 +310,10 @@ export default function Profile() {
                                                 <Text color="gray.600">
                                                     Member since {userData.date_joined}
                                                 </Text>
-                                                {volunteerData ? (
+                                                {volunteerData && (
                                                     <Text color="gray.600">
-                                                        Active volunteer in {volunteerData.region}
+                                                        Active volunteer in {volunteerData.region || 'your area'}
                                                     </Text>
-                                                ) : (
-                                                    <Button
-                                                        leftIcon={<AddIcon />}
-                                                        colorScheme="blue"
-                                                        variant="outline"
-                                                        onClick={() => navigate('/volunteer-register')}
-                                                    >
-                                                        Become a Volunteer
-                                                    </Button>
                                                 )}
                                             </VStack>
                                         </SectionCard>
@@ -368,10 +364,6 @@ export default function Profile() {
                                             <SectionCard title="Recent Responses">
                                                 <Text color="gray.600">No recent responses</Text>
                                             </SectionCard>
-
-                                            <SectionCard title="Certifications">
-                                                <Text color="gray.600">No certifications added yet</Text>
-                                            </SectionCard>
                                         </Grid>
                                     </TabPanel>
                                 )}
@@ -379,22 +371,6 @@ export default function Profile() {
                                 <TabPanel>
                                     <SectionCard title="Recent Activity">
                                         <Text color="gray.600">No recent activity</Text>
-                                    </SectionCard>
-                                </TabPanel>
-
-                                <TabPanel>
-                                    <SectionCard title="Account Settings">
-                                        <VStack spacing={4} align="start">
-                                            <Button colorScheme="blue" variant="outline">
-                                                Change Password
-                                            </Button>
-                                            <Button colorScheme="blue" variant="outline">
-                                                Notification Settings
-                                            </Button>
-                                            <Button colorScheme="red" variant="outline">
-                                                Delete Account
-                                            </Button>
-                                        </VStack>
                                     </SectionCard>
                                 </TabPanel>
                             </TabPanels>
@@ -422,19 +398,19 @@ export default function Profile() {
                                 />
                             </FormControl>
 
+                            <FormControl>
+                                <FormLabel>Location</FormLabel>
+                                <LocationSearch
+                                    onSelect={(location) => setEditForm({
+                                        ...editForm,
+                                        location,
+                                        region: `${location.city}, ${location.state}`
+                                    })}
+                                />
+                            </FormControl>
+
                             {volunteerData && (
                                 <>
-                                    <FormControl>
-                                        <FormLabel>Region</FormLabel>
-                                        <Input
-                                            value={editForm.region}
-                                            onChange={(e) => setEditForm({
-                                                ...editForm,
-                                                region: e.target.value
-                                            })}
-                                        />
-                                    </FormControl>
-
                                     <FormControl>
                                         <FormLabel>Skills</FormLabel>
                                         <Wrap mb={2}>
@@ -567,4 +543,4 @@ export default function Profile() {
             </Modal>
         </Box>
     );
-} 
+}

@@ -26,14 +26,16 @@ import {
     TagLabel,
     TagCloseButton,
     Wrap,
-    WrapItem
+    WrapItem,
+    FormErrorMessage,
 } from '@chakra-ui/react';
 import { MdMyLocation } from 'react-icons/md';
 import { supabase } from '../supabaseClient';
 import LocationMapPreview from './LocationMapPreview';
+import LocationSearch from './LocationSearch';
 import { STANDARD_SKILLS } from '../constants/incidentTypes';
 
-const CreateVolunteerOpportunityModal = ({ isOpen, onClose, onSuccess }) => {
+const CreateVolunteerOpportunityModal = ({ isOpen, onClose, onCreateSuccess }) => {
     const [formData, setFormData] = useState({
         title: '',
         description: '',
@@ -44,6 +46,7 @@ const CreateVolunteerOpportunityModal = ({ isOpen, onClose, onSuccess }) => {
     });
     const [isLoadingLocation, setIsLoadingLocation] = useState(false);
     const [newSkill, setNewSkill] = useState('');
+    const [errors, setErrors] = useState({});
     const toast = useToast();
 
     useEffect(() => {
@@ -51,6 +54,18 @@ const CreateVolunteerOpportunityModal = ({ isOpen, onClose, onSuccess }) => {
             getCurrentLocation();
         }
     }, [isOpen]);
+
+    const validateForm = () => {
+        const newErrors = {};
+        if (!formData.title.trim()) newErrors.title = "Title is required";
+        if (!formData.description.trim()) newErrors.description = "Description is required";
+        if (!formData.location.trim()) newErrors.location = "Location is required";
+        if (!formData.position) newErrors.position = "Location coordinates are required";
+        if (formData.required_skills.length === 0) newErrors.required_skills = "At least one skill is required";
+
+        setErrors(newErrors);
+        return Object.keys(newErrors).length === 0;
+    };
 
     const getCurrentLocation = () => {
         setIsLoadingLocation(true);
@@ -70,7 +85,7 @@ const CreateVolunteerOpportunityModal = ({ isOpen, onClose, onSuccess }) => {
                     console.error("Error obtaining location:", error);
                     toast({
                         title: "Location Error",
-                        description: "Could not get your location. Please select on map.",
+                        description: "Could not get your location. Please select on map or enter address.",
                         status: "error",
                         duration: 5000
                     });
@@ -81,18 +96,18 @@ const CreateVolunteerOpportunityModal = ({ isOpen, onClose, onSuccess }) => {
     };
 
     const handleSubmit = async () => {
+        if (!validateForm()) {
+            toast({
+                title: "Validation Error",
+                description: "Please fill in all required fields",
+                status: "error",
+                duration: 3000
+            });
+            return;
+        }
+
         try {
             const { data: { user } } = await supabase.auth.getUser();
-
-            if (!formData.position) {
-                toast({
-                    title: "Location Required",
-                    description: "Please select a location on the map",
-                    status: "error",
-                    duration: 3000
-                });
-                return;
-            }
 
             const { data, error } = await supabase
                 .from('volunteer_opportunities')
@@ -118,7 +133,7 @@ const CreateVolunteerOpportunityModal = ({ isOpen, onClose, onSuccess }) => {
                 duration: 3000
             });
 
-            if (onSuccess) onSuccess(data[0]);
+            if (onCreateSuccess) onCreateSuccess(data[0]);
             handleClose();
         } catch (error) {
             toast({
@@ -140,6 +155,7 @@ const CreateVolunteerOpportunityModal = ({ isOpen, onClose, onSuccess }) => {
             position: null
         });
         setNewSkill('');
+        setErrors({});
         onClose();
     };
 
@@ -150,6 +166,7 @@ const CreateVolunteerOpportunityModal = ({ isOpen, onClose, onSuccess }) => {
                 required_skills: [...prev.required_skills, newSkill]
             }));
             setNewSkill('');
+            setErrors(prev => ({ ...prev, required_skills: undefined }));
         }
     };
 
@@ -168,44 +185,44 @@ const CreateVolunteerOpportunityModal = ({ isOpen, onClose, onSuccess }) => {
                 <ModalCloseButton />
                 <ModalBody pb={6}>
                     <VStack spacing={4}>
-                        <FormControl isRequired>
+                        <FormControl isRequired isInvalid={errors.title}>
                             <FormLabel>Title</FormLabel>
                             <Input
                                 value={formData.title}
-                                onChange={(e) => setFormData(prev => ({
-                                    ...prev,
-                                    title: e.target.value
-                                }))}
+                                onChange={(e) => {
+                                    setFormData(prev => ({
+                                        ...prev,
+                                        title: e.target.value
+                                    }));
+                                    if (e.target.value.trim()) {
+                                        setErrors(prev => ({ ...prev, title: undefined }));
+                                    }
+                                }}
                                 placeholder="Enter opportunity title"
                             />
+                            {errors.title && <FormErrorMessage>{errors.title}</FormErrorMessage>}
                         </FormControl>
 
-                        <FormControl isRequired>
+                        <FormControl isRequired isInvalid={errors.description}>
                             <FormLabel>Description</FormLabel>
                             <Textarea
                                 value={formData.description}
-                                onChange={(e) => setFormData(prev => ({
-                                    ...prev,
-                                    description: e.target.value
-                                }))}
+                                onChange={(e) => {
+                                    setFormData(prev => ({
+                                        ...prev,
+                                        description: e.target.value
+                                    }));
+                                    if (e.target.value.trim()) {
+                                        setErrors(prev => ({ ...prev, description: undefined }));
+                                    }
+                                }}
                                 placeholder="Describe the volunteer opportunity"
                                 rows={4}
                             />
+                            {errors.description && <FormErrorMessage>{errors.description}</FormErrorMessage>}
                         </FormControl>
 
-                        <FormControl isRequired>
-                            <FormLabel>Location Name</FormLabel>
-                            <Input
-                                value={formData.location}
-                                onChange={(e) => setFormData(prev => ({
-                                    ...prev,
-                                    location: e.target.value
-                                }))}
-                                placeholder="e.g., Central Park, Downtown Area"
-                            />
-                        </FormControl>
-
-                        <FormControl isRequired>
+                        <FormControl isRequired isInvalid={errors.required_skills}>
                             <FormLabel>Required Skills</FormLabel>
                             <Wrap mb={2}>
                                 {formData.required_skills.map(skill => (
@@ -230,14 +247,74 @@ const CreateVolunteerOpportunityModal = ({ isOpen, onClose, onSuccess }) => {
                                     onChange={(e) => setNewSkill(e.target.value)}
                                     placeholder="Select skill"
                                 >
-                                    {STANDARD_SKILLS.map(skill => (
-                                        <option key={skill} value={skill}>
-                                            {skill}
-                                        </option>
-                                    ))}
+                                    {STANDARD_SKILLS
+                                        .filter(skill => !formData.required_skills.includes(skill))
+                                        .map(skill => (
+                                            <option key={skill} value={skill}>
+                                                {skill}
+                                            </option>
+                                        ))}
                                 </Select>
                                 <Button onClick={handleAddSkill}>Add</Button>
                             </HStack>
+                            {errors.required_skills &&
+                                <FormErrorMessage>{errors.required_skills}</FormErrorMessage>}
+                        </FormControl>
+
+                        <FormControl isRequired isInvalid={errors.location || errors.position}>
+                            <FormLabel>Location</FormLabel>
+                            <VStack spacing={2} align="stretch">
+                                <LocationSearch
+                                    mode="address"
+                                    placeholder="Enter the opportunity location..."
+                                    onSelect={locationData => {
+                                        setFormData(prev => ({
+                                            ...prev,
+                                            location: locationData.address,
+                                            position: {
+                                                lat: locationData.lat,
+                                                lng: locationData.lng
+                                            }
+                                        }));
+                                        setErrors(prev => ({
+                                            ...prev,
+                                            position: undefined,
+                                            location: undefined
+                                        }));
+                                    }}
+                                />
+
+                                <Text fontSize="sm" color="gray.600">Or select location on map:</Text>
+
+                                <HStack>
+                                    <Button
+                                        size="sm"
+                                        onClick={getCurrentLocation}
+                                        isLoading={isLoadingLocation}
+                                        leftIcon={<MdMyLocation />}
+                                    >
+                                        Use Current Location
+                                    </Button>
+                                    {formData.position && (
+                                        <Text fontSize="sm" color="gray.600">
+                                            Selected: {formData.position.lat.toFixed(6)}, {formData.position.lng.toFixed(6)}
+                                        </Text>
+                                    )}
+                                </HStack>
+
+                                <LocationMapPreview
+                                    position={formData.position}
+                                    setPosition={(pos) => {
+                                        setFormData(prev => ({
+                                            ...prev,
+                                            position: pos
+                                        }));
+                                        setErrors(prev => ({ ...prev, position: undefined }));
+                                    }}
+                                />
+                                {(errors.location || errors.position) &&
+                                    <FormErrorMessage>{errors.location || errors.position}</FormErrorMessage>}
+                            </VStack>
                         </FormControl>
 
                         <FormControl isRequired>
@@ -257,32 +334,6 @@ const CreateVolunteerOpportunityModal = ({ isOpen, onClose, onSuccess }) => {
                                     <NumberDecrementStepper />
                                 </NumberInputStepper>
                             </NumberInput>
-                        </FormControl>
-
-                        <FormControl isRequired>
-                            <FormLabel>Location</FormLabel>
-                            <HStack mb={2}>
-                                <Button
-                                    onClick={getCurrentLocation}
-                                    isLoading={isLoadingLocation}
-                                    leftIcon={<MdMyLocation />}
-                                >
-                                    Use Current Location
-                                </Button>
-                                {formData.position && (
-                                    <Text fontSize="sm" color="gray.600">
-                                        Lat: {formData.position.lat.toFixed(6)},
-                                        Lng: {formData.position.lng.toFixed(6)}
-                                    </Text>
-                                )}
-                            </HStack>
-                            <LocationMapPreview
-                                position={formData.position}
-                                setPosition={(pos) => setFormData(prev => ({
-                                    ...prev,
-                                    position: pos
-                                }))}
-                            />
                         </FormControl>
                     </VStack>
                 </ModalBody>

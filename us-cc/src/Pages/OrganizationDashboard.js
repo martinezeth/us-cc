@@ -6,7 +6,6 @@ import {
     Heading,
     Text,
     Button,
-    useDisclosure,
     VStack,
     HStack,
     Badge,
@@ -23,7 +22,7 @@ import {
     TabPanels,
     Tabs,
     useToast,
-    Icon
+    Icon,
 } from '@chakra-ui/react';
 import { AddIcon, WarningIcon } from '@chakra-ui/icons';
 import { MdAssignment, MdAnnouncement } from 'react-icons/md';
@@ -31,7 +30,6 @@ import { supabase } from '../supabaseClient';
 import CreateVolunteerOpportunityModal from '../Components/CreateVolunteerOpportunityModal';
 import CreateIncidentModal from '../Components/CreateIncidentModal';
 import CreatePostModal from '../Components/CreatePostModal';
-
 
 const DashboardCard = ({ children, title }) => (
     <Card>
@@ -74,6 +72,10 @@ const ContentCard = ({ item, type, onDelete }) => {
         }
     };
 
+    const getFormattedDate = (dateString) => {
+        return new Date(dateString).toLocaleDateString();
+    };
+
     return (
         <Card>
             <CardHeader>
@@ -87,7 +89,7 @@ const ContentCard = ({ item, type, onDelete }) => {
                         )}
                     </HStack>
                     <Text color="gray.600" fontSize="sm">
-                        Created {new Date(item.created_at || item.date_posted || item.timestamp).toLocaleDateString()}
+                        Created {getFormattedDate(item.created_at || item.date_posted || item.timestamp)}
                     </Text>
                 </VStack>
             </CardHeader>
@@ -124,22 +126,11 @@ export default function OrganizationDashboard() {
         volunteersEngaged: 0
     });
 
+    const [isOpportunityModalOpen, setIsOpportunityModalOpen] = useState(false);
+    const [isPostModalOpen, setIsPostModalOpen] = useState(false);
+    const [isIncidentModalOpen, setIsIncidentModalOpen] = useState(false);
+
     const toast = useToast();
-    const {
-        isOpen: isOpportunityModalOpen,
-        onOpen: onOpportunityModalOpen,
-        onClose: onOpportunityModalClose
-    } = useDisclosure();
-    const {
-        isOpen: isPostModalOpen,
-        onOpen: onPostModalOpen,
-        onClose: onPostModalClose
-    } = useDisclosure();
-    const {
-        isOpen: isIncidentModalOpen,
-        onOpen: onIncidentModalOpen,
-        onClose: onIncidentModalClose
-    } = useDisclosure();
 
     useEffect(() => {
         fetchDashboardData();
@@ -177,7 +168,7 @@ export default function OrganizationDashboard() {
             setIncidents(incidentsData || []);
 
             // Calculate stats
-            const activeCount = opportunitiesData?.filter(opp => opp.status === 'active').length || 0;
+            const activeCount = opportunitiesData?.filter(opp => opp.status === 'open').length || 0;
 
             const { data: responsesData } = await supabase
                 .from('opportunity_responses')
@@ -223,21 +214,21 @@ export default function OrganizationDashboard() {
                             <Button
                                 leftIcon={<Icon as={MdAssignment} />}
                                 colorScheme="blue"
-                                onClick={onOpportunityModalOpen}
+                                onClick={() => setIsOpportunityModalOpen(true)}
                             >
                                 New Opportunity
                             </Button>
                             <Button
                                 leftIcon={<Icon as={MdAnnouncement} />}
                                 colorScheme="green"
-                                onClick={onPostModalOpen}
+                                onClick={() => setIsPostModalOpen(true)}
                             >
                                 New Post
                             </Button>
                             <Button
                                 leftIcon={<WarningIcon />}
                                 colorScheme="red"
-                                onClick={onIncidentModalOpen}
+                                onClick={() => setIsIncidentModalOpen(true)}
                             >
                                 Report Incident
                             </Button>
@@ -261,7 +252,7 @@ export default function OrganizationDashboard() {
                         </StatGroup>
                     </DashboardCard>
 
-                    <Tabs colorScheme="blue" variant="enclosed-colored">
+                    <Tabs colorScheme="blue" variant="enclosed">
                         <TabList>
                             <Tab>Opportunities ({opportunities.length})</Tab>
                             <Tab>Posts ({posts.length})</Tab>
@@ -269,11 +260,11 @@ export default function OrganizationDashboard() {
                         </TabList>
 
                         <TabPanels>
-                            <TabPanel px={0}>
+                            <TabPanel>
                                 <Grid templateColumns="repeat(auto-fill, minmax(350px, 1fr))" gap={6}>
                                     {opportunities.map(opportunity => (
                                         <ContentCard
-                                            key={opportunity.id}
+                                            key={`opp-${opportunity.id}`}
                                             item={opportunity}
                                             type="opportunity"
                                             onDelete={handleDelete('opportunity')}
@@ -282,11 +273,11 @@ export default function OrganizationDashboard() {
                                 </Grid>
                             </TabPanel>
 
-                            <TabPanel px={0}>
+                            <TabPanel>
                                 <Grid templateColumns="repeat(auto-fill, minmax(350px, 1fr))" gap={6}>
                                     {posts.map(post => (
                                         <ContentCard
-                                            key={post.id}
+                                            key={`post-${post.id}`}
                                             item={post}
                                             type="post"
                                             onDelete={handleDelete('post')}
@@ -295,11 +286,11 @@ export default function OrganizationDashboard() {
                                 </Grid>
                             </TabPanel>
 
-                            <TabPanel px={0}>
+                            <TabPanel>
                                 <Grid templateColumns="repeat(auto-fill, minmax(350px, 1fr))" gap={6}>
                                     {incidents.map(incident => (
                                         <ContentCard
-                                            key={incident.id}
+                                            key={`incident-${incident.id}`}
                                             item={incident}
                                             type="incident"
                                             onDelete={handleDelete('incident')}
@@ -314,19 +305,17 @@ export default function OrganizationDashboard() {
 
             <CreateVolunteerOpportunityModal
                 isOpen={isOpportunityModalOpen}
-                onClose={onOpportunityModalClose}
-                type="opportunity"
-                onSuccess={fetchDashboardData}
+                onClose={() => setIsOpportunityModalOpen(false)}
+                onCreateSuccess={fetchDashboardData}
             />
             <CreatePostModal
                 isOpen={isPostModalOpen}
-                onClose={onPostModalClose}
-                type="post"
-                onSuccess={fetchDashboardData}
+                onClose={() => setIsPostModalOpen(false)}
+                onCreatePost={fetchDashboardData}
             />
             <CreateIncidentModal
                 isOpen={isIncidentModalOpen}
-                onClose={onIncidentModalClose}
+                onClose={() => setIsIncidentModalOpen(false)}
                 onCreateSuccess={fetchDashboardData}
             />
         </Box>
