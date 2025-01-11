@@ -9,9 +9,9 @@ import mapCurrentLocation from '../Images/Icons/mapCurrentLocation.svg';
 // Marker for selecting location
 const markerIcon = new L.Icon({
     iconUrl: mapCurrentLocation,
-    iconSize: [40, 40],          // Size of the icon
-    iconAnchor: [20, 40],        // Point of the icon which will correspond to marker's location
-    popupAnchor: [0, -40]        // Point from which the popup should open relative to the iconAnchor
+    iconSize: [40, 40],
+    iconAnchor: [20, 40],
+    popupAnchor: [0, -40]
 });
 
 // Component to handle map center updates
@@ -44,7 +44,7 @@ const LocationMarker = ({ position, setPosition, radius }) => {
             {radius && (
                 <Circle
                     center={position}
-                    radius={radius * 1609.34} // Converting miles to meters
+                    radius={radius * 1609.34} // Converting meters to miles
                     color="blue"
                     fillColor="blue"
                     fillOpacity={0.1}

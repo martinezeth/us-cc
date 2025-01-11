@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
     Box,
     Container,
@@ -41,14 +41,13 @@ import {
     AccordionButton,
     AccordionPanel,
     AccordionIcon,
-    Alert,
     AlertDialog,
     AlertDialogBody,
     AlertDialogFooter,
     AlertDialogHeader,
     AlertDialogContent,
     AlertDialogOverlay,
-    useDisclosure,
+    Flex,
 } from '@chakra-ui/react';
 import { AddIcon, WarningIcon, DeleteIcon, ChatIcon } from '@chakra-ui/icons';
 import { MdAssignment, MdAnnouncement } from 'react-icons/md';
@@ -65,7 +64,6 @@ const VolunteerResponsesDrawer = ({ isOpen, onClose, opportunity }) => {
     useEffect(() => {
         if (opportunity?.id) {
             fetchMessages();
-            // Subscribe to new messages
             const subscription = supabase
                 .channel('messages')
                 .on('postgres_changes', {
@@ -211,7 +209,7 @@ const VolunteerResponsesDrawer = ({ isOpen, onClose, opportunity }) => {
                                                     ))}
                                                 </VStack>
                                                 <Input
-                                                    placeholder="Type your message..."
+                                                    placeholder={`Message ${response.volunteer_name}...`}
                                                     value={messages[response.volunteer_id] || ''}
                                                     onChange={(e) => setMessages({
                                                         ...messages,
@@ -308,7 +306,7 @@ const DashboardCard = ({ children, title }) => (
 
 const ContentCard = ({ item, type, onDelete, onViewResponses, onArchive }) => {
     const [isDeleteAlertOpen, setIsDeleteAlertOpen] = useState(false);
-    const cancelRef = React.useRef();
+    const cancelRef = useRef();
     const toast = useToast();
 
     const handleDelete = async () => {
@@ -346,36 +344,49 @@ const ContentCard = ({ item, type, onDelete, onViewResponses, onArchive }) => {
     };
 
     return (
-        <Card>
-            <CardHeader>
-                <VStack align="start" spacing={2}>
-                    <HStack justify="space-between" width="full">
-                        <Heading size="md">{item.title || item.incident_type}</Heading>
-                        {type === 'opportunity' && (
-                            <Badge colorScheme={item.status === 'archived' ? 'gray' : 'green'}>
-                                {item.status === 'archived' ? 'Archived' : 'Active'}
-                            </Badge>
-                        )}
-                    </HStack>
-                    <Text color="gray.600" fontSize="sm">
-                        Created {getFormattedDate(item.created_at || item.date_posted || item.timestamp)}
+        <Box
+            bg="white"
+            borderRadius="lg"
+            boxShadow="sm"
+            p={6}
+            border="1px solid"
+            borderColor="gray.100"
+            position="relative"
+            transition="transform 0.2s"
+            _hover={{ transform: 'translateY(-2px)', boxShadow: 'md' }}
+        >
+            <VStack align="stretch" spacing={2}>
+                <Flex justify="space-between" align="center">
+                    <Heading size="md" noOfLines={2}>
+                        {item.title || item.incident_type}
+                    </Heading>
+                    {type === 'opportunity' && (
+                        <Badge colorScheme={item.status === 'archived' ? 'gray' : 'green'}>
+                            {item.status === 'archived' ? 'Archived' : 'Active'}
+                        </Badge>
+                    )}
+                </Flex>
+                <Text color="gray.600" fontSize="sm">
+                    Created {getFormattedDate(item.created_at || item.date_posted || item.timestamp)}
+                </Text>
+
+                <Text noOfLines={3} mt={2}>
+                    {item.description || item.body}
+                </Text>
+
+                {type === 'opportunity' && item.location && (
+                    <Text fontSize="sm" color="gray.600">
+                        Location: {item.location}
+                        {item.radius_miles && ` (${item.radius_miles} mile radius)`}
                     </Text>
-                </VStack>
-            </CardHeader>
-            <CardBody>
-                <VStack align="start" spacing={4}>
-                    <Text>{item.description || item.body}</Text>
-                    {type === 'opportunity' && item.location && (
-                        <Text fontSize="sm" color="gray.600">
-                            Location: {item.location}
-                            {item.radius_miles && ` (${item.radius_miles} mile radius)`}
-                        </Text>
-                    )}
-                    {type === 'incident' && (
-                        <Text fontSize="sm" color="gray.600">
-                            Location: {item.location_lat.toFixed(6)}, {item.location_lng.toFixed(6)}
-                        </Text>
-                    )}
+                )}
+                {type === 'incident' && (
+                    <Text fontSize="sm" color="gray.600">
+                        Location: {item.location_lat.toFixed(6)}, {item.location_lng.toFixed(6)}
+                    </Text>
+                )}
+
+                <Flex mt={4} justify="space-between" align="center">
                     <HStack spacing={2}>
                         {type === 'opportunity' && (
                             <>
@@ -384,31 +395,34 @@ const ContentCard = ({ item, type, onDelete, onViewResponses, onArchive }) => {
                                     colorScheme="blue"
                                     leftIcon={<ChatIcon />}
                                     onClick={() => onViewResponses(item)}
+                                    minW="140px"
                                 >
-                                    View Responses ({item.response_count || 0})
+                                    Responses ({item.response_count || 0})
                                 </Button>
                                 <Button
                                     size="sm"
                                     colorScheme={item.status === 'archived' ? 'green' : 'yellow'}
                                     leftIcon={item.status === 'archived' ? <AddIcon /> : <WarningIcon />}
                                     onClick={() => onArchive(item.id, item.status === 'archived' ? 'open' : 'archived')}
+                                    minW="100px"
                                 >
                                     {item.status === 'archived' ? 'Reopen' : 'Archive'}
                                 </Button>
                             </>
                         )}
-                        <Button
-                            size="sm"
-                            colorScheme="red"
-                            variant="ghost"
-                            leftIcon={<DeleteIcon />}
-                            onClick={() => setIsDeleteAlertOpen(true)}
-                        >
-                            Delete
-                        </Button>
                     </HStack>
-                </VStack>
-            </CardBody>
+                    <Button
+                        size="sm"
+                        colorScheme="red"
+                        variant="ghost"
+                        leftIcon={<DeleteIcon />}
+                        onClick={() => setIsDeleteAlertOpen(true)}
+                        minW="80px"
+                    >
+                        Delete
+                    </Button>
+                </Flex>
+            </VStack>
 
             <AlertDialog
                 isOpen={isDeleteAlertOpen}
@@ -434,7 +448,7 @@ const ContentCard = ({ item, type, onDelete, onViewResponses, onArchive }) => {
                     </AlertDialogContent>
                 </AlertDialogOverlay>
             </AlertDialog>
-        </Card>
+        </Box>
     );
 };
 
@@ -549,16 +563,14 @@ export default function OrganizationDashboard() {
 
             if (responsesError) throw responsesError;
 
-            // Then fetching additional data for each response
+            // Then fetch additional data for each response
             const processedResponses = await Promise.all(responseData.map(async (response) => {
-                // Get volunteer signup data
                 const { data: signupData } = await supabase
                     .from('volunteer_signups')
                     .select('skills, region')
                     .eq('user_id', response.volunteer_id)
                     .single();
 
-                // Get profile data
                 const { data: profileData } = await supabase
                     .from('profiles')
                     .select('full_name, city, state')
