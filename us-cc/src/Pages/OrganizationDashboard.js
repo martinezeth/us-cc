@@ -48,13 +48,22 @@ import {
     AlertDialogContent,
     AlertDialogOverlay,
     Flex,
+    Alert,
+    AlertIcon,
+    Menu,
+    MenuButton,
+    MenuList,
+    MenuItem,
+    IconButton
 } from '@chakra-ui/react';
-import { AddIcon, WarningIcon, DeleteIcon, ChatIcon } from '@chakra-ui/icons';
+import { AddIcon, WarningIcon, DeleteIcon, ChatIcon, EditIcon } from '@chakra-ui/icons';
 import { MdAssignment, MdAnnouncement } from 'react-icons/md';
+import { BsThreeDotsVertical } from 'react-icons/bs';
 import { supabase } from '../supabaseClient';
 import CreateVolunteerOpportunityModal from '../Components/CreateVolunteerOpportunityModal';
 import CreateIncidentModal from '../Components/CreateIncidentModal';
 import CreatePostModal from '../Components/CreatePostModal';
+import EditVolunteerOpportunityModal from '../Components/EditVolunteerOpportunityModal';
 
 const VolunteerResponsesDrawer = ({ isOpen, onClose, opportunity }) => {
     const [messages, setMessages] = useState({});
@@ -62,6 +71,28 @@ const VolunteerResponsesDrawer = ({ isOpen, onClose, opportunity }) => {
     const toast = useToast();
 
     useEffect(() => {
+        const fetchMessages = async () => {
+            if (!opportunity?.id) return;
+
+            const { data, error } = await supabase
+                .from('messages')
+                .select('*')
+                .eq('opportunity_id', opportunity.id)
+                .order('sent_at', { ascending: true });
+
+            if (error) {
+                toast({
+                    title: "Error fetching messages",
+                    description: error.message,
+                    status: "error",
+                    duration: 5000
+                });
+                return;
+            }
+
+            setExistingMessages(data || []);
+        };
+
         if (opportunity?.id) {
             fetchMessages();
             const subscription = supabase
@@ -80,31 +111,19 @@ const VolunteerResponsesDrawer = ({ isOpen, onClose, opportunity }) => {
                 subscription.unsubscribe();
             };
         }
-    }, [opportunity?.id]);
+    }, [opportunity?.id, toast]);
 
-    const fetchMessages = async () => {
-        if (!opportunity?.id) return;
-
-        const { data, error } = await supabase
-            .from('messages')
-            .select('*')
-            .eq('opportunity_id', opportunity.id)
-            .order('sent_at', { ascending: true });
-
-        if (error) {
+    const handleSendMessage = async (volunteerId = null) => {
+        if (opportunity.status === 'archived') {
             toast({
-                title: "Error fetching messages",
-                description: error.message,
+                title: "Cannot send messages",
+                description: "This opportunity is archived",
                 status: "error",
-                duration: 5000
+                duration: 3000
             });
             return;
         }
 
-        setExistingMessages(data || []);
-    };
-
-    const handleSendMessage = async (volunteerId = null) => {
         const message = messages[volunteerId || 'group'];
         if (!message?.trim()) return;
 
@@ -140,6 +159,8 @@ const VolunteerResponsesDrawer = ({ isOpen, onClose, opportunity }) => {
         );
     };
 
+    const isArchived = opportunity?.status === 'archived';
+
     return (
         <Drawer
             isOpen={isOpen}
@@ -150,13 +171,25 @@ const VolunteerResponsesDrawer = ({ isOpen, onClose, opportunity }) => {
             <DrawerOverlay />
             <DrawerContent>
                 <DrawerCloseButton />
-                <DrawerHeader>Volunteer Responses</DrawerHeader>
+                <DrawerHeader>
+                    Volunteer Responses
+                    {isArchived && (
+                        <Badge ml={2} colorScheme="gray">Archived</Badge>
+                    )}
+                </DrawerHeader>
 
                 <DrawerBody>
                     <VStack spacing={4} align="stretch">
                         <Text fontWeight="bold">
                             Opportunity: {opportunity?.title}
                         </Text>
+
+                        {isArchived && (
+                            <Alert status="info" mb={4}>
+                                <AlertIcon />
+                                This opportunity is archived. Message history is viewable but new messages cannot be sent.
+                            </Alert>
+                        )}
 
                         <Accordion allowMultiple>
                             {opportunity?.responses?.map((response) => (
@@ -208,29 +241,34 @@ const VolunteerResponsesDrawer = ({ isOpen, onClose, opportunity }) => {
                                                         </Box>
                                                     ))}
                                                 </VStack>
-                                                <Input
-                                                    placeholder={`Message ${response.volunteer_name}...`}
-                                                    value={messages[response.volunteer_id] || ''}
-                                                    onChange={(e) => setMessages({
-                                                        ...messages,
-                                                        [response.volunteer_id]: e.target.value
-                                                    })}
-                                                    onKeyPress={(e) => {
-                                                        if (e.key === 'Enter') {
-                                                            handleSendMessage(response.volunteer_id);
-                                                        }
-                                                    }}
-                                                />
-                                                <Button
-                                                    mt={2}
-                                                    size="sm"
-                                                    colorScheme="blue"
-                                                    leftIcon={<ChatIcon />}
-                                                    onClick={() => handleSendMessage(response.volunteer_id)}
-                                                    isDisabled={!messages[response.volunteer_id]}
-                                                >
-                                                    Send Message
-                                                </Button>
+                                                {!isArchived && (
+                                                    <>
+                                                        <Input
+                                                            placeholder={`Message ${response.volunteer_name}...`}
+                                                            value={messages[response.volunteer_id] || ''}
+                                                            onChange={(e) => setMessages({
+                                                                ...messages,
+                                                                [response.volunteer_id]: e.target.value
+                                                            })}
+                                                            onKeyDown={(e) => {
+                                                                if (e.key === 'Enter') {
+                                                                    e.preventDefault();
+                                                                    handleSendMessage(response.volunteer_id);
+                                                                }
+                                                            }}
+                                                        />
+                                                        <Button
+                                                            mt={2}
+                                                            size="sm"
+                                                            colorScheme="blue"
+                                                            leftIcon={<ChatIcon />}
+                                                            onClick={() => handleSendMessage(response.volunteer_id)}
+                                                            isDisabled={!messages[response.volunteer_id]}
+                                                        >
+                                                            Send Message
+                                                        </Button>
+                                                    </>
+                                                )}
                                             </Box>
                                         </VStack>
                                     </AccordionPanel>
@@ -266,28 +304,33 @@ const VolunteerResponsesDrawer = ({ isOpen, onClose, opportunity }) => {
                                     </Box>
                                 ))}
                         </Box>
-                        <Input
-                            placeholder="Type a message to all volunteers..."
-                            value={messages['group'] || ''}
-                            onChange={(e) => setMessages({
-                                ...messages,
-                                group: e.target.value
-                            })}
-                            onKeyPress={(e) => {
-                                if (e.key === 'Enter') {
-                                    handleSendMessage();
-                                }
-                            }}
-                        />
-                        <Button
-                            w="full"
-                            colorScheme="blue"
-                            leftIcon={<ChatIcon />}
-                            onClick={() => handleSendMessage()}
-                            isDisabled={!messages['group']}
-                        >
-                            Message All Volunteers
-                        </Button>
+                        {!isArchived && (
+                            <>
+                                <Input
+                                    placeholder="Type a message to all volunteers..."
+                                    value={messages['group'] || ''}
+                                    onChange={(e) => setMessages({
+                                        ...messages,
+                                        group: e.target.value
+                                    })}
+                                    onKeyDown={(e) => {
+                                        if (e.key === 'Enter') {
+                                            e.preventDefault();
+                                            handleSendMessage();
+                                        }
+                                    }}
+                                />
+                                <Button
+                                    w="full"
+                                    colorScheme="blue"
+                                    leftIcon={<ChatIcon />}
+                                    onClick={() => handleSendMessage()}
+                                    isDisabled={!messages['group']}
+                                >
+                                    Message All Volunteers
+                                </Button>
+                            </>
+                        )}
                     </VStack>
                 </DrawerFooter>
             </DrawerContent>
@@ -304,7 +347,7 @@ const DashboardCard = ({ children, title }) => (
     </Card>
 );
 
-const ContentCard = ({ item, type, onDelete, onViewResponses, onArchive }) => {
+const ContentCard = ({ item, type, onDelete, onViewResponses, onArchive, onEdit }) => {
     const [isDeleteAlertOpen, setIsDeleteAlertOpen] = useState(false);
     const cancelRef = useRef();
     const toast = useToast();
@@ -314,18 +357,61 @@ const ContentCard = ({ item, type, onDelete, onViewResponses, onArchive }) => {
             const table = type === 'opportunity' ? 'volunteer_opportunities' :
                 type === 'post' ? 'posts' : 'incidents';
 
-            const { error } = await supabase
-                .from(table)
-                .delete()
-                .eq('id', item.id);
+            if (type === 'opportunity') {
+                // Check if there are responses
+                const { data: responses } = await supabase
+                    .from('opportunity_responses')
+                    .select('id')
+                    .eq('opportunity_id', item.id);
 
-            if (error) throw error;
+                if (responses && responses.length > 0) {
+                    // If there are volunteer responses, archive instead of deleting
+                    const { error: archiveError } = await supabase
+                        .from('volunteer_opportunities')
+                        .update({
+                            status: 'archived',
+                            archived_at: new Date().toISOString()
+                        })
+                        .eq('id', item.id);
 
-            toast({
-                title: "Deleted Successfully",
-                status: "success",
-                duration: 3000
-            });
+                    if (archiveError) throw archiveError;
+
+                    toast({
+                        title: "Opportunity Archived",
+                        description: "This opportunity has responses and has been archived instead of deleted",
+                        status: "info",
+                        duration: 5000
+                    });
+                } else {
+                    // If no responses, proceed with deletion
+                    const { error: deleteError } = await supabase
+                        .from(table)
+                        .delete()
+                        .eq('id', item.id);
+
+                    if (deleteError) throw deleteError;
+
+                    toast({
+                        title: "Deleted Successfully",
+                        status: "success",
+                        duration: 3000
+                    });
+                }
+            } else {
+                // For non-opportunity items, proceed with normal deletion
+                const { error } = await supabase
+                    .from(table)
+                    .delete()
+                    .eq('id', item.id);
+
+                if (error) throw error;
+
+                toast({
+                    title: "Deleted Successfully",
+                    status: "success",
+                    duration: 3000
+                });
+            }
 
             if (onDelete) onDelete(item.id);
         } catch (error) {
@@ -343,6 +429,8 @@ const ContentCard = ({ item, type, onDelete, onViewResponses, onArchive }) => {
         return new Date(dateString).toLocaleDateString();
     };
 
+    const isArchived = item.status === 'archived';
+
     return (
         <Box
             bg="white"
@@ -355,75 +443,95 @@ const ContentCard = ({ item, type, onDelete, onViewResponses, onArchive }) => {
             transition="transform 0.2s"
             _hover={{ transform: 'translateY(-2px)', boxShadow: 'md' }}
         >
-            <VStack align="stretch" spacing={2}>
-                <Flex justify="space-between" align="center">
-                    <Heading size="md" noOfLines={2}>
-                        {item.title || item.incident_type}
-                    </Heading>
+            {/* Header with Menu */}
+            <Flex justify="space-between" align="start" mb={2}>
+                <Heading size="md" noOfLines={2}>
+                    {item.title || item.incident_type}
+                </Heading>
+                <HStack spacing={2}>
                     {type === 'opportunity' && (
-                        <Badge colorScheme={item.status === 'archived' ? 'gray' : 'green'}>
-                            {item.status === 'archived' ? 'Archived' : 'Active'}
+                        <Badge colorScheme={isArchived ? 'gray' : 'green'}>
+                            {isArchived ? 'Archived' : 'Active'}
                         </Badge>
                     )}
-                </Flex>
-                <Text color="gray.600" fontSize="sm">
-                    Created {getFormattedDate(item.created_at || item.date_posted || item.timestamp)}
-                </Text>
-
-                <Text noOfLines={3} mt={2}>
-                    {item.description || item.body}
-                </Text>
-
-                {type === 'opportunity' && item.location && (
-                    <Text fontSize="sm" color="gray.600">
-                        Location: {item.location}
-                        {item.radius_miles && ` (${item.radius_miles} mile radius)`}
-                    </Text>
-                )}
-                {type === 'incident' && (
-                    <Text fontSize="sm" color="gray.600">
-                        Location: {item.location_lat.toFixed(6)}, {item.location_lng.toFixed(6)}
-                    </Text>
-                )}
-
-                <Flex mt={4} justify="space-between" align="center">
-                    <HStack spacing={2}>
-                        {type === 'opportunity' && (
-                            <>
-                                <Button
-                                    size="sm"
-                                    colorScheme="blue"
-                                    leftIcon={<ChatIcon />}
-                                    onClick={() => onViewResponses(item)}
-                                    minW="140px"
+                    <Menu>
+                        <MenuButton
+                            as={IconButton}
+                            icon={<BsThreeDotsVertical />}
+                            variant="ghost"
+                            size="sm"
+                            aria-label="More options"
+                        />
+                        <MenuList>
+                            {type === 'opportunity' && !isArchived && (
+                                <>
+                                    <MenuItem
+                                        icon={<EditIcon />}
+                                        onClick={() => onEdit(item)}
+                                    >
+                                        Edit
+                                    </MenuItem>
+                                    <MenuItem
+                                        icon={<WarningIcon />}
+                                        onClick={() => onArchive(item.id, 'archived')}
+                                    >
+                                        Archive
+                                    </MenuItem>
+                                </>
+                            )}
+                            {type === 'opportunity' && isArchived && (
+                                <MenuItem
+                                    icon={<AddIcon />}
+                                    onClick={() => onArchive(item.id, 'open')}
                                 >
-                                    Responses ({item.response_count || 0})
-                                </Button>
-                                <Button
-                                    size="sm"
-                                    colorScheme={item.status === 'archived' ? 'green' : 'yellow'}
-                                    leftIcon={item.status === 'archived' ? <AddIcon /> : <WarningIcon />}
-                                    onClick={() => onArchive(item.id, item.status === 'archived' ? 'open' : 'archived')}
-                                    minW="100px"
-                                >
-                                    {item.status === 'archived' ? 'Reopen' : 'Archive'}
-                                </Button>
-                            </>
-                        )}
-                    </HStack>
+                                    Reopen
+                                </MenuItem>
+                            )}
+                            <MenuItem
+                                icon={<DeleteIcon />}
+                                color="red.500"
+                                onClick={() => setIsDeleteAlertOpen(true)}
+                            >
+                                Delete
+                            </MenuItem>
+                        </MenuList>
+                    </Menu>
+                </HStack>
+            </Flex>
+
+            {/* Content */}
+            <Text color="gray.600" fontSize="sm">
+                Created {getFormattedDate(item.created_at || item.date_posted || item.timestamp)}
+                {isArchived && item.archived_at && ` • Archived ${getFormattedDate(item.archived_at)}`}
+            </Text>
+
+            <Text noOfLines={3} mt={2}>
+                {item.description || item.body}
+            </Text>
+
+            {type === 'opportunity' && item.location && (
+                <Text fontSize="sm" color="gray.600">
+                    Location: {item.location}
+                    {item.radius_miles && ` (${item.radius_miles} mile radius)`}
+                </Text>
+            )}
+
+            {/* Keeping 'Responses' button as a footer for quick access*/}
+            {type === 'opportunity' && (
+                <Flex mt={4} justify="flex-start">
                     <Button
                         size="sm"
-                        colorScheme="red"
-                        variant="ghost"
-                        leftIcon={<DeleteIcon />}
-                        onClick={() => setIsDeleteAlertOpen(true)}
-                        minW="80px"
+                        colorScheme="blue"
+                        leftIcon={<ChatIcon />}
+                        onClick={() => onViewResponses(item)}
+                        minW="140px"
                     >
-                        Delete
+                        Responses ({item.response_count || 0})
                     </Button>
                 </Flex>
-            </VStack>
+            )}
 
+            {/* Delete Alert Dialog */}
             <AlertDialog
                 isOpen={isDeleteAlertOpen}
                 leastDestructiveRef={cancelRef}
@@ -467,6 +575,7 @@ export default function OrganizationDashboard() {
     const [isOpportunityModalOpen, setIsOpportunityModalOpen] = useState(false);
     const [isPostModalOpen, setIsPostModalOpen] = useState(false);
     const [isIncidentModalOpen, setIsIncidentModalOpen] = useState(false);
+    const [selectedOpportunityForEdit, setSelectedOpportunityForEdit] = useState(null);
 
     const toast = useToast();
 
@@ -620,7 +729,10 @@ export default function OrganizationDashboard() {
         try {
             const { error } = await supabase
                 .from('volunteer_opportunities')
-                .update({ status: newStatus })
+                .update({
+                    status: newStatus,
+                    archived_at: newStatus === 'archived' ? new Date().toISOString() : null
+                })
                 .eq('id', id);
 
             if (error) throw error;
@@ -721,6 +833,7 @@ export default function OrganizationDashboard() {
                                             onDelete={handleDelete('opportunity')}
                                             onViewResponses={handleViewResponses}
                                             onArchive={handleArchive}
+                                            onEdit={(opportunity) => setSelectedOpportunityForEdit(opportunity)}
                                         />
                                     ))}
                                 </Grid>
@@ -785,6 +898,22 @@ export default function OrganizationDashboard() {
                 isOpen={isIncidentModalOpen}
                 onClose={() => setIsIncidentModalOpen(false)}
                 onCreateSuccess={fetchDashboardData}
+            />
+
+            <EditVolunteerOpportunityModal
+                isOpen={!!selectedOpportunityForEdit}
+                onClose={() => setSelectedOpportunityForEdit(null)}
+                opportunity={selectedOpportunityForEdit}
+                onUpdateSuccess={() => {
+                    fetchDashboardData();
+                    setSelectedOpportunityForEdit(null);
+                    toast({
+                        title: "Opportunity Updated",
+                        description: "The volunteer opportunity has been successfully updated.",
+                        status: "success",
+                        duration: 3000
+                    });
+                }}
             />
 
             <VolunteerResponsesDrawer
