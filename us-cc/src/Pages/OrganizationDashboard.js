@@ -74,7 +74,7 @@ const VolunteerResponsesDrawer = ({ isOpen, onClose, opportunity }) => {
     const handleSendMessage = async (volunteerId) => {
         try {
             const { data: { user } } = await supabase.auth.getUser();
-            
+
             const { error } = await supabase
                 .from('messages')
                 .insert([{
@@ -105,7 +105,7 @@ const VolunteerResponsesDrawer = ({ isOpen, onClose, opportunity }) => {
 
     useEffect(() => {
         if (!opportunity) return;
-        
+
         const fetchMessages = async () => {
             if (!opportunity?.id) return;
 
@@ -117,7 +117,7 @@ const VolunteerResponsesDrawer = ({ isOpen, onClose, opportunity }) => {
                     .order('sent_at', { ascending: true });
 
                 if (error) throw error;
-                
+
                 console.log('Fetched messages:', data);
                 setExistingMessages(data || []);
             } catch (error) {
@@ -132,7 +132,7 @@ const VolunteerResponsesDrawer = ({ isOpen, onClose, opportunity }) => {
         };
 
         fetchMessages();
-        
+
         // Set up real-time subscription
         const subscription = supabase
             .channel(`messages-${opportunity.id}`)

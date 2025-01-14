@@ -302,6 +302,7 @@ export default function VolunteerDashPage() {
     const [isDemoMode, setIsDemoMode] = useState(false);
     const toast = useToast();
     const { isOpen, onOpen, onClose } = useDisclosure();
+    const [totalUnreadMessages, setTotalUnreadMessages] = useState(0);
 
     useEffect(() => {
         checkUserStatus();
@@ -443,7 +444,20 @@ export default function VolunteerDashPage() {
                         <TabList>
                             <Tab>Available Opportunities</Tab>
                             <Tab>Your Responses</Tab>
-                            <Tab>Messages</Tab>
+                            <Tab>
+                                <Flex align="center">
+                                    Messages
+                                    {totalUnreadMessages > 0 && (
+                                        <Badge
+                                            ml={2}
+                                            colorScheme="red"
+                                            borderRadius="full"
+                                        >
+                                            {totalUnreadMessages}
+                                        </Badge>
+                                    )}
+                                </Flex>
+                            </Tab>
                         </TabList>
 
                         <TabPanels>
@@ -499,7 +513,9 @@ export default function VolunteerDashPage() {
                             </TabPanel>
 
                             <TabPanel>
-                                <VolunteerMessages />
+                                <VolunteerMessages
+                                    onUnreadCountChange={setTotalUnreadMessages}
+                                />
                             </TabPanel>
                         </TabPanels>
                     </Tabs>
