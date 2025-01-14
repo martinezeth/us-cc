@@ -56,7 +56,8 @@ import {
     MenuItem,
     IconButton
 } from '@chakra-ui/react';
-import { AddIcon, WarningIcon, DeleteIcon, ChatIcon, EditIcon } from '@chakra-ui/icons';
+import { AddIcon, WarningIcon, DeleteIcon, EditIcon } from '@chakra-ui/icons';
+import { ChatIcon } from '@chakra-ui/icons';
 import { MdAssignment, MdAnnouncement } from 'react-icons/md';
 import { BsThreeDotsVertical } from 'react-icons/bs';
 import { supabase } from '../supabaseClient';
@@ -66,69 +67,14 @@ import CreatePostModal from '../Components/CreatePostModal';
 import EditVolunteerOpportunityModal from '../Components/EditVolunteerOpportunityModal';
 
 const VolunteerResponsesDrawer = ({ isOpen, onClose, opportunity }) => {
-    const [messages, setMessages] = useState({});
+    const [message, setMessage] = useState('');
     const [existingMessages, setExistingMessages] = useState([]);
     const toast = useToast();
 
-    useEffect(() => {
-        const fetchMessages = async () => {
-            if (!opportunity?.id) return;
-
-            const { data, error } = await supabase
-                .from('messages')
-                .select('*')
-                .eq('opportunity_id', opportunity.id)
-                .order('sent_at', { ascending: true });
-
-            if (error) {
-                toast({
-                    title: "Error fetching messages",
-                    description: error.message,
-                    status: "error",
-                    duration: 5000
-                });
-                return;
-            }
-
-            setExistingMessages(data || []);
-        };
-
-        if (opportunity?.id) {
-            fetchMessages();
-            const subscription = supabase
-                .channel('messages')
-                .on('postgres_changes', {
-                    event: 'INSERT',
-                    schema: 'public',
-                    table: 'messages',
-                    filter: `opportunity_id=eq.${opportunity.id}`
-                }, payload => {
-                    setExistingMessages(prev => [...prev, payload.new]);
-                })
-                .subscribe();
-
-            return () => {
-                subscription.unsubscribe();
-            };
-        }
-    }, [opportunity?.id, toast]);
-
-    const handleSendMessage = async (volunteerId = null) => {
-        if (opportunity.status === 'archived') {
-            toast({
-                title: "Cannot send messages",
-                description: "This opportunity is archived",
-                status: "error",
-                duration: 3000
-            });
-            return;
-        }
-
-        const message = messages[volunteerId || 'group'];
-        if (!message?.trim()) return;
-
+    const handleSendMessage = async (volunteerId) => {
         try {
             const { data: { user } } = await supabase.auth.getUser();
+            
             const { error } = await supabase
                 .from('messages')
                 .insert([{
@@ -136,12 +82,17 @@ const VolunteerResponsesDrawer = ({ isOpen, onClose, opportunity }) => {
                     volunteer_id: volunteerId,
                     opportunity_id: opportunity.id,
                     message: message,
-                    is_group_message: !volunteerId
+                    is_group_message: false
                 }]);
 
             if (error) throw error;
 
-            setMessages({ ...messages, [volunteerId || 'group']: '' });
+            setMessage('');
+            toast({
+                title: "Message sent",
+                status: "success",
+                duration: 3000
+            });
         } catch (error) {
             toast({
                 title: "Error sending message",
@@ -152,12 +103,56 @@ const VolunteerResponsesDrawer = ({ isOpen, onClose, opportunity }) => {
         }
     };
 
-    const getMessagesForVolunteer = (volunteerId) => {
-        return existingMessages.filter(msg =>
-            msg.volunteer_id === volunteerId ||
-            (msg.is_group_message && !msg.volunteer_id)
-        );
-    };
+    useEffect(() => {
+        if (!opportunity) return;
+        
+        const fetchMessages = async () => {
+            if (!opportunity?.id) return;
+
+            try {
+                const { data, error } = await supabase
+                    .from('messages')
+                    .select('*')
+                    .eq('opportunity_id', opportunity.id)
+                    .order('sent_at', { ascending: true });
+
+                if (error) throw error;
+                
+                console.log('Fetched messages:', data);
+                setExistingMessages(data || []);
+            } catch (error) {
+                console.error('Error fetching messages:', error);
+                toast({
+                    title: "Error fetching messages",
+                    description: error.message,
+                    status: "error",
+                    duration: 5000
+                });
+            }
+        };
+
+        fetchMessages();
+        
+        // Set up real-time subscription
+        const subscription = supabase
+            .channel(`messages-${opportunity.id}`)
+            .on('postgres_changes', {
+                event: '*',
+                schema: 'public',
+                table: 'messages',
+                filter: `opportunity_id=eq.${opportunity.id}`
+            }, (payload) => {
+                console.log('Message change:', payload);
+                if (payload.eventType === 'INSERT') {
+                    setExistingMessages(prev => [...prev, payload.new]);
+                }
+            })
+            .subscribe();
+
+        return () => {
+            subscription.unsubscribe();
+        };
+    }, [opportunity, toast]);
 
     const isArchived = opportunity?.status === 'archived';
 
@@ -227,7 +222,7 @@ const VolunteerResponsesDrawer = ({ isOpen, onClose, opportunity }) => {
                                             <Box w="full">
                                                 <Text fontWeight="bold" mb={2}>Messages:</Text>
                                                 <VStack align="stretch" mb={4} maxH="200px" overflowY="auto">
-                                                    {getMessagesForVolunteer(response.volunteer_id).map((msg, idx) => (
+                                                    {existingMessages.map((msg, idx) => (
                                                         <Box
                                                             key={idx}
                                                             bg={msg.is_group_message ? "gray.100" : "blue.100"}
@@ -245,11 +240,8 @@ const VolunteerResponsesDrawer = ({ isOpen, onClose, opportunity }) => {
                                                     <>
                                                         <Input
                                                             placeholder={`Message ${response.volunteer_name}...`}
-                                                            value={messages[response.volunteer_id] || ''}
-                                                            onChange={(e) => setMessages({
-                                                                ...messages,
-                                                                [response.volunteer_id]: e.target.value
-                                                            })}
+                                                            value={message}
+                                                            onChange={(e) => setMessage(e.target.value)}
                                                             onKeyDown={(e) => {
                                                                 if (e.key === 'Enter') {
                                                                     e.preventDefault();
@@ -263,7 +255,7 @@ const VolunteerResponsesDrawer = ({ isOpen, onClose, opportunity }) => {
                                                             colorScheme="blue"
                                                             leftIcon={<ChatIcon />}
                                                             onClick={() => handleSendMessage(response.volunteer_id)}
-                                                            isDisabled={!messages[response.volunteer_id]}
+                                                            isDisabled={!message}
                                                         >
                                                             Send Message
                                                         </Button>
@@ -308,11 +300,8 @@ const VolunteerResponsesDrawer = ({ isOpen, onClose, opportunity }) => {
                             <>
                                 <Input
                                     placeholder="Type a message to all volunteers..."
-                                    value={messages['group'] || ''}
-                                    onChange={(e) => setMessages({
-                                        ...messages,
-                                        group: e.target.value
-                                    })}
+                                    value={message}
+                                    onChange={(e) => setMessage(e.target.value)}
                                     onKeyDown={(e) => {
                                         if (e.key === 'Enter') {
                                             e.preventDefault();
@@ -325,7 +314,7 @@ const VolunteerResponsesDrawer = ({ isOpen, onClose, opportunity }) => {
                                     colorScheme="blue"
                                     leftIcon={<ChatIcon />}
                                     onClick={() => handleSendMessage()}
-                                    isDisabled={!messages['group']}
+                                    isDisabled={!message}
                                 >
                                     Message All Volunteers
                                 </Button>

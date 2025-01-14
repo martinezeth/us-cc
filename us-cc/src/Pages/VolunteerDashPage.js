@@ -36,6 +36,7 @@ import {
 import { FaBuilding, FaCheckCircle } from 'react-icons/fa';
 import { supabase } from '../supabaseClient';
 import { STANDARD_SKILLS, AVAILABILITY_OPTIONS } from '../constants/incidentTypes';
+import VolunteerMessages from '../Components/VolunteerMessages';
 
 const VolunteerRegistrationModal = ({ isOpen, onClose, onRegister }) => {
     const [formData, setFormData] = useState({
@@ -442,6 +443,7 @@ export default function VolunteerDashPage() {
                         <TabList>
                             <Tab>Available Opportunities</Tab>
                             <Tab>Your Responses</Tab>
+                            <Tab>Messages</Tab>
                         </TabList>
 
                         <TabPanels>
@@ -459,6 +461,14 @@ export default function VolunteerDashPage() {
                                             onRefresh={refreshData}
                                         />
                                     ))}
+                                    {opportunities.length === 0 && (
+                                        <Box gridColumn="1/-1" textAlign="center" py={8}>
+                                            <Text color="gray.500">
+                                                No opportunities available at the moment.
+                                                Check back later for new opportunities!
+                                            </Text>
+                                        </Box>
+                                    )}
                                 </Grid>
                             </TabPanel>
 
@@ -477,7 +487,19 @@ export default function VolunteerDashPage() {
                                             onRefresh={refreshData}
                                         />
                                     ))}
+                                    {responses.length === 0 && (
+                                        <Box gridColumn="1/-1" textAlign="center" py={8}>
+                                            <Text color="gray.500">
+                                                You haven't responded to any opportunities yet.
+                                                Browse the Available Opportunities tab to get started!
+                                            </Text>
+                                        </Box>
+                                    )}
                                 </Grid>
+                            </TabPanel>
+
+                            <TabPanel>
+                                <VolunteerMessages />
                             </TabPanel>
                         </TabPanels>
                     </Tabs>
