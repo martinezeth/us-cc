@@ -410,8 +410,12 @@ const OpportunityCard = ({ opportunity, userSkills, isDemoMode, isResponseTab = 
                         isLoading={isResponding}
                         onClick={handleVolunteerClick}
                         isDisabled={!hasRequiredSkills || hasResponded}
+                        minW="140px"
+                        whiteSpace="normal"
+                        h="auto"
+                        py={2}
                     >
-                        {hasResponded ? 'Already Responded' : 'Volunteer'}
+                        {hasResponded ? 'Responded' : 'Volunteer'}
                     </Button>
                 )}
             </Flex>
@@ -454,6 +458,7 @@ export default function VolunteerDashPage() {
 
     const fetchOpportunities = async () => {
         try {
+            // First get the opportunities
             const { data: opportunities, error: opportunitiesError } = await supabase
                 .from('volunteer_opportunities')
                 .select('*')
@@ -462,11 +467,19 @@ export default function VolunteerDashPage() {
 
             if (opportunitiesError) throw opportunitiesError;
 
+            // Then get the organization profiles for each opportunity
             const opportunitiesWithOrgs = await Promise.all(opportunities.map(async (opp) => {
-                const { data: { user }, error: userError } = await supabase.auth.getUser(opp.organization_id);
+                const { data: profileData } = await supabase
+                    .from('profiles')
+                    .select('full_name, organization_name')
+                    .eq('id', opp.organization_id)
+                    .single();
+
                 return {
                     ...opp,
-                    organization_name: user?.user_metadata?.name || 'Unknown Organization'
+                    organization_name: profileData?.organization_name ||
+                        profileData?.full_name ||
+                        'Unknown Organization'
                 };
             }));
 
@@ -487,23 +500,44 @@ export default function VolunteerDashPage() {
             const { data: responses, error: responsesError } = await supabase
                 .from('opportunity_responses')
                 .select(`
-                    *,
-                    opportunity:opportunity_id (*)
+                    opportunity_id,
+                    opportunity:volunteer_opportunities (
+                        id,
+                        title,
+                        description,
+                        location,
+                        status,
+                        organization_id,
+                        radius_miles,
+                        required_skills
+                    )
                 `)
                 .eq('volunteer_id', user.id)
                 .eq('status', 'accepted');
 
             if (responsesError) throw responsesError;
 
-            const responsesWithOrgs = await Promise.all(responses.map(async (response) => {
-                const { data: { user }, error: userError } = await supabase.auth.getUser(response.opportunity.organization_id);
-                return {
-                    ...response.opportunity,
-                    organization_name: user?.user_metadata?.name || 'Unknown Organization'
-                };
+            // Separately fetch organization profiles for the opportunities
+            const opportunities = responses.map(r => r.opportunity).filter(Boolean);
+            const orgIds = [...new Set(opportunities.map(opp => opp.organization_id))];
+
+            const { data: orgProfiles } = await supabase
+                .from('profiles')
+                .select('id, organization_name, full_name')
+                .in('id', orgIds);
+
+            // Create a lookup map for org names
+            const orgNameMap = {};
+            orgProfiles?.forEach(profile => {
+                orgNameMap[profile.id] = profile.organization_name || profile.full_name;
+            });
+
+            const processedResponses = opportunities.map(opp => ({
+                ...opp,
+                organization_name: orgNameMap[opp.organization_id] || 'Unknown Organization'
             }));
 
-            setResponses(responsesWithOrgs);
+            setResponses(processedResponses);
         } catch (error) {
             console.error('Error fetching responses:', error);
             toast({

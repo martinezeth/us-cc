@@ -99,7 +99,7 @@ function Register({ onSwitch }) {
         password,
         options: {
           data: {
-            name,
+            name: name,
             username: email.split('@')[0],
             is_organization: isOrganization,
             organization_type: isOrganization ? orgType : null
@@ -109,12 +109,13 @@ function Register({ onSwitch }) {
 
       if (error) throw error;
 
-      // Create basic profile
+      // Create profile with organization name if it's an organization
       const { error: profileError } = await supabase
         .from('profiles')
         .insert([{
           id: data.user.id,
-          full_name: name
+          full_name: name,
+          organization_name: isOrganization ? name : null  // Set organization_name for orgs
         }]);
 
       if (profileError) throw profileError;

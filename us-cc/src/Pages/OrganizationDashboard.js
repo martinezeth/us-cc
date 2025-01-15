@@ -58,10 +58,12 @@ import {
     Textarea,
     FormControl,
     FormLabel,
-    Select
+    Select,
+    InputGroup,
+    InputLeftElement,
+    Stack
 } from '@chakra-ui/react';
-import { AddIcon, WarningIcon, DeleteIcon, EditIcon } from '@chakra-ui/icons';
-import { ChatIcon } from '@chakra-ui/icons';
+import { AddIcon, WarningIcon, DeleteIcon, EditIcon, SearchIcon, ChatIcon } from '@chakra-ui/icons';
 import { MdAssignment, MdAnnouncement } from 'react-icons/md';
 import { BsThreeDotsVertical } from 'react-icons/bs';
 import { supabase } from '../supabaseClient';
@@ -70,55 +72,96 @@ import CreateIncidentModal from '../Components/CreateIncidentModal';
 import CreatePostModal from '../Components/CreatePostModal';
 import EditVolunteerOpportunityModal from '../Components/EditVolunteerOpportunityModal';
 
+window.debugOrganization = {
+    updateMetadata: async () => {
+        try {
+            const { data, error } = await supabase.auth.updateUser({
+                data: {
+                    name: 'Ethan TestOrg',
+                    organization_name: 'Test OrgEthan',
+                    is_organization: true,
+                    organization_type: 'ngo'
+                }
+            });
+            console.log('Update result:', { data, error });
+        } catch (error) {
+            console.error('Error:', error);
+        }
+    },
+    
+    checkCurrentUser: async () => {
+        const { data: { user }, error } = await supabase.auth.getUser();
+        console.log('Current user:', user);
+        console.log('User metadata:', user?.user_metadata);
+    }
+};
+
 const VolunteerResponsesDrawer = ({ isOpen, onClose, opportunity }) => {
     const [selectedVolunteer, setSelectedVolunteer] = useState(null);
     const [directMessage, setDirectMessage] = useState('');
     const [groupMessage, setGroupMessage] = useState('');
     const [existingMessages, setExistingMessages] = useState([]);
+    const [searchQuery, setSearchQuery] = useState('');
     const toast = useToast();
 
-    useEffect(() => {
-        if (!opportunity) return;
+    const fetchMessages = async () => {
+        if (!opportunity?.id) return;
 
-        const fetchMessages = async () => {
-            if (!opportunity?.id) return;
+        try {
+            // First get messages
+            const { data, error } = await supabase
+                .from('messages')
+                .select(`
+                    *,
+                    organizations:profiles!organization_id(
+                        full_name,
+                        organization_name
+                    )
+                `)
+                .eq('opportunity_id', opportunity.id)
+                .order('sent_at', { ascending: true });
 
-            try {
-                const { data, error } = await supabase
-                    .from('messages')
-                    .select('*')
-                    .eq('opportunity_id', opportunity.id)
-                    .eq('is_group_message', false)
-                    .order('sent_at', { ascending: true });
+            if (error) throw error;
 
-                if (error) throw error;
+            // Get organization details if not included in the join
+            if (opportunity.organization_id) {
+                const { data: orgData } = await supabase
+                    .from('profiles')
+                    .select('full_name, organization_name')
+                    .eq('id', opportunity.organization_id)
+                    .single();
 
-                setExistingMessages(data || []);
-            } catch (error) {
-                console.error('Error fetching messages:', error);
-                toast({
-                    title: "Error fetching messages",
-                    description: error.message,
-                    status: "error",
-                    duration: 5000
-                });
+                if (orgData) {
+                    opportunity.organization_name = orgData.organization_name || orgData.full_name;
+                }
             }
-        };
 
+            setExistingMessages(data || []);
+        } catch (error) {
+            console.error('Error fetching messages:', error);
+            toast({
+                title: "Error fetching messages",
+                description: error.message,
+                status: "error",
+                duration: 5000
+            });
+        }
+    };
+
+    useEffect(() => {
         fetchMessages();
 
-        // Set up real-time subscription
+        // Set up real-time subscription for new messages
         const subscription = supabase
-            .channel(`messages-${opportunity.id}`)
+            .channel(`messages-${opportunity?.id}`)
             .on('postgres_changes', {
                 event: '*',
                 schema: 'public',
                 table: 'messages',
-                filter: `opportunity_id=eq.${opportunity.id} and is_group_message=eq.false`
+                filter: `opportunity_id=eq.${opportunity?.id}`
             }, (payload) => {
-                if (payload.eventType === 'INSERT') {
-                    setExistingMessages(prev => [...prev, payload.new]);
-                }
+                console.log('Message change received:', payload);
+                fetchMessages(); // Refresh messages when changes occur
             })
             .subscribe();
 
@@ -133,14 +176,25 @@ const VolunteerResponsesDrawer = ({ isOpen, onClose, opportunity }) => {
         try {
             const { data: { user } } = await supabase.auth.getUser();
             
+            // Get organization name from profile
+            const { data: orgProfile } = await supabase
+                .from('profiles')
+                .select('full_name, organization_name')
+                .eq('id', user.id)
+                .single();
+
+            const orgName = orgProfile?.organization_name || orgProfile?.full_name || user.user_metadata?.name;
+            
             const { error } = await supabase
                 .from('messages')
                 .insert([{
                     organization_id: user.id,
+                    organization_name: orgName,
                     volunteer_id: selectedVolunteer.volunteer_id,
                     opportunity_id: opportunity.id,
                     message: directMessage,
-                    is_group_message: false
+                    is_group_message: false,
+                    sent_at: new Date().toISOString()
                 }]);
 
             if (error) throw error;
@@ -165,14 +219,25 @@ const VolunteerResponsesDrawer = ({ isOpen, onClose, opportunity }) => {
         try {
             const { data: { user } } = await supabase.auth.getUser();
             
+            // Get organization name from profile
+            const { data: orgProfile } = await supabase
+                .from('profiles')
+                .select('full_name, organization_name')
+                .eq('id', user.id)
+                .single();
+
+            const orgName = orgProfile?.organization_name || orgProfile?.full_name || user.user_metadata?.name;
+            
             const { error } = await supabase
                 .from('messages')
                 .insert([{
                     organization_id: user.id,
+                    organization_name: orgName,
                     volunteer_id: null,
                     opportunity_id: opportunity.id,
                     message: groupMessage,
-                    is_group_message: true
+                    is_group_message: true,
+                    sent_at: new Date().toISOString()
                 }]);
 
             if (error) throw error;
@@ -193,6 +258,11 @@ const VolunteerResponsesDrawer = ({ isOpen, onClose, opportunity }) => {
         }
     };
 
+    // Filter volunteers based on search query
+    const filteredVolunteers = opportunity?.responses?.filter(volunteer =>
+        volunteer.volunteer_name.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+
     return (
         <Drawer isOpen={isOpen} onClose={onClose} size="md">
             <DrawerOverlay />
@@ -200,90 +270,165 @@ const VolunteerResponsesDrawer = ({ isOpen, onClose, opportunity }) => {
                 <DrawerCloseButton />
                 <DrawerHeader>Volunteer Responses</DrawerHeader>
                 <DrawerBody>
-                    <VStack spacing={6} align="stretch">
-                        {/* Volunteer Selection Dropdown */}
-                        <Box>
-                            <FormControl>
-                                <FormLabel>Select Volunteer</FormLabel>
-                                <Select
-                                    placeholder="Choose a volunteer"
-                                    value={selectedVolunteer?.volunteer_id || ''}
-                                    onChange={(e) => {
-                                        const volunteer = opportunity?.responses?.find(
-                                            r => r.volunteer_id === e.target.value
-                                        );
-                                        setSelectedVolunteer(volunteer || null);
-                                        setDirectMessage(''); // Clear direct message when switching volunteers
-                                    }}
-                                >
-                                    {opportunity?.responses?.map((response) => (
-                                        <option key={response.volunteer_id} value={response.volunteer_id}>
-                                            {response.volunteer_name} ({response.status || 'Pending'})
-                                        </option>
+                    <VStack spacing={4} align="stretch">
+                        {/* Volunteer List Section */}
+                        <Box bg="white" borderRadius="md" boxShadow="sm">
+                            <Heading size="sm" p={4} borderBottom="1px" borderColor="gray.100">
+                                Volunteers ({opportunity?.responses?.length || 0})
+                            </Heading>
+                            
+                            {/* Search Bar */}
+                            <Box p={4} borderBottom="1px" borderColor="gray.100">
+                                <InputGroup>
+                                    <InputLeftElement pointerEvents="none">
+                                        <SearchIcon color="gray.400" />
+                                    </InputLeftElement>
+                                    <Input
+                                        placeholder="Search volunteers..."
+                                        value={searchQuery}
+                                        onChange={(e) => setSearchQuery(e.target.value)}
+                                        variant="filled"
+                                        bg="gray.50"
+                                    />
+                                </InputGroup>
+                            </Box>
+
+                            {/* Scrollable Volunteer List */}
+                            <Box maxH="400px" overflowY="auto">
+                                <Accordion allowMultiple>
+                                    {filteredVolunteers?.map((volunteer) => (
+                                        <AccordionItem key={volunteer.volunteer_id} border="none">
+                                            <AccordionButton _hover={{ bg: 'gray.50' }}>
+                                                <Box flex="1">
+                                                    <Flex justify="space-between" align="center">
+                                                        <HStack>
+                                                            <Avatar
+                                                                size="sm"
+                                                                name={volunteer.volunteer_name}
+                                                            />
+                                                            <Text fontWeight="bold">
+                                                                {volunteer.volunteer_name}
+                                                            </Text>
+                                                        </HStack>
+                                                        <Badge colorScheme="blue">
+                                                            {volunteer.skills?.length || 0} skills
+                                                        </Badge>
+                                                    </Flex>
+                                                </Box>
+                                                <AccordionIcon />
+                                            </AccordionButton>
+                                            <AccordionPanel pb={4} bg="gray.50">
+                                                <VStack align="stretch" spacing={4}>
+                                                    {/* Volunteer Details */}
+                                                    <Box bg="white" p={4} borderRadius="md">
+                                                        <Text fontWeight="bold" mb={2}>Skills:</Text>
+                                                        <Wrap mb={3}>
+                                                            {volunteer.skills?.map((skill, index) => (
+                                                                <WrapItem key={index}>
+                                                                    <Tag size="md" colorScheme="blue">
+                                                                        <TagLabel>{skill}</TagLabel>
+                                                                    </Tag>
+                                                                </WrapItem>
+                                                            ))}
+                                                        </Wrap>
+                                                        <Text fontWeight="bold" mb={2}>Availability:</Text>
+                                                        <Text>{volunteer.availability || 'Not specified'}</Text>
+                                                    </Box>
+
+                                                    {/* Direct Messages */}
+                                                    <Box bg="white" p={4} borderRadius="md">
+                                                        <Heading size="sm" mb={3}>Direct Messages</Heading>
+                                                        <VStack spacing={2} align="stretch" maxH="200px" overflowY="auto">
+                                                            {existingMessages
+                                                                .filter(msg => msg.volunteer_id === volunteer.volunteer_id)
+                                                                .map((msg, idx) => (
+                                                                    <Box
+                                                                        key={idx}
+                                                                        p={3}
+                                                                        bg="blue.50"
+                                                                        borderRadius="md"
+                                                                    >
+                                                                        <Text>{msg.message}</Text>
+                                                                        <Text fontSize="xs" color="gray.500" mt={1}>
+                                                                            {new Date(msg.sent_at).toLocaleString()}
+                                                                        </Text>
+                                                                    </Box>
+                                                                ))
+                                                            }
+                                                        </VStack>
+                                                        <Textarea
+                                                            mt={3}
+                                                            value={selectedVolunteer?.volunteer_id === volunteer.volunteer_id ? directMessage : ''}
+                                                            onChange={(e) => {
+                                                                setSelectedVolunteer(volunteer);
+                                                                setDirectMessage(e.target.value);
+                                                            }}
+                                                            placeholder={`Message ${volunteer.volunteer_name}...`}
+                                                        />
+                                                        <Button
+                                                            mt={2}
+                                                            colorScheme="blue"
+                                                            onClick={() => {
+                                                                setSelectedVolunteer(volunteer);
+                                                                handleSendDirectMessage();
+                                                            }}
+                                                            isDisabled={!directMessage.trim() || selectedVolunteer?.volunteer_id !== volunteer.volunteer_id}
+                                                            width="full"
+                                                        >
+                                                            Send Message
+                                                        </Button>
+                                                    </Box>
+                                                </VStack>
+                                            </AccordionPanel>
+                                        </AccordionItem>
                                     ))}
-                                </Select>
-                            </FormControl>
+                                </Accordion>
+                            </Box>
                         </Box>
 
-                        {/* Selected Volunteer Details and Direct Messaging */}
-                        {selectedVolunteer && (
-                            <Box>
-                                <Box p={4} bg="gray.50" borderRadius="md" mb={4}>
-                                    <Heading size="sm" mb={3}>Volunteer Details</Heading>
-                                    <Text fontWeight="bold" mb={2}>Skills:</Text>
-                                    <Wrap mb={3}>
-                                        {selectedVolunteer.skills?.map((skill, index) => (
-                                            <WrapItem key={index}>
-                                                <Tag size="md" colorScheme="blue">
-                                                    <TagLabel>{skill}</TagLabel>
-                                                </Tag>
-                                            </WrapItem>
-                                        ))}
-                                    </Wrap>
-                                    <Text fontWeight="bold" mb={2}>Availability:</Text>
-                                    <Text>{selectedVolunteer.availability || 'Not specified'}</Text>
-                                </Box>
+                        {/* Group Messages Section */}
+                        <Box bg="white" borderRadius="md" boxShadow="sm">
+                            <Heading size="sm" p={4} borderBottom="1px" borderColor="gray.100">
+                                Group Messages
+                            </Heading>
+                            <Box p={4}>
+                                {/* Display Group Messages */}
+                                <VStack spacing={2} align="stretch" maxH="200px" overflowY="auto" mb={4}>
+                                    {existingMessages
+                                        .filter(msg => msg.is_group_message)
+                                        .map((msg, idx) => (
+                                            <Box
+                                                key={idx}
+                                                p={3}
+                                                bg="purple.50"
+                                                borderRadius="md"
+                                            >
+                                                <Text>{msg.message}</Text>
+                                                <Text fontSize="xs" color="gray.500" mt={1}>
+                                                    {new Date(msg.sent_at).toLocaleString()}
+                                                </Text>
+                                            </Box>
+                                        ))
+                                    }
+                                </VStack>
 
-                                {/* Direct Messages */}
-                                <Box>
-                                    <Heading size="sm" mb={3}>Messages</Heading>
-                                    <VStack spacing={2} align="stretch" mb={4}>
-                                        {existingMessages
-                                            .filter(msg => msg.volunteer_id === selectedVolunteer.volunteer_id)
-                                            .map((msg, idx) => (
-                                                <Box
-                                                    key={idx}
-                                                    p={3}
-                                                    bg="gray.50"
-                                                    borderRadius="md"
-                                                >
-                                                    <Text>{msg.message}</Text>
-                                                    <Text fontSize="xs" color="gray.500" mt={1}>
-                                                        {new Date(msg.sent_at).toLocaleString()}
-                                                    </Text>
-                                                </Box>
-                                            ))
-                                        }
-                                    </VStack>
-
-                                    <VStack spacing={3}>
-                                        <Textarea
-                                            value={directMessage}
-                                            onChange={(e) => setDirectMessage(e.target.value)}
-                                            placeholder={`Message ${selectedVolunteer.volunteer_name}...`}
-                                        />
-                                        <Button
-                                            colorScheme="blue"
-                                            onClick={handleSendDirectMessage}
-                                            isDisabled={!directMessage.trim()}
-                                            width="full"
-                                        >
-                                            Send Message
-                                        </Button>
-                                    </VStack>
-                                </Box>
+                                {/* Send Group Message */}
+                                <Textarea
+                                    value={groupMessage}
+                                    onChange={(e) => setGroupMessage(e.target.value)}
+                                    placeholder="Type a message to all volunteers..."
+                                />
+                                <Button
+                                    mt={2}
+                                    colorScheme="purple"
+                                    onClick={handleSendGroupMessage}
+                                    isDisabled={!groupMessage.trim()}
+                                    width="full"
+                                >
+                                    Send Group Message
+                                </Button>
                             </Box>
-                        )}
+                        </Box>
                     </VStack>
                 </DrawerBody>
             </DrawerContent>

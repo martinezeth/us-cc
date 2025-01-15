@@ -51,24 +51,18 @@ const VolunteerMessages = ({ onUnreadCountChange }) => {
         try {
             const { data: { user } } = await supabase.auth.getUser();
 
-            // First get all messages and read receipts
+            // Get messages with opportunity data and read receipts
             const { data: messagesData, error: messagesError } = await supabase
                 .from('messages')
                 .select(`
-                    id,
-                    message,
-                    sent_at,
-                    is_read,
-                    is_group_message,
-                    volunteer_id,
-                    opportunity_id,
-                    opportunity:volunteer_opportunities!opportunity_id (
+                    *,
+                    opportunity:volunteer_opportunities (
                         id,
                         title,
                         organization_id,
                         status
                     ),
-                    read_receipts:message_read_receipts(
+                    read_receipts:message_read_receipts!message_id (
                         volunteer_id,
                         read_at
                     )
@@ -78,41 +72,61 @@ const VolunteerMessages = ({ onUnreadCountChange }) => {
 
             if (messagesError) throw messagesError;
 
-            // Fetch organization names for the opportunities
-            const orgIds = [...new Set(messagesData.map(msg => msg.opportunity?.organization_id).filter(Boolean))];
-            const orgNames = {};
+            // Get unique organization IDs
+            const orgIds = [...new Set(messagesData
+                .map(msg => msg.opportunity?.organization_id)
+                .filter(Boolean))];
 
-            for (const orgId of orgIds) {
-                const { data: { user: orgUser } } = await supabase.auth.getUser(orgId);
-                orgNames[orgId] = orgUser?.user_metadata?.name || 'Unknown Organization';
-            }
+            // Fetch organization profiles
+            const { data: orgProfiles } = await supabase
+                .from('profiles')
+                .select('id, organization_name, full_name')
+                .in('id', orgIds);
 
-            // Group messages by opportunity and respect the existing read status
+            // Create a lookup map for org names
+            const orgNameMap = {};
+            orgProfiles?.forEach(profile => {
+                orgNameMap[profile.id] = profile.organization_name || profile.full_name;
+            });
+
+            // Group messages by opportunity
             const grouped = messagesData.reduce((acc, message) => {
                 const oppId = message.opportunity_id;
                 if (!acc[oppId]) {
                     acc[oppId] = {
                         opportunity: {
                             ...message.opportunity,
-                            organization_name: orgNames[message.opportunity?.organization_id]
+                            organization_name: orgNameMap[message.opportunity?.organization_id] || 'Unknown Organization'
                         },
                         messages: []
                     };
                 }
-                // Keep the original read status from the database
+
+                // Check if message is read
+                const isRead = message.volunteer_id === user.id ?
+                    message.is_read :
+                    message.read_receipts?.some(receipt =>
+                        receipt.volunteer_id === user.id
+                    );
+
                 acc[oppId].messages.push({
                     ...message,
-                    is_read: message.volunteer_id === user.id ?
-                        message.is_read :
-                        (message.read_receipts || []).some(r => r.volunteer_id === user.id)
+                    is_read: isRead
                 });
                 return acc;
             }, {});
 
             setOpportunityMessages(grouped);
             setLoading(false);
+
+            // Calculate and update unread count
+            const totalUnread = Object.values(grouped).reduce((count, { messages }) =>
+                count + messages.filter(m => !m.is_read).length
+                , 0);
+            onUnreadCountChange?.(totalUnread);
+
         } catch (error) {
-            console.error('Error fetching messages:', error);
+            console.error('Error in fetchMessages:', error);
             setLoading(false);
         }
     };
@@ -145,63 +159,55 @@ const VolunteerMessages = ({ onUnreadCountChange }) => {
         try {
             const { data: { user } } = await supabase.auth.getUser();
 
-            // Check for both direct and group messages that are unread
-            const { data: unreadMessages, error: unreadError } = await supabase
-                .from('messages')
-                .select('id, is_read, volunteer_id')
-                .eq('opportunity_id', opportunityId)
-                .eq('is_read', false)
-                .or(`volunteer_id.eq.${user.id},and(is_group_message.eq.true,volunteer_id.is.null)`);
+            // Get all unread messages for this opportunity
+            const messages = opportunityMessages[opportunityId]?.messages || [];
+            const unreadMessages = messages.filter(msg => !msg.is_read);
 
-            console.log('Unread messages found:', unreadMessages);
-
-            if (unreadMessages?.length > 0) {
-                // For group messages, we need to create read receipts
-                const readReceipts = unreadMessages
-                    .filter(msg => msg.volunteer_id === null)
-                    .map(msg => ({
-                        message_id: msg.id,
-                        volunteer_id: user.id,
-                        read_at: new Date().toISOString()
-                    }));
-
-                if (readReceipts.length > 0) {
-                    // Insert read receipts for group messages
-                    const { error: receiptError } = await supabase
-                        .from('message_read_receipts')
-                        .upsert(readReceipts);
-
-                    if (receiptError) throw receiptError;
-                }
-
-                // Update direct messages
-                const directMessages = unreadMessages.filter(msg => msg.volunteer_id === user.id);
-                if (directMessages.length > 0) {
-                    const { error } = await supabase
-                        .from('messages')
-                        .update({ is_read: true })
-                        .eq('opportunity_id', opportunityId)
-                        .eq('volunteer_id', user.id)
-                        .eq('is_read', false);
-
-                    if (error) throw error;
-                }
-
-                // Refresh messages to ensure we have the latest state
-                await fetchMessages();
-
-                toast({
-                    title: `${unreadMessages.length} messages marked as read`,
-                    status: "success",
-                    duration: 2000
-                });
-            } else {
+            if (unreadMessages.length === 0) {
                 toast({
                     title: "No unread messages",
                     status: "info",
                     duration: 2000
                 });
+                return;
             }
+
+            // Handle group messages
+            const groupMessages = unreadMessages.filter(msg => !msg.volunteer_id);
+            if (groupMessages.length > 0) {
+                const { error: receiptError } = await supabase
+                    .from('message_read_receipts')
+                    .upsert(
+                        groupMessages.map(msg => ({
+                            message_id: msg.id,
+                            volunteer_id: user.id,
+                            read_at: new Date().toISOString()
+                        }))
+                    );
+
+                if (receiptError) throw receiptError;
+            }
+
+            // Handle direct messages
+            const directMessages = unreadMessages.filter(msg => msg.volunteer_id === user.id);
+            if (directMessages.length > 0) {
+                const { error } = await supabase
+                    .from('messages')
+                    .update({ is_read: true })
+                    .in('id', directMessages.map(msg => msg.id));
+
+                if (error) throw error;
+            }
+
+            // Refresh messages
+            await fetchMessages();
+
+            toast({
+                title: `${unreadMessages.length} messages marked as read`,
+                status: "success",
+                duration: 2000
+            });
+
         } catch (error) {
             console.error('Error marking messages as read:', error);
             toast({
@@ -342,7 +348,7 @@ const VolunteerMessages = ({ onUnreadCountChange }) => {
                                     colorScheme="blue"
                                     variant="outline"
                                     onClick={() => markAllMessagesAsRead(oppId)}
-                                    isDisabled={unreadCount === 0}
+                                    isDisabled={!data.messages.some(msg => !msg.is_read)}
                                 >
                                     Mark as Read
                                 </Button>
@@ -350,6 +356,7 @@ const VolunteerMessages = ({ onUnreadCountChange }) => {
                             <MessageList messages={data.messages} />
                         </AccordionPanel>
                     </AccordionItem>
+
                 );
             })}
         </Accordion>
