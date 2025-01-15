@@ -16,35 +16,19 @@ import {
     TabPanels,
     Tab,
     TabPanel,
-    Modal,
-    ModalOverlay,
-    ModalContent,
-    ModalHeader,
-    ModalFooter,
-    ModalBody,
-    ModalCloseButton,
-    FormControl,
-    FormLabel,
-    Input,
-    Select,
     Tag,
     TagLabel,
-    TagCloseButton,
     Wrap,
     WrapItem,
-    useDisclosure,
-    IconButton,
     Stat,
     StatLabel,
     StatNumber,
     StatHelpText,
-    Icon,
+    Alert,
+    AlertIcon,
 } from '@chakra-ui/react';
-import { EditIcon, AddIcon } from '@chakra-ui/icons';
+import { EditIcon } from '@chakra-ui/icons';
 import { supabase } from '../supabaseClient';
-import { STANDARD_SKILLS, AVAILABILITY_OPTIONS } from '../constants/incidentTypes';
-import LocationSearch from '../Components/LocationSearch';
-import { FaBuilding } from 'react-icons/fa';
 
 const SectionCard = ({ children, title }) => (
     <Box
@@ -83,31 +67,14 @@ const StatCard = ({ label, value, helpText }) => (
 );
 
 export default function Profile() {
-    const [userData, setUserData] = useState(null);
+    const [profileData, setProfileData] = useState(null);
     const [volunteerData, setVolunteerData] = useState(null);
+    const [opportunityResponses, setOpportunityResponses] = useState([]);
+    const [isOwnProfile, setIsOwnProfile] = useState(false);
+    const [loading, setLoading] = useState(true);
     const { username } = useParams();
     const navigate = useNavigate();
     const toast = useToast();
-    const { isOpen, onOpen, onClose } = useDisclosure();
-
-    // Edit form state
-    const [editForm, setEditForm] = useState({
-        name: '',
-        skills: [],
-        availability: [],
-        location: {
-            city: '',
-            state: '',
-            country: '',
-            lat: null,
-            lng: null
-        },
-        region: '',
-        newSkill: '',
-        newAvailability: ''
-    });
-
-    const [opportunityResponses, setOpportunityResponses] = useState([]);
 
     useEffect(() => {
         fetchProfileData();
@@ -115,11 +82,14 @@ export default function Profile() {
 
     const fetchProfileData = async () => {
         try {
-            const { data: authUser } = await supabase.auth.getUser();
+            setLoading(true);
 
-            if (!authUser.user) {
+            // Get current authenticated user
+            const { data: { user: currentUser } } = await supabase.auth.getUser();
+
+            if (!currentUser) {
                 toast({
-                    title: "Not authorized",
+                    title: "Authentication required",
                     description: "Please login to view profiles",
                     status: "error",
                     duration: 5000,
@@ -128,130 +98,128 @@ export default function Profile() {
                 return;
             }
 
-            // Set initial user data
-            setUserData({
-                name: authUser.user.user_metadata?.name || 'User',
-                username: authUser.user.email.split('@')[0],
-                email: authUser.user.email,
-                date_joined: new Date(authUser.user.created_at).toLocaleDateString(),
-                location: authUser.user.user_metadata?.location || null
+            // Check if viewing own profile
+            const isOwn = currentUser.email.split('@')[0] === username;
+            setIsOwnProfile(isOwn);
+
+            // If viewing own profile, use current user's ID
+            let targetUserId = isOwn ? currentUser.id : null;
+
+            // If viewing someone else's profile, we can look up their posts first
+            if (!isOwn) {
+                // Find a post by this username to get their user_id
+                const { data: posts, error: postsError } = await supabase
+                    .from('posts')
+                    .select('user_id')
+                    .eq('user_username', username)
+                    .limit(1)
+                    .single();
+
+                if (postsError) {
+                    // If no posts found, try checking volunteer_signups
+                    const { data: volunteer, error: volunteerError } = await supabase
+                        .from('volunteer_signups')
+                        .select('user_id')
+                        .eq('user_id', username)
+                        .limit(1)
+                        .single();
+
+                    if (volunteerError) {
+                        throw new Error("User not found");
+                    }
+                    targetUserId = volunteer.user_id;
+                } else {
+                    targetUserId = posts.user_id;
+                }
+            }
+
+            // Fetch the profile data
+            const { data: profile, error: profileError } = await supabase
+                .from('profiles')
+                .select('*')
+                .eq('id', targetUserId)
+                .single();
+
+            if (profileError) throw profileError;
+
+            // Set profile data
+            setProfileData({
+                id: targetUserId,
+                name: profile.full_name || username,
+                username: username,
+                date_joined: new Date(currentUser.created_at).toLocaleDateString(),
+                city: profile.city || null,
+                state: profile.state || null
             });
 
             // Fetch volunteer data if exists
             const { data: volunteerInfo } = await supabase
                 .from('volunteer_signups')
                 .select('*')
-                .eq('user_id', authUser.user.id)
+                .eq('user_id', targetUserId)
                 .single();
 
             if (volunteerInfo) {
                 setVolunteerData(volunteerInfo);
-                setEditForm({
-                    name: authUser.user.user_metadata?.name || '',
-                    skills: volunteerInfo.skills || [],
-                    availability: volunteerInfo.availability || [],
-                    location: authUser.user.user_metadata?.location || {},
-                    region: volunteerInfo.region || '',
-                    newSkill: '',
-                    newAvailability: ''
-                });
             }
 
             // Fetch opportunity responses
-            if (authUser.user) {
-                const { data: responses, error } = await supabase
-                    .from('opportunity_responses')
-                    .select(`
-                        *,
-                        volunteer_opportunities (
-                            title,
-                            description,
-                            event_date,
-                            status,
-                            location
-                        )
-                    `)
-                    .eq('volunteer_id', authUser.user.id)
-                    .order('response_date', { ascending: false });
+            const { data: responses } = await supabase
+                .from('opportunity_responses')
+                .select(`
+                    *,
+                    volunteer_opportunities (
+                        title,
+                        description,
+                        event_date,
+                        status,
+                        location
+                    )
+                `)
+                .eq('volunteer_id', targetUserId)
+                .order('response_date', { ascending: false });
 
-                if (error) throw error;
-                setOpportunityResponses(responses || []);
-            }
+            setOpportunityResponses(responses || []);
+
         } catch (error) {
             console.error('Error fetching profile:', error);
-            toast({
-                title: "Error",
-                description: "Failed to load profile data",
-                status: "error",
-                duration: 5000,
-            });
-        }
-    };
-
-    const handleEditSubmit = async () => {
-        try {
-            const { data: { user } } = await supabase.auth.getUser();
-
-            // Update volunteer data
-            const { error: volunteerError } = await supabase
-                .from('volunteer_signups')
-                .update({
-                    skills: editForm.skills,
-                    availability: editForm.availability,
-                    region: editForm.region,
-                    city: editForm.location.city,
-                    state: editForm.location.state,
-                    country: editForm.location.country,
-                    location_lat: editForm.location.lat,
-                    location_lng: editForm.location.lng
-                })
-                .eq('user_id', user.id);
-
-            if (volunteerError) throw volunteerError;
-
-            // Update user metadata if name or location changed
-            if (editForm.name !== userData.name ||
-                JSON.stringify(editForm.location) !== JSON.stringify(userData.location)) {
-                const { error: userError } = await supabase.auth.updateUser({
-                    data: {
-                        name: editForm.name,
-                        location: {
-                            city: editForm.location.city,
-                            state: editForm.location.state,
-                            country: editForm.location.country,
-                            lat: editForm.location.lat,
-                            lng: editForm.location.lng
-                        }
-                    }
+            if (error.message === "User not found") {
+                toast({
+                    title: "Profile not found",
+                    description: `Could not find profile for user "${username}"`,
+                    status: "error",
+                    duration: 5000,
                 });
-
-                if (userError) throw userError;
+                // Stay on the page for a moment so user can read the error
+                setTimeout(() => navigate('/'), 2000);
+            } else {
+                toast({
+                    title: "Error",
+                    description: `Failed to load profile: ${error.message}`,
+                    status: "error",
+                    duration: 5000,
+                });
             }
-
-            toast({
-                title: "Success",
-                description: "Profile updated successfully",
-                status: "success",
-                duration: 3000,
-            });
-
-            fetchProfileData();
-            onClose();
-        } catch (error) {
-            console.error('Error updating profile:', error);
-            toast({
-                title: "Error",
-                description: "Failed to update profile",
-                status: "error",
-                duration: 5000,
-            });
+        } finally {
+            setLoading(false);
         }
     };
 
-    if (!userData) {
+    if (loading) {
         return (
             <Box minH="90vh" display="flex" alignItems="center" justifyContent="center">
                 <Text>Loading...</Text>
+            </Box>
+        );
+    }
+
+    if (!profileData) {
+        return (
+            <Box minH="90vh" display="flex" alignItems="center" justifyContent="center">
+                <Alert status="error">
+                    <AlertIcon />
+                    Profile not found
+                </Alert>
             </Box>
         );
     }
@@ -267,19 +235,18 @@ export default function Profile() {
                                 <VStack spacing={4} align="center">
                                     <Avatar
                                         size="2xl"
-                                        name={userData.name}
-                                        src={userData.avatar_url}
+                                        name={profileData.name}
                                     />
                                     <VStack spacing={1}>
                                         <Text fontSize="xl" fontWeight="bold">
-                                            {userData.name}
+                                            {profileData.name}
                                         </Text>
                                         <Text color="gray.500">
-                                            @{userData.username}
+                                            @{profileData.username}
                                         </Text>
-                                        {volunteerData?.city && (
+                                        {profileData.city && (
                                             <Text color="gray.500" fontSize="sm">
-                                                📍 {volunteerData.city}, {volunteerData.state}
+                                                📍 {profileData.city}, {profileData.state}
                                             </Text>
                                         )}
                                         {volunteerData && (
@@ -288,13 +255,15 @@ export default function Profile() {
                                             </Badge>
                                         )}
                                     </VStack>
-                                    <Button
-                                        leftIcon={<EditIcon />}
-                                        size="sm"
-                                        onClick={onOpen}
-                                    >
-                                        Edit Profile
-                                    </Button>
+                                    {isOwnProfile && (
+                                        <Button
+                                            leftIcon={<EditIcon />}
+                                            size="sm"
+                                            onClick={() => navigate('/profile/edit')}
+                                        >
+                                            Edit Profile
+                                        </Button>
+                                    )}
                                 </VStack>
                             </SectionCard>
 
@@ -332,7 +301,7 @@ export default function Profile() {
                                         <SectionCard title="About">
                                             <VStack align="start" spacing={2}>
                                                 <Text color="gray.600">
-                                                    Member since {userData.date_joined}
+                                                    Member since {profileData.date_joined}
                                                 </Text>
                                                 {volunteerData && (
                                                     <Text color="gray.600">
@@ -384,62 +353,36 @@ export default function Profile() {
 
                                 {volunteerData && (
                                     <TabPanel>
-                                        <Grid templateColumns="repeat(auto-fit, minmax(300px, 1fr))" gap={6}>
-                                            <SectionCard title="Recent Responses">
-                                                <Text color="gray.600">No recent responses</Text>
-                                            </SectionCard>
-                                        </Grid>
+                                        <SectionCard title="Recent Activity">
+                                            {opportunityResponses.length === 0 ? (
+                                                <Text color="gray.600">No recent activity</Text>
+                                            ) : (
+                                                <VStack spacing={4} align="stretch">
+                                                    {opportunityResponses.map((response) => (
+                                                        <Box
+                                                            key={response.id}
+                                                            p={4}
+                                                            borderWidth="1px"
+                                                            borderRadius="md"
+                                                            _hover={{ bg: 'gray.50' }}
+                                                        >
+                                                            <Text fontWeight="bold">
+                                                                {response.volunteer_opportunities.title}
+                                                            </Text>
+                                                            <Text color="gray.600" fontSize="sm">
+                                                                {new Date(response.response_date).toLocaleDateString()}
+                                                            </Text>
+                                                        </Box>
+                                                    ))}
+                                                </VStack>
+                                            )}
+                                        </SectionCard>
                                     </TabPanel>
                                 )}
 
                                 <TabPanel>
                                     <SectionCard title="Recent Activity">
-                                        {opportunityResponses.length === 0 ? (
-                                            <Text color="gray.600">No volunteer opportunity responses yet</Text>
-                                        ) : (
-                                            <VStack spacing={4} align="stretch">
-                                                {opportunityResponses.map((response) => (
-                                                    <Box
-                                                        key={response.id}
-                                                        p={4}
-                                                        borderWidth="1px"
-                                                        borderRadius="md"
-                                                        _hover={{ bg: 'gray.50' }}
-                                                    >
-                                                        <HStack justify="space-between" mb={2}>
-                                                            <Text fontWeight="bold">
-                                                                {response.volunteer_opportunities.title}
-                                                            </Text>
-                                                            <Badge
-                                                                colorScheme={
-                                                                    response.status === 'accepted' ? 'green' :
-                                                                    response.status === 'pending' ? 'yellow' :
-                                                                    'red'
-                                                                }
-                                                            >
-                                                                {response.status}
-                                                            </Badge>
-                                                        </HStack>
-                                                        <Text color="gray.600" fontSize="sm" mb={2}>
-                                                            {response.volunteer_opportunities.description}
-                                                        </Text>
-                                                        <HStack spacing={4} color="gray.500" fontSize="sm">
-                                                            <Text>
-                                                                Responded: {new Date(response.response_date).toLocaleDateString()}
-                                                            </Text>
-                                                            <Text>
-                                                                Event Date: {new Date(response.volunteer_opportunities.event_date).toLocaleDateString()}
-                                                            </Text>
-                                                            {response.volunteer_opportunities.location && (
-                                                                <Text>
-                                                                    📍 {response.volunteer_opportunities.location}
-                                                                </Text>
-                                                            )}
-                                                        </HStack>
-                                                    </Box>
-                                                ))}
-                                            </VStack>
-                                        )}
+                                        <Text color="gray.600">No recent activity to display</Text>
                                     </SectionCard>
                                 </TabPanel>
                             </TabPanels>
@@ -447,169 +390,6 @@ export default function Profile() {
                     </GridItem>
                 </Grid>
             </Box>
-
-            {/* Edit Profile Modal */}
-            <Modal isOpen={isOpen} onClose={onClose} size="xl">
-                <ModalOverlay />
-                <ModalContent>
-                    <ModalHeader>Edit Profile</ModalHeader>
-                    <ModalCloseButton />
-                    <ModalBody>
-                        <VStack spacing={6}>
-                            <FormControl>
-                                <FormLabel>Name</FormLabel>
-                                <Input
-                                    value={editForm.name}
-                                    onChange={(e) => setEditForm({
-                                        ...editForm,
-                                        name: e.target.value
-                                    })}
-                                />
-                            </FormControl>
-
-                            <FormControl>
-                                <FormLabel>Location</FormLabel>
-                                <LocationSearch
-                                    onSelect={(location) => setEditForm({
-                                        ...editForm,
-                                        location,
-                                        region: `${location.city}, ${location.state}`
-                                    })}
-                                />
-                            </FormControl>
-
-                            {volunteerData && (
-                                <>
-                                    <FormControl>
-                                        <FormLabel>Skills</FormLabel>
-                                        <Wrap mb={2}>
-                                            {editForm.skills.map((skill, index) => (
-                                                <WrapItem key={index}>
-                                                    <Tag
-                                                        size="md"
-                                                        borderRadius="full"
-                                                        variant="solid"
-                                                        colorScheme="blue"
-                                                    >
-                                                        <TagLabel>{skill}</TagLabel>
-                                                        <TagCloseButton
-                                                            onClick={() => {
-                                                                const newSkills = [...editForm.skills];
-                                                                newSkills.splice(index, 1);
-                                                                setEditForm({
-                                                                    ...editForm,
-                                                                    skills: newSkills
-                                                                });
-                                                            }}
-                                                        />
-                                                    </Tag>
-                                                </WrapItem>
-                                            ))}
-                                        </Wrap>
-                                        <HStack>
-                                            <Select
-                                                value={editForm.newSkill}
-                                                onChange={(e) => setEditForm({
-                                                    ...editForm,
-                                                    newSkill: e.target.value
-                                                })}
-                                                placeholder="Select a skill"
-                                            >
-                                                {STANDARD_SKILLS
-                                                    .filter(skill => !editForm.skills.includes(skill))
-                                                    .map((skill) => (
-                                                        <option key={skill} value={skill}>
-                                                            {skill}
-                                                        </option>
-                                                    ))}
-                                            </Select>
-                                            <IconButton
-                                                icon={<AddIcon />}
-                                                onClick={() => {
-                                                    if (editForm.newSkill) {
-                                                        setEditForm({
-                                                            ...editForm,
-                                                            skills: [...editForm.skills, editForm.newSkill],
-                                                            newSkill: ''
-                                                        });
-                                                    }
-                                                }}
-                                            />
-                                        </HStack>
-                                    </FormControl>
-
-                                    <FormControl>
-                                        <FormLabel>Availability</FormLabel>
-                                        <Wrap mb={2}>
-                                            {editForm.availability.map((time, index) => (
-                                                <WrapItem key={index}>
-                                                    <Tag
-                                                        size="md"
-                                                        borderRadius="full"
-                                                        variant="solid"
-                                                        colorScheme="green"
-                                                    >
-                                                        <TagLabel>{time}</TagLabel>
-                                                        <TagCloseButton
-                                                            onClick={() => {
-                                                                const newAvailability = [...editForm.availability];
-                                                                newAvailability.splice(index, 1);
-                                                                setEditForm({
-                                                                    ...editForm,
-                                                                    availability: newAvailability
-                                                                });
-                                                            }}
-                                                        />
-                                                    </Tag>
-                                                </WrapItem>
-                                            ))}
-                                        </Wrap>
-                                        <HStack>
-                                            <Select
-                                                value={editForm.newAvailability}
-                                                onChange={(e) => setEditForm({
-                                                    ...editForm,
-                                                    newAvailability: e.target.value
-                                                })}
-                                                placeholder="Select availability"
-                                            >
-                                                {AVAILABILITY_OPTIONS
-                                                    .filter(option => !editForm.availability.includes(option))
-                                                    .map((option) => (
-                                                        <option key={option} value={option}>
-                                                            {option}
-                                                        </option>
-                                                    ))}
-                                            </Select>
-                                            <IconButton
-                                                icon={<AddIcon />}
-                                                onClick={() => {
-                                                    if (editForm.newAvailability) {
-                                                        setEditForm({
-                                                            ...editForm,
-                                                            availability: [...editForm.availability, editForm.newAvailability],
-                                                            newAvailability: ''
-                                                        });
-                                                    }
-                                                }}
-                                            />
-                                        </HStack>
-                                    </FormControl>
-                                </>
-                            )}
-                        </VStack>
-                    </ModalBody>
-
-                    <ModalFooter>
-                        <Button variant="ghost" mr={3} onClick={onClose}>
-                            Cancel
-                        </Button>
-                        <Button colorScheme="blue" onClick={handleEditSubmit}>
-                            Save Changes
-                        </Button>
-                    </ModalFooter>
-                </ModalContent>
-            </Modal>
         </Box>
     );
 }
