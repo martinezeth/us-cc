@@ -51,6 +51,16 @@ const VolunteerMessages = ({ onUnreadCountChange }) => {
         try {
             const { data: { user } } = await supabase.auth.getUser();
 
+            // First get the opportunities this volunteer has responded to
+            const { data: responses } = await supabase
+                .from('opportunity_responses')
+                .select('opportunity_id')
+                .eq('volunteer_id', user.id)
+                .eq('status', 'accepted');
+
+            // Get the opportunity IDs the volunteer has access to
+            const accessibleOpportunityIds = responses?.map(r => r.opportunity_id) || [];
+
             // Get messages with opportunity data and read receipts
             const { data: messagesData, error: messagesError } = await supabase
                 .from('messages')
@@ -67,7 +77,10 @@ const VolunteerMessages = ({ onUnreadCountChange }) => {
                         read_at
                     )
                 `)
-                .or(`volunteer_id.eq.${user.id},and(is_group_message.eq.true,volunteer_id.is.null)`)
+                .or(
+                    `and(volunteer_id.eq.${user.id},is_group_message.eq.false),` +
+                    `and(is_group_message.eq.true,opportunity_id.in.(${accessibleOpportunityIds.join(',')}))`
+                )
                 .order('sent_at', { ascending: false });
 
             if (messagesError) throw messagesError;
@@ -216,6 +229,17 @@ const VolunteerMessages = ({ onUnreadCountChange }) => {
                 status: "error",
                 duration: 3000
             });
+        }
+    };
+
+    const fetchUserMetadata = async () => {
+        try {
+            const { data: { user }, error } = await supabase.auth.getUser();
+            if (error) throw error;
+            return user.user_metadata;
+        } catch (error) {
+            console.error('Error fetching user metadata:', error);
+            return null;
         }
     };
 

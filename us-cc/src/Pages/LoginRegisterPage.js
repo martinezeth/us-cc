@@ -240,60 +240,74 @@ function Login({ onSwitch }) {
 
     setIsLoading(true);
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password
-      });
+        const { data, error } = await supabase.auth.signInWithPassword({
+            email,
+            password
+        });
 
-      if (error) throw error;
+        if (error) throw error;
 
-      toast({
-        title: "Login successful!",
-        status: "success",
-        duration: 3000,
-        isClosable: true,
-      });
-      navigate('/');
+        // Check user metadata to determine where to redirect
+        const isOrganization = data.user?.user_metadata?.is_organization;
+
+        toast({
+            title: "Login successful!",
+            status: "success",
+            duration: 3000,
+            isClosable: true,
+        });
+
+        // Redirect based on user type with correct path
+        if (isOrganization) {
+            navigate('/organization-dashboard');
+        } else {
+            navigate('/volunteering');
+        }
     } catch (error) {
-      toast({
-        title: "Login failed",
-        description: error.message,
-        status: "error",
-        duration: 5000,
-        isClosable: true,
-      });
+        toast({
+            title: "Login failed",
+            description: error.message,
+            status: "error",
+            duration: 5000,
+            isClosable: true,
+        });
     } finally {
-      setIsLoading(false);
+        setIsLoading(false);
     }
   };
 
   const handleDemoLogin = async (type) => {
     setIsLoading(true);
+    console.log('=== DEMO LOGIN DEBUG START ===');
+
     try {
         const credentials = type === 'volunteer'
             ? { email: 'demo@volunteer.com', password: 'demoVolunteer123!' }
             : { email: 'demo@organization.com', password: 'demoOrg123!' };
 
+        await supabase.auth.signOut();
         const { data, error } = await supabase.auth.signInWithPassword(credentials);
-
+        
         if (error) throw error;
 
+        // Use the correct route path from App.js
+        const targetPath = type === 'volunteer' ? '/volunteering' : '/organization-dashboard';
+        console.log('Target path:', targetPath);
+        
         toast({
             title: `Welcome to the ${type === 'volunteer' ? 'Volunteer' : 'Organization'} Demo!`,
-            description: `You're now logged in as a demo ${type}`,
             status: "success",
             duration: 3000,
-            isClosable: true,
         });
-        
-        navigate(type === 'volunteer' ? '/volunteer-dashboard' : '/organization-dashboard');
+
+        navigate(targetPath);
     } catch (error) {
+        console.error('Login error:', error);
         toast({
             title: "Demo login failed",
-            description: "Please try again or use guest mode",
+            description: error.message,
             status: "error",
             duration: 5000,
-            isClosable: true,
         });
     } finally {
         setIsLoading(false);

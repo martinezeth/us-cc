@@ -289,15 +289,16 @@ const OpportunityCard = ({ opportunity, userSkills, isDemoMode, isResponseTab = 
     const checkIfResponded = async () => {
         try {
             const { data: { user } } = await supabase.auth.getUser();
+            // Change from .single() to regular select
             const { data, error } = await supabase
                 .from('opportunity_responses')
                 .select('*')
                 .eq('opportunity_id', opportunity.id)
-                .eq('volunteer_id', user.id)
-                .single();
+                .eq('volunteer_id', user.id);
 
-            if (error && error.code !== 'PGRST116') throw error;
-            setHasResponded(!!data);
+            if (error) throw error;
+            // Check if we got any responses
+            setHasResponded(data && data.length > 0);
         } catch (error) {
             console.error('Error checking response status:', error);
         }
@@ -441,18 +442,19 @@ export default function VolunteerDashPage() {
 
     const checkUserStatus = async () => {
         const { data: { user } } = await supabase.auth.getUser();
-        setIsDemoMode(user?.email === 'demo@demo.com');
+        setIsDemoMode(user?.email === 'demo@volunteer.com');
 
-        // Check if user is already a volunteer
-        const { data: volunteerData } = await supabase
+        // Check if user is already a volunteer - Changed from .single() to just select
+        const { data: volunteerData, error } = await supabase
             .from('volunteer_signups')
             .select('*')
             .eq('user_id', user.id)
-            .single();
+            .limit(1); // Add limit to get just the latest record
 
-        setIsVolunteer(!!volunteerData);
-        if (volunteerData) {
-            setUserSkills(volunteerData.skills || []);
+        // Check if we got any volunteer records
+        setIsVolunteer(!!volunteerData && volunteerData.length > 0);
+        if (volunteerData && volunteerData.length > 0) {
+            setUserSkills(volunteerData[0].skills || []);
         }
     };
 
@@ -553,6 +555,38 @@ export default function VolunteerDashPage() {
         fetchOpportunities();
         fetchResponses();
     };
+
+    useEffect(() => {
+        const debugMessages = async () => {
+            const { data: { user } } = await supabase.auth.getUser();
+            console.log('Current user:', user);
+
+            // Get all messages for this user
+            const { data: messages, error } = await supabase
+                .from('messages')
+                .select(`
+                    *,
+                    opportunity:volunteer_opportunities (
+                        id,
+                        title,
+                        organization_id
+                    )
+                `)
+                .or(`volunteer_id.eq.${user.id},and(is_group_message.eq.true,volunteer_id.is.null)`);
+
+            console.log('All messages:', messages);
+
+            // Get user's opportunity responses
+            const { data: responses } = await supabase
+                .from('opportunity_responses')
+                .select('*')
+                .eq('volunteer_id', user.id);
+
+            console.log('User responses:', responses);
+        };
+
+        debugMessages();
+    }, []);
 
     if (!isVolunteer) {
         return (

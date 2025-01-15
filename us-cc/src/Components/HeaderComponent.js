@@ -199,7 +199,7 @@ const HeaderComponent = () => {
                 {!isOrganization && (
                   <Button 
                     as={Link} 
-                    to={isRegisteredVolunteer ? "/volunteer-dashboard" : "/volunteer-signup"} 
+                    to={isRegisteredVolunteer ? "/volunteering" : "/volunteer-signup"}
                     variant="ghost"
                   >
                     {isRegisteredVolunteer ? "Volunteer Dashboard" : "Become a Volunteer"}
@@ -237,7 +237,7 @@ const HeaderComponent = () => {
                   {!isOrganization && (
                     <Button 
                       as={Link} 
-                      to={isRegisteredVolunteer ? "/volunteer-dashboard" : "/volunteer-signup"} 
+                      to={isRegisteredVolunteer ? "/volunteering" : "/volunteer-signup"}
                       variant="ghost"
                     >
                       {isRegisteredVolunteer ? "Volunteer Dashboard" : "Become a Volunteer"}

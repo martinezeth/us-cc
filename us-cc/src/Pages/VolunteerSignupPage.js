@@ -77,20 +77,46 @@ function VolunteerPage() {
 
         setLoading(true);
         try {
-            const { data, error } = await supabase
+            // Check if user already has a signup
+            const { data: existingSignup } = await supabase
                 .from('volunteer_signups')
-                .insert([{
-                    user_id: user.id,
-                    skills: specialSkills,
-                    availability: availability,
-                    location_lat: location.lat,
-                    location_lng: location.lng,
-                    city: location.city,
-                    state: location.state,
-                    country: location.country
-                }]);
+                .select('*')
+                .eq('user_id', user.id)
+                .limit(1);
 
-            if (error) throw error;
+            if (existingSignup && existingSignup.length > 0) {
+                // Update existing signup
+                const { error: updateError } = await supabase
+                    .from('volunteer_signups')
+                    .update({
+                        skills: specialSkills,
+                        availability: availability,
+                        location_lat: location.lat,
+                        location_lng: location.lng,
+                        city: location.city,
+                        state: location.state,
+                        country: location.country
+                    })
+                    .eq('user_id', user.id);
+
+                if (updateError) throw updateError;
+            } else {
+                // Create new signup
+                const { error } = await supabase
+                    .from('volunteer_signups')
+                    .insert([{
+                        user_id: user.id,
+                        skills: specialSkills,
+                        availability: availability,
+                        location_lat: location.lat,
+                        location_lng: location.lng,
+                        city: location.city,
+                        state: location.state,
+                        country: location.country
+                    }]);
+
+                if (error) throw error;
+            }
 
             // Update user profile with location
             const { error: profileError } = await supabase
@@ -105,12 +131,12 @@ function VolunteerPage() {
 
             toast({
                 title: "Success!",
-                description: "You've successfully registered as a volunteer",
+                description: "Volunteer profile updated successfully",
                 status: "success",
                 duration: 5000,
             });
 
-            navigate('/profile');
+            navigate('/volunteering');
         } catch (error) {
             toast({
                 title: "Error",
