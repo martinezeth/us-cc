@@ -3,27 +3,82 @@ import {
   Box, Flex, Button, Image, IconButton, Spacer, Text,
   Link as ChakraLink, Stack, Avatar, Menu, MenuButton,
   MenuList, MenuItem, Drawer, DrawerBody, DrawerHeader,
-  DrawerOverlay, DrawerContent, DrawerCloseButton, useDisclosure
+  DrawerOverlay, DrawerContent, DrawerCloseButton, useDisclosure,
+  Icon
 } from '@chakra-ui/react';
 import { HamburgerIcon, ChevronDownIcon, WarningIcon } from '@chakra-ui/icons';
+import { FaUser, FaBuilding, FaSignOutAlt } from 'react-icons/fa';
 import { Link, useNavigate } from 'react-router-dom';
 import Logo from '../Images/usccLogoDraft.svg';
 import DropDown from './Disasters';
 import { supabase } from '../supabaseClient';
 import CreateIncidentModal from './CreateIncidentModal';
 
-const UserProfileAvatar = ({ username, isOrganization }) => {
-  const initials = username ? username.substring(0, 1).toUpperCase() : '';
+const UserProfileAvatar = ({ user, isOrganization }) => {
+  const navigate = useNavigate();
+  const [displayName, setDisplayName] = useState('');
+
+  useEffect(() => {
+    // Set initial display name
+    setDisplayName(user?.user_metadata?.name || user?.email?.split('@')[0] || '');
+
+    // Listen for profile updates
+    const handleProfileUpdate = (event) => {
+      setDisplayName(event.detail?.full_name || user?.email?.split('@')[0] || '');
+    };
+
+    window.addEventListener('profileUpdate', handleProfileUpdate);
+
+    return () => {
+      window.removeEventListener('profileUpdate', handleProfileUpdate);
+    };
+  }, [user]);
+
+  const handleLogout = async () => {
+    try {
+      await supabase.auth.signOut();
+      navigate('/');
+    } catch (error) {
+      console.error('Error logging out:', error);
+    }
+  };
+
   return (
-    <Link to={`/profile/${username}`}>
-      <Avatar
-        name={username}
-        size="md"
-        bg={isOrganization ? "blue.500" : "gray.500"}
-      >
-        {initials}
-      </Avatar>
-    </Link>
+    <Menu>
+      <MenuButton>
+        <Avatar
+          name={displayName}
+          size="md"
+          bg={isOrganization ? "blue.500" : "gray.500"}
+          cursor="pointer"
+          _hover={{ transform: 'scale(1.05)' }}
+          transition="all 0.2s"
+        />
+      </MenuButton>
+      <MenuList>
+        <MenuItem
+          onClick={() => navigate(`/profile/${user?.email?.split('@')[0]}`)}
+          icon={<Icon as={FaUser} />}
+        >
+          View Profile
+        </MenuItem>
+        {isOrganization && (
+          <MenuItem
+            onClick={() => navigate('/organization-dashboard')}
+            icon={<Icon as={FaBuilding} />}
+          >
+            Dashboard
+          </MenuItem>
+        )}
+        <MenuItem
+          onClick={handleLogout}
+          icon={<Icon as={FaSignOutAlt} />}
+          color="red.500"
+        >
+          Logout
+        </MenuItem>
+      </MenuList>
+    </Menu>
   );
 };
 
@@ -34,6 +89,7 @@ const HeaderComponent = () => {
   const [isOrganization, setIsOrganization] = useState(false);
   const [loading, setLoading] = useState(true);
   const [isIncidentModalOpen, setIsIncidentModalOpen] = useState(false);
+  const [profileData, setProfileData] = useState(null);
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -53,6 +109,18 @@ const HeaderComponent = () => {
     });
 
     return () => subscription.unsubscribe();
+  }, []);
+
+  useEffect(() => {
+    const handleProfileUpdate = (event) => {
+      setProfileData(event.detail);
+    };
+
+    window.addEventListener('profileUpdate', handleProfileUpdate);
+
+    return () => {
+      window.removeEventListener('profileUpdate', handleProfileUpdate);
+    };
   }, []);
 
   const handleLogout = async () => {
@@ -109,8 +177,7 @@ const HeaderComponent = () => {
                 <Button variant="ghost" colorScheme="red" leftIcon={<WarningIcon />} onClick={() => setIsIncidentModalOpen(true)}>
                   Report Incident
                 </Button>
-                <UserProfileAvatar username={user.email?.split('@')[0]} isOrganization={isOrganization} />
-                <Button variant="ghost" onClick={handleLogout}>Logout</Button>
+                <UserProfileAvatar user={user} isOrganization={isOrganization} />
               </>
             ) : (
               <Button as={Link} to="/login" variant="ghost">Login</Button>
@@ -139,7 +206,7 @@ const HeaderComponent = () => {
                   <Button variant="ghost" colorScheme="red" onClick={() => { setIsIncidentModalOpen(true); onClose(); }}>
                     Report Incident
                   </Button>
-                  <UserProfileAvatar username={user.email?.split('@')[0]} isOrganization={isOrganization} />
+                  <UserProfileAvatar user={user} isOrganization={isOrganization} />
                   <Button variant="ghost" onClick={() => { handleLogout(); onClose(); }}>Logout</Button>
                 </>
               ) : (

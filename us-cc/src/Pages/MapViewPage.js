@@ -262,7 +262,7 @@ function MapPage() {
                 <Marker
                   key={incident.incident_id}
                   position={[incident.location_lat, incident.location_lng]}
-                  icon={mapIcons[incident.incident_type.toLowerCase().replace(/ /g, '_')] || new L.Icon.Default()}
+                  icon={mapIcons[incident.incident_type] || new L.Icon.Default()}
                 >
                   <Popup>
                     <Box p={1}>

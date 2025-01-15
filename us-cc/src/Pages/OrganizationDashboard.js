@@ -71,6 +71,7 @@ import CreateVolunteerOpportunityModal from '../Components/CreateVolunteerOpport
 import CreateIncidentModal from '../Components/CreateIncidentModal';
 import CreatePostModal from '../Components/CreatePostModal';
 import EditVolunteerOpportunityModal from '../Components/EditVolunteerOpportunityModal';
+import { INCIDENT_TYPES } from '../constants/incidentTypes';
 
 window.debugOrganization = {
     updateMetadata: async () => {
@@ -88,7 +89,7 @@ window.debugOrganization = {
             console.error('Error:', error);
         }
     },
-    
+
     checkCurrentUser: async () => {
         const { data: { user }, error } = await supabase.auth.getUser();
         console.log('Current user:', user);
@@ -172,10 +173,10 @@ const VolunteerResponsesDrawer = ({ isOpen, onClose, opportunity }) => {
 
     const handleSendDirectMessage = async () => {
         if (!selectedVolunteer) return;
-        
+
         try {
             const { data: { user } } = await supabase.auth.getUser();
-            
+
             // Get organization name from profile
             const { data: orgProfile } = await supabase
                 .from('profiles')
@@ -184,7 +185,7 @@ const VolunteerResponsesDrawer = ({ isOpen, onClose, opportunity }) => {
                 .single();
 
             const orgName = orgProfile?.organization_name || orgProfile?.full_name || user.user_metadata?.name;
-            
+
             const { error } = await supabase
                 .from('messages')
                 .insert([{
@@ -218,7 +219,7 @@ const VolunteerResponsesDrawer = ({ isOpen, onClose, opportunity }) => {
     const handleSendGroupMessage = async () => {
         try {
             const { data: { user } } = await supabase.auth.getUser();
-            
+
             // Get organization name from profile
             const { data: orgProfile } = await supabase
                 .from('profiles')
@@ -227,7 +228,7 @@ const VolunteerResponsesDrawer = ({ isOpen, onClose, opportunity }) => {
                 .single();
 
             const orgName = orgProfile?.organization_name || orgProfile?.full_name || user.user_metadata?.name;
-            
+
             const { error } = await supabase
                 .from('messages')
                 .insert([{
@@ -276,7 +277,7 @@ const VolunteerResponsesDrawer = ({ isOpen, onClose, opportunity }) => {
                             <Heading size="sm" p={4} borderBottom="1px" borderColor="gray.100">
                                 Volunteers ({opportunity?.responses?.length || 0})
                             </Heading>
-                            
+
                             {/* Search Bar */}
                             <Box p={4} borderBottom="1px" borderColor="gray.100">
                                 <InputGroup>
@@ -970,7 +971,10 @@ export default function OrganizationDashboard() {
                                     {incidents.map(incident => (
                                         <ContentCard
                                             key={`incident-${incident.id}`}
-                                            item={incident}
+                                            item={{
+                                                ...incident,
+                                                title: INCIDENT_TYPES[incident.incident_type] || incident.incident_type
+                                            }}
                                             type="incident"
                                             onDelete={handleDelete('incident')}
                                         />

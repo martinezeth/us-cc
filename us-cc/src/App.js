@@ -20,6 +20,7 @@ import Covid from './Pages/Covid';
 import Earthquake from './Pages/Earthquake';
 import AboutPage from './Pages/About';
 import OrganizationDashboard from './Pages/OrganizationDashboard';
+
 import { CookiesProvider, useCookies } from 'react-cookie';
 
 import theme from './Styles/theme';
