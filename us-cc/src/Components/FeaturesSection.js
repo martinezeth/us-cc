@@ -1,69 +1,80 @@
 import React from 'react';
-import { Box, SimpleGrid, VStack, Text, Icon } from '@chakra-ui/react';
-import { MdReportProblem, MdGroupWork, MdBarChart, MdSettings } from 'react-icons/md';
+import { Box, Container, SimpleGrid, Heading, Text, Icon } from '@chakra-ui/react';
+import { MdMap, MdGroup, MdAssignment, MdAnnouncement, MdDashboard } from 'react-icons/md';
+import { FaHandsHelping } from 'react-icons/fa';
 import { useNavigate } from 'react-router-dom';
 
 const FeatureCard = ({ title, description, icon, onClick }) => {
   return (
-    <VStack
-      p={5}
+    <Box
       bg="white"
-      boxShadow="md"
-      rounded="md"
-      align="center"
-      spacing={4}
-      _hover={{ bg: 'gray.100' }}
-      onClick={onClick}
+      p={6}
+      rounded="lg"
+      shadow="md"
+      border="1px"
+      borderColor="gray.100"
+      transition="all 0.3s"
       cursor="pointer"
+      onClick={onClick}
+      _hover={{ transform: 'translateY(-5px)', shadow: 'lg' }}
+      position="relative"
     >
-      <Icon as={icon} w={10} h={10} color="blue.500" />
-      <Text fontSize="xl" fontWeight="semibold">
-        {title}
-      </Text>
-      <Text textAlign="center" color="gray.600">
-        {description}
-      </Text>
-    </VStack>
-  );
-};
-
-
-const FeaturesSection = () => {
-  const navigate = useNavigate();
-
-  return (
-    <Box p={5} bg="gray.50">
-      <Text fontSize="3xl" textAlign="center" mb={6}>
-        Key Features
-      </Text>
-      <SimpleGrid columns={{ base: 1, md: 2, lg: 4 }} spacing={10}>
-        <FeatureCard
-          title="Incident Reporting"
-          description="Report and track incidents in real-time."
-          icon={MdReportProblem}
-          onClick={() => navigate('/posts')}
-        />
-        <FeatureCard
-          title="Resource Management"
-          description="Efficient allocation of resources during crises."
-          icon={MdSettings}
-          onClick={() => navigate('/resources')}
-        />
-        <FeatureCard
-          title="Volunteer Coordination"
-          description="Coordinate volunteer efforts effectively."
-          icon={MdGroupWork}
-          onClick={() => navigate('/volunteering')}
-        />
-        <FeatureCard
-          title="Real-time Data Visualization"
-          description="Visualize data to make informed decisions quickly."
-          icon={MdBarChart}
-          onClick={() => navigate('/mapview')}
-        />
-      </SimpleGrid>
+      <Icon as={icon} w={10} h={10} color="blue.500" mb={4} />
+      <Heading size="md" mb={2}>{title}</Heading>
+      <Text color="gray.600">{description}</Text>
     </Box>
   );
 };
 
-export default FeaturesSection;
+export default function FeaturesSection() {
+  const navigate = useNavigate();
+
+  return (
+    <Box py={16} bg="gray.50" width="100%">
+      <Box maxW="90%" mx="auto">
+        <Heading textAlign="center" mb={12} size="xl">
+          Key Features
+        </Heading>
+
+        <SimpleGrid columns={{ base: 1, md: 2, lg: 3 }} spacing={8}>
+          <FeatureCard
+            title="Incident Map"
+            description="View and report real-time incidents with our interactive map interface. Track emergency situations in your area."
+            icon={MdMap}
+            onClick={() => navigate('/mapview')}
+          />
+          <FeatureCard
+            title="Volunteer Opportunities"
+            description="Browse and respond to volunteer opportunities. Connect with organizations making a difference."
+            icon={FaHandsHelping}
+            onClick={() => navigate('/volunteering')}
+          />
+          <FeatureCard
+            title="Organization Dashboard"
+            description="For organizations: Manage volunteer opportunities and coordinate response efforts effectively."
+            icon={MdDashboard}
+            onClick={() => navigate('/organization-dashboard')}
+          />
+          <FeatureCard
+            title="Community Posts"
+            description="Share and stay updated with community posts about local safety concerns and lost pets."
+            icon={MdAnnouncement}
+            onClick={() => navigate('/posts')}
+          />
+          <FeatureCard
+            title="Resource Center"
+            description="Access emergency preparedness guides and crisis response resources."
+            icon={MdAssignment}
+            onClick={() => navigate('/resources')}
+          />
+          <FeatureCard
+            title="Volunteer Registration"
+            description="Register as a volunteer, specify your skills, and get matched with opportunities."
+            icon={MdGroup}
+            onClick={() => navigate('/volunteer-signup')}
+          />
+        </SimpleGrid>
+      </Box>
+    </Box>
+  );
+}

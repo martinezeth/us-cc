@@ -19,6 +19,8 @@ import Hurricane from './Pages/Hurricane';
 import Covid from './Pages/Covid';
 import Earthquake from './Pages/Earthquake';
 import AboutPage from './Pages/About';
+import OrganizationDashboard from './Pages/OrganizationDashboard';
+
 import { CookiesProvider, useCookies } from 'react-cookie';
 
 import theme from './Styles/theme';
@@ -30,34 +32,35 @@ function App() {
 
   return (
 
-      <ChakraProvider theme={theme}>
-        <Router>
-          <div className="App">
-            <HeaderComponent />
-              <Routes>
-                <Route path="/" element={<LandingPage />} />
-                <Route path="/login" element={<AuthenticationPage RegoOrLogin="Login" />} />
-                <Route path="/register" element={<AuthenticationPage RegoOrLogin="Register" />} />
-                <Route path="/about" element={<AboutPage/>} />
-                <Route path="/newreport" element={<NewReportPage />} />
-                <Route path="/posts" element={<Posts/>}/>
-                <Route path='/posts/:username' element={<Posts />}/>
-                <Route path="/profile/:username" element={<Profile/>} />
-                <Route path="/wildfire" element={<Wildfire/>} />
-                <Route path="/flood" element={<Flood/>} />
-                <Route path="/earthquake" element={<Earthquake/>} />
-                <Route path="/hurricane" element={<Hurricane/>} />
-                <Route path="/COVID" element={<Covid/>} />
-                <Route path="/resources" element={<ResourcesPage />} />
-                <Route path="/mapview" element={<MapPage />} />
-                <Route path="/volunteering" element={<VolunteerDashPage />} />
-                <Route path="/volunteer-register" element={<VolunteerSignupPage />} />
-              </Routes>
-              <div className="footerSpacer"> </div>
-            <FooterComponent />
-          </div>
-        </Router>
-      </ChakraProvider>
+    <ChakraProvider theme={theme}>
+      <Router>
+        <div className="App">
+          <HeaderComponent />
+          <Routes>
+            <Route path="/" element={<LandingPage />} />
+            <Route path="/login" element={<AuthenticationPage RegoOrLogin="Login" />} />
+            <Route path="/register" element={<AuthenticationPage RegoOrLogin="Register" />} />
+            <Route path="/about" element={<AboutPage />} />
+            <Route path="/newreport" element={<NewReportPage />} />
+            <Route path="/posts" element={<Posts />} />
+            <Route path='/posts/:username' element={<Posts />} />
+            <Route path="/profile/:username" element={<Profile />} />
+            <Route path="/wildfire" element={<Wildfire />} />
+            <Route path="/flood" element={<Flood />} />
+            <Route path="/earthquake" element={<Earthquake />} />
+            <Route path="/hurricane" element={<Hurricane />} />
+            <Route path="/COVID" element={<Covid />} />
+            <Route path="/resources" element={<ResourcesPage />} />
+            <Route path="/mapview" element={<MapPage />} />
+            <Route path="/volunteering" element={<VolunteerDashPage />} />
+            <Route path="/organization-dashboard" element={<OrganizationDashboard />} />
+            <Route path="/volunteer-signup" element={<VolunteerSignupPage />} />
+          </Routes>
+          <div className="footerSpacer"> </div>
+          <FooterComponent />
+        </div>
+      </Router>
+    </ChakraProvider>
   );
 }
 

@@ -1,25 +1,12 @@
 const express = require('express');
-const mysql = require('mysql');
-const { validateCredentials, createUser, decodeToken } = require('./Controllers/AuthController');
-const { getUserData, updateUserInformation, getIDFromUsername, getUserVolunteering, getUserDataUsername, getRegions, getVolunteersByRegion, getVolunteersBySkills, makeUserVolunteer } = require('./Controllers/UserController');
-const { getUserPostData, getRecentPostData, createUserPost } = require('./Controllers/PostsController');
-const { fetchIncidents, createIncidentReport, incidentsByRadius } = require('./Controllers/IncidentController');
 const cors = require('cors');
 const jwt = require('jsonwebtoken');
+const supabase = require('./supabaseServer');
 const app = express();
 require('dotenv').config({ path: './dbConnection.env' });
 
-/**
- * This file will contain:
- * - Database connection
- * - Routes
- * - API host
- * - API middleware
- * - env variables
- */
-
 app.use(cors({
-    origin: 'http://localhost:3000',
+    origin: ['http://localhost:3000', 'http://localhost:3001'],
     methods: ['GET', 'POST', 'PUT'],
     credentials: true,
     allowedHeaders: ['Content-Type', 'Authorization']
@@ -27,446 +14,111 @@ app.use(cors({
 
 app.use(express.json());
 
-
-
-// AWS Database connection setup
-const connection = mysql.createConnection({
-    host: process.env.DB_HOST,
-    user: process.env.DB_USER,
-    password: process.env.DB_PASS,
-    database: process.env.DB_NAME
-});
-
-
-connection.connect(err => {
-    if (err) {
-        console.error('Error connecting to database: ', err);
-        return;
-    }
-    console.log(`Connected to database ${process.env.DB_NAME}.`);
-});
-
-/*
- * Routes
- */
-
-app.post('/api/login', (req, res) => {
-  const { username, password } = req.body;
-//   console.log(`Login attempt for user: ${username}`);
-
-  validateCredentials(username, password, (error, userExists) => {
-      if (error) {
-          console.error('Error validating credentials:', error);
-          res.status(500).send('Error validating credentials');
-          return;
-      }
-    //   console.log(`Credentials valid: ${userExists}`);
-      if (userExists) {
-          getUserDataUsername(username, (userDataError, userData) => {
-              if (userDataError) {
-                  console.error('Error retrieving user data:', userDataError);
-                  res.status(500).send('Error retrieving user data');
-                  return;
-              }
-
-              const key = process.env.JWT_SECRET;
-              const authToken = jwt.sign({ username, userData }, key, { expiresIn: '14h' });
-
-            //   console.log('Auth token created:', authToken);
-              res.send({ authToken: authToken });
-          });
-      } else {
-          res.status(401).send('Invalid username or password');
-      }
-  });
-});
-
-
-
-app.post('/api/logout', (req, res) => {
-    res.clearCookie('authToken', { httpOnly: true });
-    res.status(200).send('Logout successful');
-});
-
-// REGISTER Route
-app.post('/api/register', (req, res) => {
-    const { username, password, name } = req.body;
-    validateCredentials(username, password, (error, userExists) => {
-        if (error) {
-            console.error('Error validating credentials:', error);
-            res.status(500).send('Internal Server Error');
-            return;
-        }
-        if (userExists) {
-            console.log("User exists already");
-            return;
-        }
-
-        // If user does not exist, create the user
-        createUser(username, password, name, (createError) => {
-            if (createError) {
-                console.error('Error creating user:', createError);
-                res.status(500).send('Error creating user');
-                return;
-            }
-            res.sendStatus(200);
-
-        });
-    });
-});
-
-// Route for Creating Incident Reports
-app.post('/api/create-incident-report', (req, res) => {
-  const { incident_type, description, location_lat, location_lng } = req.body;
-  if (!incident_type || !description || location_lat === undefined || location_lng === undefined) {
-      console.error('Missing required fields:', req.body);
-      return res.status(400).send('Missing required fields');
+// Middleware to check if the user is in guest mode
+const checkGuestMode = (req, res, next) => {
+  if (req.headers['x-guest-mode'] === 'true') {
+    req.isGuest = true;
   }
+  next();
+};
 
-  const authToken = req.headers.authorization.split(' ')[1];
+app.use(checkGuestMode);
+
+// Update routes to handle guest mode and use Supabase
+app.post('/api/create-event', async (req, res) => {
+  if (req.isGuest) {
+    return res.status(403).json({ error: 'Please log in to create an event' });
+  }
   try {
-      const decodedToken = decodeToken(authToken, process.env.JWT_SECRET);
-      const user_id = decodedToken && decodedToken.userData && decodedToken.userData[0][0].user_id;
-      if (!user_id) {
-          throw new Error('Invalid or missing user ID in token');
-      }
-
-      const incidentData = {
-          user_id,
-          incident_type,
-          description,
-          location_lat,
-          location_lng
-      };
-
-      createIncidentReport(incidentData, (error, insertId) => {
-          if (error) {
-              console.error('Failed to create incident report:', error);
-              return res.status(500).send('Failed to create incident report');
-          }
-          res.status(200).json({ message: 'Incident report created successfully', id: insertId });
-      });
-  } catch (err) {
-      console.error('Authorization error:', err.message);
-      res.status(401).send('Unauthorized: ' + err.message);
+    const { data, error } = await supabase
+      .from('incidents')
+      .insert([req.body]);
+    if (error) throw error;
+    res.json(data);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
   }
 });
 
-// Function to calculate the change in latitude and longitude based on the given radius in miles
-function calculateBounds(lat, lng, radiusInMiles) {
-    let rad = radiusInMiles //6371.01 is the earth radius in KM
-    let minLat = lat - rad;
-    let maxLat = lat + rad;
-    let minLon = lng - rad;
-    let maxLon = lng + rad;
-    return {
-        minLat: minLat,
-        maxLat: maxLat,
-        minLng: minLon,
-        maxLng: maxLon
-    };
-    
-}
+app.post('/api/volunteer-signup', async (req, res) => {
+  if (req.isGuest) {
+    return res.status(403).json({ error: 'Please log in to sign up as a volunteer' });
+  }
+  try {
+    const { data, error } = await supabase
+      .from('volunteer_signups')
+      .insert([req.body]);
+    if (error) throw error;
+    res.json(data);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
 
+app.get('/api/posts', async (req, res) => {
+  try {
+    console.log('Fetching posts...');
+    const { data, error } = await supabase
+      .from('posts')
+      .select('*')
+      .order('date_posted', { ascending: false });
 
-// New route to fetch incidents by radius in miles
-app.get('/api/incidents-by-radius', (req, res) => {
-    const { lat, lng, radius } = req.query;
-    if (!lat || !lng || !radius) {
-        return res.status(400).send("Missing required parameters: lat, lng, or radius");
+    if (error) {
+      console.error('Supabase error:', error);
+      return res.status(500).json({ error: error.message });
     }
 
-    const bounds = calculateBounds(parseFloat(lat), parseFloat(lng), parseFloat(radius));
+    // Transform the data to match frontend expectations if needed
+    const transformedData = (data || []).map(post => ({
+      id: post.id,
+      user_name: post.user_name,
+      user_username: post.user_username,
+      title: post.title,
+      body: post.body,
+      date_posted: post.date_posted
+    }));
+
+    res.json(transformedData);
+  } catch (error) {
+    console.error('Server error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.get('/api/posts/:username', async (req, res) => {
+  try {
+    const { data, error } = await supabase
+      .from('posts')
+      .select('*')
+      .eq('user_username', req.params.username)
+      .order('date_posted', { ascending: false });
     
-    incidentsByRadius(bounds, (err, incidents) => {
-        if(err){
-            console.log("Server.js:: incidents-by-radius", err);
-            res.sendStatus(500);
-        }
-        res.status(200).json(incidents);
-    })
+    if (error) {
+      console.error('Supabase error:', error);
+      return res.status(500).json({ error: error.message });
+    }
     
+    res.json(data || []); // Return empty array if no data
+  } catch (error) {
+    console.error('Server error:', error);
+    res.status(500).json({ error: error.message });
+  }
 });
 
-
-
-// Route for getting Incident Reports  
-app.get('/api/incident-reports', (req, res) => {
-    const { swLat, swLng, neLat, neLng } = req.query;
-    if (swLat && swLng && neLat && neLng) {
-        connection.query(
-            'SELECT * FROM IncidentReports WHERE location_lat BETWEEN ? AND ? AND location_lng BETWEEN ? AND ?',
-            [parseFloat(swLat), parseFloat(neLat), parseFloat(swLng), parseFloat(neLng)],
-            (error, results) => {
-                if (error) {
-                    console.error("Error fetching incident reports: ", error);
-                    res.status(500).send("Error fetching incident reports");
-                    return;
-                }
-                res.json(results);
-            }
-        );
-    } else {
-        // Fallback to fetching all incidents if no specific parameters are provided
-        connection.query('SELECT * FROM IncidentReports', (error, results) => {
-            if (error) {
-                console.error("Error fetching incident reports: ", error);
-                res.status(500).send("Error fetching incident reports");
-                return;
-            }
-            res.json(results);
-        });
-    }
+app.get('/api/incidents', async (req, res) => {
+  try {
+    const { data, error } = await supabase
+      .from('incidents')
+      .select('*')
+      .order('timestamp', { ascending: false });
+    if (error) throw error;
+    res.json(data);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
 });
 
-
-app.get('/api/regions', (req,res) => {
-    getRegions((error, regions) => {
-        if(error){
-            console.error('Error retrieving region data:', error);
-            res.status(500).send('Error retrieving region data');
-            return;
-        }
-        res.json(regions);
-    });
-});
-
-// User Info Route
-app.get('/api/userinfo/:username', (req, res) => {
-    const authToken = req.headers['authorization'];
-    const { username } = req.params;
-
-    if (authToken) {
-
-        const decodedToken = decodeToken(authToken, process.env.JWT_SECRET);
-        if (decodedToken) {
-            getUserDataUsername(username, (error, userData) => {
-                if (error) {
-                    console.error('Error retrieving user data:', error);
-                    res.status(500).send('Error retrieving user data');
-                    return;
-                }
-                res.json(userData);
-            });
-        } 
-
-    } else {
-        res.status(401);
-    }
-});
-
-app.get('/api/users/:userId', (req, res) => {
-    const userId = req.params.userId;
-
-    getUserById(userId, (error, results) => {
-        if (error) {
-            console.error('Error fetching user:', error);
-            return;
-        }
-        if (results.length > 0) {
-            res.json(results);
-            
-        }
-    });
-});
-
-function getUserById(userId, callback) {
-    connection.query(`SELECT name FROM Users WHERE user_id = ?`, [userId], (error, results) => {
-        if (error) {
-            console.error("Error fetching user name: ", error);
-            callback(error, null);
-            return;
-        }
-        callback(null, results);
-    });
-}
-
-// Route to update a user
-app.post('/api/userinfo/update-user', (req, res) => {
-    const {userid, newUsername, newName, newPassword} = req.body;
-    const userdata = {userid: userid, newUsername: newUsername, newName: newName, newPassword: newPassword};
-    updateUserInformation(userdata, (err) => {
-        if(err){
-            console.log("Error updating user info:", err);
-            res.sendStatus(500);
-            return;
-        }
-        res.sendStatus(200);
-    })
-
-    
-});
-
-// User Posts Route 
-app.get('/api/posts/:username', (req, res) => {
-    const authToken = req.headers['authorization'];
-
-    const decodedToken = decodeToken(authToken, process.env.JWT_SECRET);
-
-    const { username, userData } = decodedToken;
-    const user_id = userData[0][0].user_id;
-
-    // Call the function to get post data based on user ID
-    getUserPostData(user_id, (error, postData) => {
-        if (error) {
-            console.error('Error fetching posts:', error);
-            res.status(500).json({ error: 'Internal Server Error' });
-            return;
-        }
-        console.log("post data user", postData);
-
-        res.json(postData[0]);
-    });
-});
-
-// Route to get all posts that are "recent"
-app.get('/api/posts', (req, res) => {
-    //const authToken = req.headers['authorization'];
-    // Call the function to get post data based on user ID
-    getRecentPostData((error, postData) => {
-        if (error) {
-            console.error('Error fetching posts:', error);
-            res.status(500).json({ error: 'Internal Server Error' });
-            return;
-        }
-        console.log("post data all", postData[0]);
-        res.json(postData[0]);
-        
-    });
-});
-
-// Route for creating a post
-app.post('/api/createpost', (req, res) => {
-    const authToken = req.headers['authorization'];
-    if (!authToken) {
-        return res.status(401).send('Unauthorized');
-    }
-    const postInfo = req.body;
-    const decodedToken = decodeToken(authToken, process.env.JWT_SECRET);
-    if (!decodedToken || !decodedToken.userData || !decodedToken.userData[0] || !decodedToken.userData[0][0]) {
-        return res.status(401).send('Unauthorized');
-    }
-
-    const user = decodedToken.userData[0][0];
-    
-    postInfo.user_id = user.user_id;
-    postInfo.region_id = user.region_id;
-    // console.log(postInfo);
-    createUserPost(postInfo, (err, result) => {
-        if(err){
-            console.error('Error creating post:', err);
-            res.status(500).send('Error creating post:');
-            return;
-        }
-        res.json(postInfo).status(200);
-    });
-});
-
-// Route to get where a user is volunteering
-app.get('/api/volunteering/:username', (req, res) => {
-    const { username } = req.params;
-
-    getUserVolunteering(username, (error, volunteeringData) => {
-        if (error) {
-            console.error('Error fetching volunteering data:', error);
-            res.status(500).json({ error: 'Internal server error' });
-            return;
-        }
-        res.json(volunteeringData);
-    });
-});
-
-// Route to register for volunteering
-app.post('/api/volunteering/register',(req, res) => {
-    const { userData } = req.body;
-    makeUserVolunteer(userData, (error, success) => {
-        if(error) {
-            console.error("Could not register user.", error);
-            res.status(500).json({ error: 'Internal server error' });
-            return;
-        }
-        res.status(200).json(userData);
-    });
-});
-
-// Route to get volunteers by region
-app.get('/api/volunteers/region', (req, res) => {
-    const { region } = req.query;
-    getVolunteersByRegion(region, (err, volunteers) => {
-        if (err) {
-            res.status(500).send('Failed to fetch volunteers');
-        } else {
-            res.json(volunteers);
-        }
-    });
-});
-
-
-// Route to get volunteers by skills
-app.get('/api/volunteers/skills', (req, res) => {
-    const { skill } = req.query;
-    getVolunteersBySkills(skill, (err, volunteers) => {
-        if (err) {
-            res.status(500).send('Failed to fetch volunteers');
-        } else {
-            res.json(volunteers);
-        }
-    });
-});
-
-
-// Endpoint for getting number of volunteers by region
-app.get('/api/volunteers/region-chart', (req, res) => {
-    connection.query('SELECT region_id, COUNT(*) AS count FROM Volunteers GROUP BY region_id', (error, results) => {
-        if (error) {
-            console.error('Error fetching aggregated volunteers:', error);
-            res.status(500).send('Error fetching data');
-            return;
-        }
-        res.json(results);
-    });
-});
-
-app.get('/api/volunteers/getregions', (req, res) => {
-    connection.query('CALL GetRegions()', (error, results) => {
-        if(error){
-            console.error('Error calling GetRegions', error);
-            res.sendStatus(500);
-            return;
-        }
-        res.status(200).json(results);
-    });
-});
-
-// Endpoint for getting number of volunteers by skill
-app.get('/api/volunteers/skill-chart', (req, res) => {
-    connection.query('SELECT skills, COUNT(*) AS count FROM Volunteers GROUP BY skills', (error, results) => {
-        if (error) {
-            console.error('Error fetching aggregated volunteers:', error);
-            res.status(500).send('Error fetching data');
-            return;
-        }
-        res.json(results);
-    });
-});
-
-app.get('/api/volunteers/skills', (req,res) => {
-    connection.query('SELECT skills FROM Volunteers', (error, results) => {
-        if (error) {
-            console.error('Error fetching skills:', error);
-            res.status(500).send('Error fetching data');
-            return;
-        }
-        
-        res.sendStatus(200);
-    });
-});
-
-/**
- * Define the PORT
- * Listen on PORT
- */
-const PORT = process.env.PORT;
-app.listen(PORT, () => {
-    console.log(`Server is running on port ${PORT}`);
+const port = process.env.PORT || 8000;
+app.listen(port, () => {
+  console.log(`Server running on port ${port}`);
 });

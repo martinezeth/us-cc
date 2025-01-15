@@ -9,13 +9,12 @@ export default function FooterComponent() {
             textAlign: 'center', 
             padding: '20px', 
             backgroundColor: '#f0f0f0', 
-            borderTop: '1px solid #ddd', // Adding a border at the top for separation
+            borderTop: '1px solid #ddd',
             position: 'relative',
             bottom: 0,
             left: 0
         }}>
             <p>© {currentYear} Crisis Companion. All Rights Reserved.</p>
-            <p>Contact us: crisis-companion@sonoma.edu</p>
             {/* <p>Privacy Policy | Terms of Service</p> */}
         </footer>
     );
