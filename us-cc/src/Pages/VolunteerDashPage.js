@@ -32,21 +32,90 @@ import {
     Input,
     Select,
     useDisclosure,
+    Wrap,
+    WrapItem,
+    HStack,
+    TagCloseButton,
+    FormErrorMessage,
 } from '@chakra-ui/react';
 import { FaBuilding, FaCheckCircle } from 'react-icons/fa';
 import { supabase } from '../supabaseClient';
 import { STANDARD_SKILLS, AVAILABILITY_OPTIONS } from '../constants/incidentTypes';
 import VolunteerMessages from '../Components/VolunteerMessages';
+import LocationSearch from '../Components/LocationSearch';
+import LocationMapPreview from '../Components/LocationMapPreview';
 
 const VolunteerRegistrationModal = ({ isOpen, onClose, onRegister }) => {
     const [formData, setFormData] = useState({
         skills: [],
         availability: [],
-        region: ''
+        location: null
     });
+    const [errors, setErrors] = useState({});
+    const [newSkill, setNewSkill] = useState('');
+    const [newAvailability, setNewAvailability] = useState('');
     const toast = useToast();
 
+    const handleAddSkill = () => {
+        if (newSkill && !formData.skills.includes(newSkill)) {
+            setFormData(prev => ({
+                ...prev,
+                skills: [...prev.skills, newSkill]
+            }));
+            setNewSkill('');
+        }
+    };
+
+    const handleRemoveSkill = (skill) => {
+        setFormData(prev => ({
+            ...prev,
+            skills: prev.skills.filter(s => s !== skill)
+        }));
+    };
+
+    const handleAddAvailability = () => {
+        if (newAvailability && !formData.availability.includes(newAvailability)) {
+            setFormData(prev => ({
+                ...prev,
+                availability: [...prev.availability, newAvailability]
+            }));
+            setNewAvailability('');
+        }
+    };
+
+    const handleRemoveAvailability = (availability) => {
+        setFormData(prev => ({
+            ...prev,
+            availability: prev.availability.filter(a => a !== availability)
+        }));
+    };
+
+    const validateForm = () => {
+        const newErrors = {};
+        if (!formData.location) {
+            newErrors.location = "Please select your city";
+        }
+        if (formData.skills.length === 0) {
+            newErrors.skills = "Please select at least one skill";
+        }
+        if (formData.availability.length === 0) {
+            newErrors.availability = "Please select at least one availability option";
+        }
+        setErrors(newErrors);
+        return Object.keys(newErrors).length === 0;
+    };
+
     const handleSubmit = async () => {
+        if (!validateForm()) {
+            toast({
+                title: "Missing Information",
+                description: "Please fill in all required fields",
+                status: "error",
+                duration: 5000,
+            });
+            return;
+        }
+
         try {
             const { data: { user } } = await supabase.auth.getUser();
             const { error } = await supabase
@@ -55,10 +124,24 @@ const VolunteerRegistrationModal = ({ isOpen, onClose, onRegister }) => {
                     user_id: user.id,
                     skills: formData.skills,
                     availability: formData.availability,
-                    region: formData.region
+                    location_lat: formData.location.lat,
+                    location_lng: formData.location.lng,
+                    city: formData.location.city,
+                    state: formData.location.state,
+                    country: formData.location.country
                 }]);
 
             if (error) throw error;
+
+            const { error: profileError } = await supabase
+                .from('profiles')
+                .upsert({
+                    id: user.id,
+                    city: formData.location.city,
+                    state: formData.location.state
+                });
+
+            if (profileError) throw profileError;
 
             toast({
                 title: "Success!",
@@ -86,63 +169,105 @@ const VolunteerRegistrationModal = ({ isOpen, onClose, onRegister }) => {
                 <ModalCloseButton />
                 <ModalBody>
                     <VStack spacing={4} pb={6}>
-                        <FormControl isRequired>
-                            <FormLabel>Region</FormLabel>
-                            <Input
-                                value={formData.region}
-                                onChange={(e) => setFormData({
-                                    ...formData,
-                                    region: e.target.value
-                                })}
-                                placeholder="e.g., Sacramento County"
+                        <FormControl isRequired isInvalid={errors.location}>
+                            <FormLabel>Your City</FormLabel>
+                            <LocationSearch
+                                mode="city"
+                                placeholder="Enter your city..."
+                                onSelect={(locationData) => {
+                                    setFormData(prev => ({
+                                        ...prev,
+                                        location: locationData
+                                    }));
+                                    setErrors(prev => ({ ...prev, location: undefined }));
+                                }}
                             />
+                            {errors.location && (
+                                <FormErrorMessage>{errors.location}</FormErrorMessage>
+                            )}
                         </FormControl>
 
-                        <FormControl isRequired>
+                        <FormControl isRequired isInvalid={errors.skills}>
                             <FormLabel>Skills</FormLabel>
-                            <Select
-                                isMulti
-                                value={formData.skills}
-                                onChange={(e) => {
-                                    const values = Array.from(e.target.selectedOptions, option => option.value);
-                                    setFormData({
-                                        ...formData,
-                                        skills: values
-                                    });
-                                }}
-                                multiple
-                            >
-                                {STANDARD_SKILLS.map(skill => (
-                                    <option key={skill} value={skill}>
-                                        {skill}
-                                    </option>
+                            <Wrap mb={2}>
+                                {formData.skills.map(skill => (
+                                    <WrapItem key={skill}>
+                                        <Tag
+                                            size="md"
+                                            borderRadius="full"
+                                            variant="solid"
+                                            colorScheme="blue"
+                                        >
+                                            <TagLabel>{skill}</TagLabel>
+                                            <TagCloseButton
+                                                onClick={() => handleRemoveSkill(skill)}
+                                            />
+                                        </Tag>
+                                    </WrapItem>
                                 ))}
-                            </Select>
+                            </Wrap>
+                            <HStack>
+                                <Select
+                                    value={newSkill}
+                                    onChange={(e) => setNewSkill(e.target.value)}
+                                    placeholder="Select skill"
+                                >
+                                    {STANDARD_SKILLS
+                                        .filter(skill => !formData.skills.includes(skill))
+                                        .map(skill => (
+                                            <option key={skill} value={skill}>
+                                                {skill}
+                                            </option>
+                                        ))}
+                                </Select>
+                                <Button onClick={handleAddSkill}>Add</Button>
+                            </HStack>
+                            {errors.skills && (
+                                <FormErrorMessage>{errors.skills}</FormErrorMessage>
+                            )}
                         </FormControl>
 
-                        <FormControl isRequired>
+                        <FormControl isRequired isInvalid={errors.availability}>
                             <FormLabel>Availability</FormLabel>
-                            <Select
-                                isMulti
-                                value={formData.availability}
-                                onChange={(e) => {
-                                    const values = Array.from(e.target.selectedOptions, option => option.value);
-                                    setFormData({
-                                        ...formData,
-                                        availability: values
-                                    });
-                                }}
-                                multiple
-                            >
-                                {AVAILABILITY_OPTIONS.map(option => (
-                                    <option key={option} value={option}>
-                                        {option}
-                                    </option>
+                            <Wrap mb={2}>
+                                {formData.availability.map(time => (
+                                    <WrapItem key={time}>
+                                        <Tag
+                                            size="md"
+                                            borderRadius="full"
+                                            variant="solid"
+                                            colorScheme="green"
+                                        >
+                                            <TagLabel>{time}</TagLabel>
+                                            <TagCloseButton
+                                                onClick={() => handleRemoveAvailability(time)}
+                                            />
+                                        </Tag>
+                                    </WrapItem>
                                 ))}
-                            </Select>
+                            </Wrap>
+                            <HStack>
+                                <Select
+                                    value={newAvailability}
+                                    onChange={(e) => setNewAvailability(e.target.value)}
+                                    placeholder="Select availability"
+                                >
+                                    {AVAILABILITY_OPTIONS
+                                        .filter(time => !formData.availability.includes(time))
+                                        .map(time => (
+                                            <option key={time} value={time}>
+                                                {time}
+                                            </option>
+                                        ))}
+                                </Select>
+                                <Button onClick={handleAddAvailability}>Add</Button>
+                            </HStack>
+                            {errors.availability && (
+                                <FormErrorMessage>{errors.availability}</FormErrorMessage>
+                            )}
                         </FormControl>
 
-                        <Button colorScheme="blue" onClick={handleSubmit}>
+                        <Button colorScheme="blue" onClick={handleSubmit} width="100%">
                             Register
                         </Button>
                     </VStack>

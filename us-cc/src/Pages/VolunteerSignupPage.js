@@ -20,6 +20,8 @@ import {
 import { supabase } from '../supabaseClient';
 import { useNavigate } from 'react-router-dom';
 import { STANDARD_SKILLS, AVAILABILITY_OPTIONS } from '../constants/incidentTypes';
+import LocationSearch from '../Components/LocationSearch';
+import LocationMapPreview from '../Components/LocationMapPreview';
 
 function VolunteerPage() {
     const navigate = useNavigate();
@@ -30,6 +32,7 @@ function VolunteerPage() {
     const [selectedSkill, setSelectedSkill] = useState('');
     const [selectedAreas, setSelectedAreas] = useState([]);
     const [availability, setAvailability] = useState([]);
+    const [location, setLocation] = useState(null);
 
     useEffect(() => {
         const getCurrentUser = async () => {
@@ -62,6 +65,15 @@ function VolunteerPage() {
 
     const handleSubmit = async () => {
         if (!user) return;
+        if (!location) {
+            toast({
+                title: "Error",
+                description: "Please select your location",
+                status: "error",
+                duration: 5000,
+            });
+            return;
+        }
 
         setLoading(true);
         try {
@@ -72,10 +84,26 @@ function VolunteerPage() {
                     capabilities: selectedAreas,
                     service_areas: selectedAreas,
                     availability: availability,
-                    skills: specialSkills
+                    skills: specialSkills,
+                    location_lat: location.lat,
+                    location_lng: location.lng,
+                    city: location.city,
+                    state: location.state,
+                    country: location.country
                 }]);
 
             if (error) throw error;
+
+            // Update user profile with location
+            const { error: profileError } = await supabase
+                .from('profiles')
+                .upsert({
+                    id: user.id,
+                    city: location.city,
+                    state: location.state
+                });
+
+            if (profileError) throw profileError;
 
             toast({
                 title: "Success!",
@@ -179,6 +207,28 @@ function VolunteerPage() {
                         ))}
                     </Wrap>
                 </Box>
+
+                <FormControl isRequired>
+                    <FormLabel>Your Location</FormLabel>
+                    <LocationSearch
+                        mode="address"
+                        placeholder="Enter your address..."
+                        onSelect={(locationData) => setLocation(locationData)}
+                    />
+                    {location && (
+                        <LocationMapPreview
+                            position={{ lat: location.lat, lng: location.lng }}
+                            setPosition={(pos) => {
+                                setLocation(prev => ({
+                                    ...prev,
+                                    lat: pos.lat,
+                                    lng: pos.lng
+                                }));
+                            }}
+                            height="200px"
+                        />
+                    )}
+                </FormControl>
 
                 <Button
                     colorScheme="blue"

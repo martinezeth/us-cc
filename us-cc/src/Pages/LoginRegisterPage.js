@@ -26,6 +26,8 @@ import { HiEye, HiEyeOff } from 'react-icons/hi';
 import { useNavigate } from 'react-router-dom';
 import { ReactComponent as Logo } from '../Images/crisisCompanionLogo.svg';
 import { supabase } from '../supabaseClient';
+import LocationSearch from '../Components/LocationSearch';
+import LocationMapPreview from '../Components/LocationMapPreview';
 
 const PasswordField = forwardRef((props, ref) => {
   const { isOpen, onToggle } = useDisclosure();
@@ -100,12 +102,22 @@ function Register({ onSwitch }) {
             name,
             username: email.split('@')[0],
             is_organization: isOrganization,
-            organization_type: isOrganization ? orgType : null,
+            organization_type: isOrganization ? orgType : null
           }
         }
       });
 
       if (error) throw error;
+
+      // Create basic profile
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .insert([{
+          id: data.user.id,
+          full_name: name
+        }]);
+
+      if (profileError) throw profileError;
 
       toast({
         title: "Registration successful!",
@@ -128,10 +140,10 @@ function Register({ onSwitch }) {
   };
 
   return (
-    <Container maxW="lg" py={{ base: '12', md: '24' }} px={{ base: '0', sm: '8' }} centerContent>
+    <Container maxW="lg" py={{ base: '12', md: '24' }} px={{ base: '0', sm: '8' }}>
       <Stack spacing={4} align="center">
         <Logo style={{ width: '150px', height: '150px' }} />
-        <Heading size="lg" mb="8">Create an account</Heading>
+        <Heading size="lg">Create an account</Heading>
         <VStack spacing={4} bg="bg.surface" p={{ base: '4', sm: '8' }} borderRadius="xl" boxShadow="md" width="100%">
           <FormControl isRequired isInvalid={errors.name}>
             <FormLabel>Name</FormLabel>
@@ -195,11 +207,11 @@ function Register({ onSwitch }) {
             isLoading={isLoading}
             width="100%"
           >
-            Register
+            Sign Up
           </Button>
 
           <Text mt="4">
-            Already have an account? <Link color="blue.500" onClick={onSwitch}>Log in</Link>
+            Already have an account? <Link color="blue.500" onClick={onSwitch}>Sign in</Link>
           </Text>
         </VStack>
       </Stack>

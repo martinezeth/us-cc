@@ -244,9 +244,10 @@ const VolunteerResponsesDrawer = ({ isOpen, onClose, opportunity }) => {
                                     <Text>{selectedVolunteer.availability || 'Not specified'}</Text>
                                 </Box>
 
-                                <Box mb={4}>
-                                    <Heading size="sm" mb={3}>Direct Messages</Heading>
-                                    <VStack spacing={2} align="stretch" maxH="200px" overflowY="auto" mb={3}>
+                                {/* Direct Messages */}
+                                <Box>
+                                    <Heading size="sm" mb={3}>Messages</Heading>
+                                    <VStack spacing={2} align="stretch" mb={4}>
                                         {existingMessages
                                             .filter(msg => msg.volunteer_id === selectedVolunteer.volunteer_id)
                                             .map((msg, idx) => (
@@ -264,6 +265,7 @@ const VolunteerResponsesDrawer = ({ isOpen, onClose, opportunity }) => {
                                             ))
                                         }
                                     </VStack>
+
                                     <VStack spacing={3}>
                                         <Textarea
                                             value={directMessage}
@@ -276,40 +278,12 @@ const VolunteerResponsesDrawer = ({ isOpen, onClose, opportunity }) => {
                                             isDisabled={!directMessage.trim()}
                                             width="full"
                                         >
-                                            Send Direct Message
+                                            Send Message
                                         </Button>
                                     </VStack>
                                 </Box>
                             </Box>
                         )}
-
-                        {/* Group Message Section - Always at bottom */}
-                        <Box 
-                            p={4} 
-                            bg="gray.50" 
-                            borderRadius="md" 
-                            position="sticky" 
-                            bottom={0}
-                            borderTop="1px" 
-                            borderColor="gray.200"
-                        >
-                            <Heading size="sm" mb={3}>Send Group Message</Heading>
-                            <VStack spacing={3}>
-                                <Textarea
-                                    value={groupMessage}
-                                    onChange={(e) => setGroupMessage(e.target.value)}
-                                    placeholder="Type a message to all volunteers..."
-                                />
-                                <Button
-                                    colorScheme="blue"
-                                    onClick={handleSendGroupMessage}
-                                    isDisabled={!groupMessage.trim()}
-                                    width="full"
-                                >
-                                    Send to All Volunteers
-                                </Button>
-                            </VStack>
-                        </Box>
                     </VStack>
                 </DrawerBody>
             </DrawerContent>

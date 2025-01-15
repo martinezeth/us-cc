@@ -38,11 +38,13 @@ import {
     StatLabel,
     StatNumber,
     StatHelpText,
+    Icon,
 } from '@chakra-ui/react';
 import { EditIcon, AddIcon } from '@chakra-ui/icons';
 import { supabase } from '../supabaseClient';
 import { STANDARD_SKILLS, AVAILABILITY_OPTIONS } from '../constants/incidentTypes';
 import LocationSearch from '../Components/LocationSearch';
+import { FaBuilding } from 'react-icons/fa';
 
 // Reusable styled components
 const SectionCard = ({ children, title }) => (
@@ -253,14 +255,14 @@ export default function Profile() {
                                         <Text color="gray.500">
                                             @{userData.username}
                                         </Text>
-                                        {userData.location && (
+                                        {volunteerData?.city && (
                                             <Text color="gray.500" fontSize="sm">
-                                                📍 {userData.location.city}, {userData.location.state}
+                                                📍 {volunteerData.city}, {volunteerData.state}
                                             </Text>
                                         )}
                                         {volunteerData && (
                                             <Badge colorScheme="green" px={2} py={1}>
-                                                Verified Volunteer
+                                                Volunteer
                                             </Badge>
                                         )}
                                     </VStack>
@@ -312,7 +314,7 @@ export default function Profile() {
                                                 </Text>
                                                 {volunteerData && (
                                                     <Text color="gray.600">
-                                                        Active volunteer in {volunteerData.region || 'your area'}
+                                                        Active volunteer in {volunteerData.city}
                                                     </Text>
                                                 )}
                                             </VStack>
