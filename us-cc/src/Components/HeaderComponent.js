@@ -55,25 +55,30 @@ const UserProfileAvatar = ({ user, isOrganization }) => {
           transition="all 0.2s"
         />
       </MenuButton>
-      <MenuList>
+      <MenuList bg="white">
         <MenuItem
           onClick={() => navigate(`/profile/${user?.email?.split('@')[0]}`)}
-          icon={<Icon as={FaUser} />}
+          icon={<Icon as={FaUser} color="gray.600" />}
+          color="gray.700"
+          _hover={{ bg: 'gray.100' }}
         >
           View Profile
         </MenuItem>
         {isOrganization && (
           <MenuItem
             onClick={() => navigate('/organization-dashboard')}
-            icon={<Icon as={FaBuilding} />}
+            icon={<Icon as={FaBuilding} color="gray.600" />}
+            color="gray.700"
+            _hover={{ bg: 'gray.100' }}
           >
             Dashboard
           </MenuItem>
         )}
         <MenuItem
           onClick={handleLogout}
-          icon={<Icon as={FaSignOutAlt} />}
+          icon={<Icon as={FaSignOutAlt} color="red.500" />}
           color="red.500"
+          _hover={{ bg: 'red.50' }}
         >
           Logout
         </MenuItem>

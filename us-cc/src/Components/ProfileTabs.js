@@ -16,7 +16,8 @@ import {
     Tab,
     TabPanel,
     Heading,
-    useToast
+    useToast,
+    Button
 } from '@chakra-ui/react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../supabaseClient';
@@ -209,6 +210,17 @@ const ProfileTabs = ({ profileData, volunteerData, isOwnProfile }) => {
                     <Text fontSize="sm" color="gray.500" mt={2}>
                         Organization: {response.volunteer_opportunities?.organization_name || 'Unknown Organization'}
                     </Text>
+                    {isOwnProfile && (
+                        <Button
+                            size="sm"
+                            colorScheme="red"
+                            variant="outline"
+                            onClick={() => handleUnregister(response.opportunity_id)}
+                            ml="auto"
+                        >
+                            Unregister
+                        </Button>
+                    )}
                 </Box>
             ))}
             {history.length === 0 && (
@@ -216,6 +228,44 @@ const ProfileTabs = ({ profileData, volunteerData, isOwnProfile }) => {
             )}
         </VStack>
     );
+
+    const handleUnregister = async (opportunityId) => {
+        try {
+            // Start a transaction to ensure both updates happen or neither does
+            const { error: responseError } = await supabase
+                .from('opportunity_responses')
+                .update({ status: 'cancelled' })
+                .eq('volunteer_id', profileData.id)
+                .eq('opportunity_id', opportunityId);
+
+            if (responseError) throw responseError;
+
+            // Update the volunteer_opportunities table to decrement registered_volunteers
+            const { error: opportunityError } = await supabase.rpc('decrement_registered_volunteers', {
+                opp_id: opportunityId
+            });
+
+            if (opportunityError) throw opportunityError;
+
+            // Refresh the activity data
+            fetchActivityData();
+
+            toast({
+                title: "Successfully unregistered",
+                description: "You have been removed from this opportunity",
+                status: "success",
+                duration: 5000,
+            });
+        } catch (error) {
+            console.error('Error unregistering:', error);
+            toast({
+                title: "Error",
+                description: "Failed to unregister from opportunity",
+                status: "error",
+                duration: 5000,
+            });
+        }
+    };
 
     return (
         <Tabs variant="enclosed" colorScheme="blue">

@@ -49,14 +49,14 @@ export default function EditProfileModal({ isOpen, onClose, userData, volunteerD
     });
 
     useEffect(() => {
-        setFormData({
-            full_name: userData?.full_name || '',
-            city: userData?.city || '',
-            state: userData?.state || '',
-        });
-        setSkills(volunteerData?.skills || []);
-        setAvailability(volunteerData?.availability || []);
-    }, [userData, volunteerData, isOpen]);
+        if (isOpen) {
+            setFormData({
+                full_name: userData?.full_name || '',
+                city: userData?.city || '',
+                state: userData?.state || '',
+            });
+        }
+    }, [isOpen, userData]);
 
     const handleAddSkill = (skill) => {
         if (!skills.includes(skill)) {
@@ -80,6 +80,7 @@ export default function EditProfileModal({ isOpen, onClose, userData, volunteerD
 
     const handleSubmit = async () => {
         setLoading(true);
+        console.log('Submitting form data:', formData); //DEBUG LINE
         try {
             // Update profile
             const { error: profileError } = await supabase
@@ -237,11 +238,11 @@ export default function EditProfileModal({ isOpen, onClose, userData, volunteerD
                                     mode="city"
                                     placeholder="Search for your city..."
                                     onSelect={(locationData) => {
-                                        setFormData({
-                                            ...formData,
+                                        setFormData(prev => ({
+                                            ...prev,
                                             city: locationData.city,
                                             state: locationData.state,
-                                        });
+                                        }));
                                         setIsEditing({...isEditing, location: false});
                                     }}
                                 />

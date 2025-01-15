@@ -249,7 +249,7 @@ function MapPage() {
               center={[37.819, -122.478]}
               zoom={zoom}
               style={{ height: '100%', width: '100%' }}
-              zoomControl={!window.matchMedia("(max-width: 768px)").matches} // Hide default zoom controls on mobile
+              zoomControl={!window.matchMedia("(max-width: 768px)").matches}
             >
               <TileLayer
                 url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"

@@ -25,7 +25,6 @@ import {
     Icon,
     Drawer,
     DrawerBody,
-    DrawerFooter,
     DrawerHeader,
     DrawerOverlay,
     DrawerContent,
@@ -48,20 +47,14 @@ import {
     AlertDialogContent,
     AlertDialogOverlay,
     Flex,
-    Alert,
-    AlertIcon,
     Menu,
     MenuButton,
     MenuList,
     MenuItem,
     IconButton,
     Textarea,
-    FormControl,
-    FormLabel,
-    Select,
     InputGroup,
     InputLeftElement,
-    Stack
 } from '@chakra-ui/react';
 import { AddIcon, WarningIcon, DeleteIcon, EditIcon, SearchIcon, ChatIcon } from '@chakra-ui/icons';
 import { MdAssignment, MdAnnouncement } from 'react-icons/md';
@@ -110,34 +103,38 @@ const VolunteerResponsesDrawer = ({ isOpen, onClose, opportunity }) => {
 
         try {
             // First get messages
-            const { data, error } = await supabase
+            const { data: messages, error: messagesError } = await supabase
                 .from('messages')
-                .select(`
-                    *,
-                    organizations:profiles!organization_id(
-                        full_name,
-                        organization_name
-                    )
-                `)
+                .select('*')
                 .eq('opportunity_id', opportunity.id)
                 .order('sent_at', { ascending: true });
 
-            if (error) throw error;
+            if (messagesError) throw messagesError;
 
-            // Get organization details if not included in the join
-            if (opportunity.organization_id) {
-                const { data: orgData } = await supabase
-                    .from('profiles')
-                    .select('full_name, organization_name')
-                    .eq('id', opportunity.organization_id)
-                    .single();
+            // Get unique organization IDs from messages
+            const orgIds = [...new Set(messages.map(msg => msg.organization_id))];
 
-                if (orgData) {
-                    opportunity.organization_name = orgData.organization_name || orgData.full_name;
-                }
-            }
+            // Fetch profile data for these organizations
+            const { data: profiles, error: profilesError } = await supabase
+                .from('profiles')
+                .select('id, full_name, organization_name')
+                .in('id', orgIds);
 
-            setExistingMessages(data || []);
+            if (profilesError) throw profilesError;
+
+            // Create a lookup map for organization names
+            const orgNameMap = {};
+            profiles.forEach(profile => {
+                orgNameMap[profile.id] = profile.organization_name || profile.full_name;
+            });
+
+            // Combine messages with organization names
+            const messagesWithNames = messages.map(message => ({
+                ...message,
+                organization_name: orgNameMap[message.organization_id] || 'Unknown Organization'
+            }));
+
+            setExistingMessages(messagesWithNames);
         } catch (error) {
             console.error('Error fetching messages:', error);
             toast({
@@ -177,20 +174,10 @@ const VolunteerResponsesDrawer = ({ isOpen, onClose, opportunity }) => {
         try {
             const { data: { user } } = await supabase.auth.getUser();
 
-            // Get organization name from profile
-            const { data: orgProfile } = await supabase
-                .from('profiles')
-                .select('full_name, organization_name')
-                .eq('id', user.id)
-                .single();
-
-            const orgName = orgProfile?.organization_name || orgProfile?.full_name || user.user_metadata?.name;
-
             const { error } = await supabase
                 .from('messages')
                 .insert([{
                     organization_id: user.id,
-                    organization_name: orgName,
                     volunteer_id: selectedVolunteer.volunteer_id,
                     opportunity_id: opportunity.id,
                     message: directMessage,
@@ -220,20 +207,10 @@ const VolunteerResponsesDrawer = ({ isOpen, onClose, opportunity }) => {
         try {
             const { data: { user } } = await supabase.auth.getUser();
 
-            // Get organization name from profile
-            const { data: orgProfile } = await supabase
-                .from('profiles')
-                .select('full_name, organization_name')
-                .eq('id', user.id)
-                .single();
-
-            const orgName = orgProfile?.organization_name || orgProfile?.full_name || user.user_metadata?.name;
-
             const { error } = await supabase
                 .from('messages')
                 .insert([{
                     organization_id: user.id,
-                    organization_name: orgName,
                     volunteer_id: null,
                     opportunity_id: opportunity.id,
                     message: groupMessage,
@@ -263,6 +240,44 @@ const VolunteerResponsesDrawer = ({ isOpen, onClose, opportunity }) => {
     const filteredVolunteers = opportunity?.responses?.filter(volunteer =>
         volunteer.volunteer_name.toLowerCase().includes(searchQuery.toLowerCase())
     );
+
+    useEffect(() => {
+        const fetchVolunteerDetails = async () => {
+            if (!opportunity?.responses) return;
+
+            try {
+                // Get volunteer IDs from responses
+                const volunteerIds = opportunity.responses.map(r => r.volunteer_id);
+
+                // Fetch volunteer details including availability
+                const { data: volunteerData, error } = await supabase
+                    .from('volunteer_signups')
+                    .select('user_id, availability')
+                    .in('user_id', volunteerIds);
+
+                if (error) throw error;
+
+                // Create a lookup map for volunteer availability
+                const availabilityMap = {};
+                volunteerData.forEach(v => {
+                    availabilityMap[v.user_id] = v.availability;
+                });
+
+                // Update the responses with availability data
+                const updatedResponses = opportunity.responses.map(response => ({
+                    ...response,
+                    availability: availabilityMap[response.volunteer_id] || 'Not specified'
+                }));
+
+                // Update the opportunity object with the new responses
+                opportunity.responses = updatedResponses;
+            } catch (error) {
+                console.error('Error fetching volunteer details:', error);
+            }
+        };
+
+        fetchVolunteerDetails();
+    }, [opportunity?.id]);
 
     return (
         <Drawer isOpen={isOpen} onClose={onClose} size="md">
@@ -333,7 +348,23 @@ const VolunteerResponsesDrawer = ({ isOpen, onClose, opportunity }) => {
                                                             ))}
                                                         </Wrap>
                                                         <Text fontWeight="bold" mb={2}>Availability:</Text>
-                                                        <Text>{volunteer.availability || 'Not specified'}</Text>
+                                                        <Wrap>
+                                                            {volunteer.availability ? (
+                                                                // Split the availability string into an array if it's not already
+                                                                (Array.isArray(volunteer.availability) ? 
+                                                                    volunteer.availability : 
+                                                                    volunteer.availability.split(',')
+                                                                ).map((time, index) => (
+                                                                    <WrapItem key={index}>
+                                                                        <Tag size="md" colorScheme="purple">
+                                                                            <TagLabel>{time.trim()}</TagLabel>
+                                                                        </Tag>
+                                                                    </WrapItem>
+                                                                ))
+                                                            ) : (
+                                                                <Text color="gray.500">Not specified</Text>
+                                                            )}
+                                                        </Wrap>
                                                     </Box>
 
                                                     {/* Direct Messages */}
@@ -615,7 +646,6 @@ const ContentCard = ({ item, type, onDelete, onViewResponses, onArchive, onEdit 
                 </Text>
             )}
 
-            {/* Keeping 'Responses' button as a footer for quick access*/}
             {type === 'opportunity' && (
                 <Flex mt={4} justify="flex-start">
                     <Button

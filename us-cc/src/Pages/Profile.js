@@ -136,6 +136,13 @@ export default function Profile() {
 
             if (profileError) throw profileError;
 
+            // Get the user's metadata to check organization status
+            const { data: userData, error: userError } = await supabase
+                .from('auth.users')
+                .select('raw_user_meta_data')
+                .eq('id', targetUserId)
+                .single();
+
             // Set profile data
             setProfileData({
                 id: targetUserId,
@@ -143,7 +150,8 @@ export default function Profile() {
                 username: username,
                 date_joined: currentUser.created_at,
                 city: profile.city || null,
-                state: profile.state || null
+                state: profile.state || null,
+                is_organization: profile.is_organization || currentUser.user_metadata?.is_organization || false
             });
 
             // Fetch volunteer data and stats
@@ -286,6 +294,16 @@ export default function Profile() {
                                                 fontSize={{ base: "xs", md: "sm" }}
                                             >
                                                 Volunteer
+                                            </Badge>
+                                        )}
+                                        {profileData.is_organization && (
+                                            <Badge
+                                                colorScheme="blue"
+                                                px={2}
+                                                py={1}
+                                                fontSize={{ base: "xs", md: "sm" }}
+                                            >
+                                                Organization
                                             </Badge>
                                         )}
                                     </VStack>
