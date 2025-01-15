@@ -1,89 +1,130 @@
 import React, { useState } from 'react';
-import axios from 'axios';
-import '../Styles/styles.css';
+import {
+    Modal, ModalOverlay, ModalContent, ModalHeader,
+    ModalFooter, ModalBody, ModalCloseButton,
+    FormControl, FormLabel, Input, Textarea,
+    Button, VStack, Text
+} from '@chakra-ui/react';
+import { supabase } from '../supabaseClient';
+import LocationSearch from './LocationSearch';
 
-const CreatePostModal = ({ isOpen, onClose, onCreatePost }) => {
+export default function CreatePostModal({ isOpen, onClose, onCreatePost }) {
     const [title, setTitle] = useState('');
     const [body, setBody] = useState('');
+    const [location, setLocation] = useState(null);
+    const [isSubmitting, setIsSubmitting] = useState(false);
 
-    const handleCancel = () => {
-        // Clear title and body
+    const handleSubmit = async () => {
+        if (!title.trim() || !body.trim() || !location) {
+            return;
+        }
+
+        setIsSubmitting(true);
+        try {
+            const { data: { user } } = await supabase.auth.getUser();
+
+            const newPost = {
+                user_id: user.id,
+                user_name: user.user_metadata?.name || user.email,
+                user_username: user.email.split('@')[0],
+                title: title.trim(),
+                body: body.trim(),
+                city: location.city,
+                state: location.state,
+                city_coords: `${location.lat},${location.lng}`,
+                date_posted: new Date()
+            };
+
+            const { data, error } = await supabase
+                .from('posts')
+                .insert([newPost])
+                .select();
+
+            if (error) throw error;
+
+            onCreatePost(data[0]);
+            handleClose();
+        } catch (error) {
+            console.error('Error creating post:', error);
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
+    const handleClose = () => {
         setTitle('');
         setBody('');
-
-        // Close the modal
+        setLocation(null);
         onClose();
-    }
-
-    const handlePost = () => {
-        // Assuming title and body are state variables
-        const postInfo = {
-            title: title,
-            body: body
-        };
-        const authToken = document.cookie && document.cookie.split('; ')
-            .find(row => row.startsWith('authToken=')).split('=')[1];
-        
-        axios.post('http://localhost:8000/api/createpost', postInfo, {
-            headers: {
-                Authorization: authToken
-            }
-        })
-            .then(response => {
-                
-                console.log('Post created successfully', response.data);
-                onCreatePost(response.data);
-                onClose();
-            })
-            .catch(error => {
-                
-                console.error('Error creating post:', error);
-                
-            });
     };
 
     return (
-        <div className={isOpen ? "modalshown" : "modalhidden"}>
-            <div className="modal-background" onClick={onClose}></div>
-            <div className="modal-content">
-                <div className="box">
-                    <h2 className="title is-4">Create a New Post</h2>
-                    <div className="field">
-                        <label className="label">Title</label>
-                        <div className="control">
-                            <input
-                                className="input"
-                                type="text"
-                                placeholder="Enter title"
+        <Modal isOpen={isOpen} onClose={handleClose}>
+            <ModalOverlay />
+            <ModalContent>
+                <ModalHeader>Create New Post</ModalHeader>
+                <ModalCloseButton />
+                <ModalBody>
+                    <VStack spacing={4}>
+                        <FormControl isRequired>
+                            <FormLabel>Title</FormLabel>
+                            <Input
                                 value={title}
                                 onChange={(e) => setTitle(e.target.value)}
+                                placeholder="Give your post a title"
                             />
-                        </div>
-                    </div>
-                    <div className="field">
-                        <label className="label">Body</label>
-                        <div className="control">
-                            <textarea
-                                className="textarea"
-                                placeholder="Enter body"
+                        </FormControl>
+
+                        <FormControl isRequired>
+                            <FormLabel>Content</FormLabel>
+                            <Textarea
                                 value={body}
                                 onChange={(e) => setBody(e.target.value)}
-                            ></textarea>
-                        </div>
-                    </div>
-                    <div className="field is-grouped">
-                        <div className="control">
-                            <button className="button is-primary" onClick={handlePost}>Post</button>
-                        </div>
-                        <div className="control">
-                            <button className="button" onClick={handleCancel}>Cancel</button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <button className="modal-close is-large" aria-label="close" onClick={onClose}></button>
-        </div>
-    );
-};
+                                placeholder="What's on your mind?"
+                                rows={4}
+                            />
+                        </FormControl>
 
-export default CreatePostModal;
+                        <FormControl isRequired>
+                            <FormLabel>Location</FormLabel>
+                            <Text fontSize="sm" color="gray.600" mb={2}>
+                                Please select your city to help others find relevant posts in their area
+                            </Text>
+                            <LocationSearch
+                                mode="city"
+                                placeholder="Search for your city..."
+                                onSelect={(locationData) => {
+                                    setLocation({
+                                        city: locationData.city,
+                                        state: locationData.state,
+                                        lat: locationData.lat,
+                                        lng: locationData.lng
+                                    });
+                                }}
+                            />
+                            {location && (
+                                <Text fontSize="sm" color="blue.500" mt={2}>
+                                    📍 {location.city}, {location.state}
+                                </Text>
+                            )}
+                        </FormControl>
+                    </VStack>
+                </ModalBody>
+
+                <ModalFooter>
+                    <Button variant="ghost" mr={3} onClick={handleClose}>
+                        Cancel
+                    </Button>
+                    <Button
+                        colorScheme="blue"
+                        onClick={handleSubmit}
+                        isLoading={isSubmitting}
+                        isDisabled={!title.trim() || !body.trim() || !location}
+                    >
+                        Post
+                    </Button>
+                </ModalFooter>
+            </ModalContent>
+        </Modal>
+    );
+}
