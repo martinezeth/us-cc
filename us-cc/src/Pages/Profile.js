@@ -46,7 +46,6 @@ import { STANDARD_SKILLS, AVAILABILITY_OPTIONS } from '../constants/incidentType
 import LocationSearch from '../Components/LocationSearch';
 import { FaBuilding } from 'react-icons/fa';
 
-// Reusable styled components
 const SectionCard = ({ children, title }) => (
     <Box
         bg="white"
@@ -108,6 +107,8 @@ export default function Profile() {
         newAvailability: ''
     });
 
+    const [opportunityResponses, setOpportunityResponses] = useState([]);
+
     useEffect(() => {
         fetchProfileData();
     }, [username]);
@@ -154,6 +155,27 @@ export default function Profile() {
                     newSkill: '',
                     newAvailability: ''
                 });
+            }
+
+            // Fetch opportunity responses
+            if (authUser.user) {
+                const { data: responses, error } = await supabase
+                    .from('opportunity_responses')
+                    .select(`
+                        *,
+                        volunteer_opportunities (
+                            title,
+                            description,
+                            event_date,
+                            status,
+                            location
+                        )
+                    `)
+                    .eq('volunteer_id', authUser.user.id)
+                    .order('response_date', { ascending: false });
+
+                if (error) throw error;
+                setOpportunityResponses(responses || []);
             }
         } catch (error) {
             console.error('Error fetching profile:', error);
@@ -372,7 +394,52 @@ export default function Profile() {
 
                                 <TabPanel>
                                     <SectionCard title="Recent Activity">
-                                        <Text color="gray.600">No recent activity</Text>
+                                        {opportunityResponses.length === 0 ? (
+                                            <Text color="gray.600">No volunteer opportunity responses yet</Text>
+                                        ) : (
+                                            <VStack spacing={4} align="stretch">
+                                                {opportunityResponses.map((response) => (
+                                                    <Box
+                                                        key={response.id}
+                                                        p={4}
+                                                        borderWidth="1px"
+                                                        borderRadius="md"
+                                                        _hover={{ bg: 'gray.50' }}
+                                                    >
+                                                        <HStack justify="space-between" mb={2}>
+                                                            <Text fontWeight="bold">
+                                                                {response.volunteer_opportunities.title}
+                                                            </Text>
+                                                            <Badge
+                                                                colorScheme={
+                                                                    response.status === 'accepted' ? 'green' :
+                                                                    response.status === 'pending' ? 'yellow' :
+                                                                    'red'
+                                                                }
+                                                            >
+                                                                {response.status}
+                                                            </Badge>
+                                                        </HStack>
+                                                        <Text color="gray.600" fontSize="sm" mb={2}>
+                                                            {response.volunteer_opportunities.description}
+                                                        </Text>
+                                                        <HStack spacing={4} color="gray.500" fontSize="sm">
+                                                            <Text>
+                                                                Responded: {new Date(response.response_date).toLocaleDateString()}
+                                                            </Text>
+                                                            <Text>
+                                                                Event Date: {new Date(response.volunteer_opportunities.event_date).toLocaleDateString()}
+                                                            </Text>
+                                                            {response.volunteer_opportunities.location && (
+                                                                <Text>
+                                                                    📍 {response.volunteer_opportunities.location}
+                                                                </Text>
+                                                            )}
+                                                        </HStack>
+                                                    </Box>
+                                                ))}
+                                            </VStack>
+                                        )}
                                     </SectionCard>
                                 </TabPanel>
                             </TabPanels>
