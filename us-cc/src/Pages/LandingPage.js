@@ -9,10 +9,9 @@ export default function LandingPage() {
     <Box w="full" p={0} m={0} bg="gray.100">
       <VStack spacing={0}>
         <Hero />
-        <AboutSection />
         <FeaturesSection />
+        <AboutSection />
       </VStack>
     </Box>
   );
 }
-

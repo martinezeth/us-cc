@@ -95,6 +95,7 @@ const HeaderComponent = () => {
   const [loading, setLoading] = useState(true);
   const [isIncidentModalOpen, setIsIncidentModalOpen] = useState(false);
   const [profileData, setProfileData] = useState(null);
+  const [isRegisteredVolunteer, setIsRegisteredVolunteer] = useState(false);
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -127,6 +128,22 @@ const HeaderComponent = () => {
       window.removeEventListener('profileUpdate', handleProfileUpdate);
     };
   }, []);
+
+  useEffect(() => {
+    const checkVolunteerStatus = async () => {
+        if (user && !isOrganization) {
+            const { data, error } = await supabase
+                .from('volunteer_signups')
+                .select('id')
+                .eq('user_id', user.id)
+                .single();
+                
+            setIsRegisteredVolunteer(!!data);
+        }
+    };
+    
+    checkVolunteerStatus();
+  }, [user, isOrganization]);
 
   const handleLogout = async () => {
     try {
@@ -179,6 +196,15 @@ const HeaderComponent = () => {
                     </MenuList>
                   </Menu>
                 )}
+                {!isOrganization && (
+                  <Button 
+                    as={Link} 
+                    to={isRegisteredVolunteer ? "/volunteer-dashboard" : "/volunteer-signup"} 
+                    variant="ghost"
+                  >
+                    {isRegisteredVolunteer ? "Volunteer Dashboard" : "Become a Volunteer"}
+                  </Button>
+                )}
                 <Button variant="ghost" colorScheme="red" leftIcon={<WarningIcon />} onClick={() => setIsIncidentModalOpen(true)}>
                   Report Incident
                 </Button>
@@ -207,6 +233,15 @@ const HeaderComponent = () => {
                 <>
                   {isOrganization && (
                     <Button as={Link} to="/organization-dashboard" variant="ghost" onClick={onClose}>Dashboard</Button>
+                  )}
+                  {!isOrganization && (
+                    <Button 
+                      as={Link} 
+                      to={isRegisteredVolunteer ? "/volunteer-dashboard" : "/volunteer-signup"} 
+                      variant="ghost"
+                    >
+                      {isRegisteredVolunteer ? "Volunteer Dashboard" : "Become a Volunteer"}
+                    </Button>
                   )}
                   <Button variant="ghost" colorScheme="red" onClick={() => { setIsIncidentModalOpen(true); onClose(); }}>
                     Report Incident

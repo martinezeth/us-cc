@@ -26,8 +26,6 @@ import { HiEye, HiEyeOff } from 'react-icons/hi';
 import { useNavigate } from 'react-router-dom';
 import { ReactComponent as Logo } from '../Images/crisisCompanionLogo.svg';
 import { supabase } from '../supabaseClient';
-import LocationSearch from '../Components/LocationSearch';
-import LocationMapPreview from '../Components/LocationMapPreview';
 
 const PasswordField = forwardRef((props, ref) => {
   const { isOpen, onToggle } = useDisclosure();
@@ -269,34 +267,36 @@ function Login({ onSwitch }) {
     }
   };
 
-  const handleDemoLogin = async () => {
+  const handleDemoLogin = async (type) => {
     setIsLoading(true);
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email: 'demo@demo.com',
-        password: 'DemoUser123!'
-      });
+        const credentials = type === 'volunteer'
+            ? { email: 'demo@volunteer.com', password: 'demoVolunteer123!' }
+            : { email: 'demo@organization.com', password: 'demoOrg123!' };
 
-      if (error) throw error;
+        const { data, error } = await supabase.auth.signInWithPassword(credentials);
 
-      toast({
-        title: "Welcome to the Demo!",
-        description: "You're now logged in with demo account access",
-        status: "success",
-        duration: 3000,
-        isClosable: true,
-      });
-      navigate('/');
+        if (error) throw error;
+
+        toast({
+            title: `Welcome to the ${type === 'volunteer' ? 'Volunteer' : 'Organization'} Demo!`,
+            description: `You're now logged in as a demo ${type}`,
+            status: "success",
+            duration: 3000,
+            isClosable: true,
+        });
+        
+        navigate(type === 'volunteer' ? '/volunteer-dashboard' : '/organization-dashboard');
     } catch (error) {
-      toast({
-        title: "Demo login failed",
-        description: "Please try again or use guest mode",
-        status: "error",
-        duration: 5000,
-        isClosable: true,
-      });
+        toast({
+            title: "Demo login failed",
+            description: "Please try again or use guest mode",
+            status: "error",
+            duration: 5000,
+            isClosable: true,
+        });
     } finally {
-      setIsLoading(false);
+        setIsLoading(false);
     }
   };
 
@@ -353,22 +353,25 @@ function Login({ onSwitch }) {
             Sign In
           </Button>
 
-          <Button
-            colorScheme="green"
-            onClick={handleDemoLogin}
-            isLoading={isLoading}
-            width="100%"
-          >
-            Try Demo Account
-          </Button>
-
-          <Button
-            colorScheme="gray"
-            onClick={handleGuestMode}
-            width="100%"
-          >
-            Continue as Guest
-          </Button>
+          <VStack spacing={4} width="100%">
+            <Button
+                colorScheme="blue"
+                onClick={() => handleDemoLogin('volunteer')}
+                isLoading={isLoading}
+                width="100%"
+            >
+                Try Demo Volunteer
+            </Button>
+            
+            <Button
+                colorScheme="green"
+                onClick={() => handleDemoLogin('organization')}
+                isLoading={isLoading}
+                width="100%"
+            >
+                Try Demo Organization
+            </Button>
+          </VStack>
 
           <Text mt="4">
             Don't have an account? <Link color="blue.500" onClick={onSwitch}>Sign up</Link>

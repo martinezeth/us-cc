@@ -81,10 +81,8 @@ function VolunteerPage() {
                 .from('volunteer_signups')
                 .insert([{
                     user_id: user.id,
-                    capabilities: selectedAreas,
-                    service_areas: selectedAreas,
-                    availability: availability,
                     skills: specialSkills,
+                    availability: availability,
                     location_lat: location.lat,
                     location_lng: location.lng,
                     city: location.city,

@@ -11,14 +11,15 @@ import {
     ModalHeader,
     ModalBody,
     ModalCloseButton,
-    useDisclosure
+    useDisclosure,
+    Heading
 } from '@chakra-ui/react';
 import '../Styles/styles.css';
 import CreatePostModal from '../Components/CreatePostModal';
 import { supabase } from '../supabaseClient';
 import { AiFillHeart, AiOutlineHeart } from 'react-icons/ai';
 import { BiComment } from 'react-icons/bi';
-import { ChevronUpIcon, ChevronDownIcon } from '@chakra-ui/icons';
+import { ChevronUpIcon, ChevronDownIcon, AddIcon } from '@chakra-ui/icons';
 
 const Comment = ({ comment, onReply, depth = 0 }) => {
     const navigate = useNavigate();
@@ -201,14 +202,35 @@ export const Post = ({ postData, isDetailView = false }) => {
                 setLikes(prev => Math.max(0, prev - 1));
             } else {
                 // Like
-                const { error } = await supabase
+                const { error: likeError } = await supabase
                     .from('post_likes')
                     .insert([{
                         post_id: postData.id,
                         user_id: user.id
                     }]);
 
-                if (error) throw error;
+                if (likeError) throw likeError;
+
+                // Create notification for post owner
+                if (user.id !== postData.user_id) {
+                    const { data: userData } = await supabase
+                        .from('profiles')
+                        .select('full_name')
+                        .eq('id', user.id)
+                        .single();
+
+                    const { error: notifError } = await supabase
+                        .from('notifications')
+                        .insert({
+                            user_id: postData.user_id,
+                            type: 'like',
+                            content: `${userData?.full_name || 'Someone'} liked your post`,
+                            related_id: postData.id
+                        });
+
+                    if (notifError) console.error('Error creating notification:', notifError);
+                }
+
                 setLikes(prev => prev + 1);
             }
             setIsLiked(!isLiked);
@@ -222,7 +244,7 @@ export const Post = ({ postData, isDetailView = false }) => {
 
         try {
             const { data: { user } } = await supabase.auth.getUser();
-            const { data, error } = await supabase
+            const { data: commentData, error: commentError } = await supabase
                 .from('post_comments')
                 .insert([{
                     post_id: postData.id,
@@ -234,9 +256,29 @@ export const Post = ({ postData, isDetailView = false }) => {
                 .select()
                 .single();
 
-            if (error) throw error;
+            if (commentError) throw commentError;
 
-            setComments([data, ...comments]);
+            // Create notification for post owner
+            if (user.id !== postData.user_id) {
+                const { data: userData } = await supabase
+                    .from('profiles')
+                    .select('full_name')
+                    .eq('id', user.id)
+                    .single();
+
+                const { error: notifError } = await supabase
+                    .from('notifications')
+                    .insert({
+                        user_id: postData.user_id,
+                        type: 'comment',
+                        content: `${userData?.full_name || 'Someone'} commented on your post`,
+                        related_id: postData.id
+                    });
+
+                if (notifError) console.error('Error creating notification:', notifError);
+            }
+
+            setComments([commentData, ...comments]);
             setNewComment('');
             setCommentCount(prev => prev + 1);
         } catch (error) {
@@ -398,6 +440,16 @@ export default function Posts() {
     const [searchRadius, setSearchRadius] = useState(25);
     const [isLoadingLocation, setIsLoadingLocation] = useState(false);
     const [isApplyingFilter, setIsApplyingFilter] = useState(false);
+    const [user, setUser] = useState(null);
+
+    useEffect(() => {
+        const checkAuth = async () => {
+            const { data: { user } } = await supabase.auth.getUser();
+            setUser(user);
+        };
+        
+        checkAuth();
+    }, []);
 
     const LocationFilter = () => (
         <Box
@@ -586,18 +638,18 @@ export default function Posts() {
                     minWidth="0"
                 >
                     <VStack spacing={4} align="stretch" width="100%">
-                        <Button
-                            colorScheme="blue"
-                            size="lg"
-                            onClick={togglePostModal}
-                            borderRadius="full"
-                            shadow="md"
-                            width="100%"
-                            p={6}
-                            fontSize="lg"
-                        >
-                            Create New Post
-                        </Button>
+                        <Flex justify="space-between" align="center" mb={4}>
+                            <Heading size="lg">Community Posts</Heading>
+                            {user && (
+                                <Button
+                                    leftIcon={<AddIcon />}
+                                    colorScheme="blue"
+                                    onClick={togglePostModal}
+                                >
+                                    Create Post
+                                </Button>
+                            )}
+                        </Flex>
 
                         {posts.length === 0 ? (
                             <Box
