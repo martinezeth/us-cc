@@ -1,6 +1,6 @@
 import React from 'react';
 import { Box, VStack } from '@chakra-ui/react';
-import Hero from '../Components/HeroSection'; // Importing the Hero component
+import Hero from '../Components/HeroSection';
 import AboutSection from '../Components/AboutSection';
 import FeaturesSection from '../Components/FeaturesSection';
 

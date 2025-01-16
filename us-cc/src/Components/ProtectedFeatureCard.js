@@ -32,8 +32,8 @@ const ProtectedFeatureCard = ({ title, description, icon, path, requiredRole }) 
             toast({
                 title: "Authentication Required",
                 description: requiredRole === 'organization'
-                    ? "Please log in as an organization to access this feature. Try the demo organization account!"
-                    : "Please log in to access this feature. Try the demo volunteer account!",
+                    ? "Please log in as an organization to access this feature. Try the Demo Organization account!"
+                    : "Please log in to access this feature. Try the Demo Volunteer account!",
                 status: "info",
                 duration: 5000,
                 isClosable: true,
