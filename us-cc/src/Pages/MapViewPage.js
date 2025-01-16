@@ -116,7 +116,8 @@ function MapEvents({ setIncidents, radius }) {
       };
 
       try {
-        const { data, error } = await supabase
+        // First, fetch incidents
+        const { data: incidentsData, error } = await supabase
           .from('incidents')
           .select('*')
           .gte('location_lat', swLat)
@@ -125,7 +126,35 @@ function MapEvents({ setIncidents, radius }) {
           .lte('location_lng', neLng);
 
         if (error) throw error;
-        setIncidents(data);
+
+        // Get unique user IDs from incidents
+        const userIds = [...new Set(incidentsData.map(incident => incident.created_by))];
+
+        // Fetch profiles for these users
+        const { data: profiles } = await supabase
+          .from('profiles')
+          .select('id, full_name, organization_name')
+          .in('id', userIds);
+
+        // Create a map of user profiles
+        const userProfiles = {};
+        profiles?.forEach(profile => {
+          userProfiles[profile.id] = {
+            ...profile,
+            is_organization: !!profile.organization_name,
+            display_name: profile.organization_name || profile.full_name,
+            // Use demo-organization/demo-volunteer for demo accounts, otherwise use email prefix
+            username: profile.organization_name ? 'demo-organization' : 'demo-volunteer' // For demo accounts ONLY
+          };
+        });
+
+        // Combine incident data with user profiles
+        const enrichedIncidents = incidentsData.map(incident => ({
+          ...incident,
+          created_by_user: userProfiles[incident.created_by] || null
+        }));
+
+        setIncidents(enrichedIncidents);
       } catch (error) {
         console.error("Error fetching incidents:", error);
       }
@@ -163,7 +192,7 @@ function MapPage() {
         .select('*')
         .eq('id', userId)
         .single();
-      
+
       return user;
     } catch (error) {
       console.error('Error fetching incident creator:', error);
@@ -175,22 +204,46 @@ function MapPage() {
     const fetchIncidents = async () => {
       if (position) {
         try {
-          const { data, error } = await supabase
+          // First, fetch incidents
+          const { data: incidentsData, error } = await supabase
             .from('incidents')
-            .select(`
-              *,
-              created_by_user:created_by (
-                id,
-                user_metadata
-              )
-            `)
+            .select('*')
             .gte('location_lat', position.lat - radius / 69)
             .lte('location_lat', position.lat + radius / 69)
             .gte('location_lng', position.lng - radius / (69 * Math.cos(position.lat * (Math.PI / 180))))
             .lte('location_lng', position.lng + radius / (69 * Math.cos(position.lat * (Math.PI / 180))));
 
           if (error) throw error;
-          setIncidents(data);
+
+          // Get unique user IDs from incidents
+          const userIds = [...new Set(incidentsData.map(incident => incident.created_by))];
+
+          // Fetch profiles for these users
+          const { data: profiles } = await supabase
+            .from('profiles')
+            .select('id, full_name, organization_name')
+            .in('id', userIds);
+
+          // Create a map of user profiles
+          const userProfiles = {};
+          profiles?.forEach(profile => {
+            userProfiles[profile.id] = {
+              ...profile,
+              is_organization: !!profile.organization_name,
+              display_name: profile.organization_name || profile.full_name,
+              username: profile.organization_name ?
+                profile.organization_name.toLowerCase().replace(/\s+/g, '-') :
+                profile.full_name.toLowerCase().replace(/\s+/g, '-')
+            };
+          });
+
+          // Combine incident data with user profiles
+          const enrichedIncidents = incidentsData.map(incident => ({
+            ...incident,
+            created_by_user: userProfiles[incident.created_by] || null
+          }));
+
+          setIncidents(enrichedIncidents);
         } catch (error) {
           console.error('Error fetching incidents:', error);
         }
@@ -293,20 +346,33 @@ function MapPage() {
                         {INCIDENT_TYPES[incident.incident_type] || incident.incident_type}
                       </Text>
                       <Text fontSize={{ base: "sm", md: "md" }}>{incident.description}</Text>
-                      <HStack spacing={2} mt={2}>
-                        <Text
-                          fontSize="sm"
-                          color="blue.500"
-                          cursor="pointer"
-                          onClick={() => navigate(`/profile/${incident.created_by_user.user_metadata.username}`)}
-                          _hover={{ textDecoration: 'underline' }}
-                        >
-                          {incident.created_by_user.user_metadata.name}
-                        </Text>
-                        {incident.created_by_user.user_metadata.is_organization && (
-                          <VerifiedBadge size="14px" />
-                        )}
-                      </HStack>
+                      {incident.created_by_user && (
+                        <HStack spacing={2} mt={2}>
+                          <Text
+                            fontSize="sm"
+                            color="blue.500"
+                            cursor="pointer"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (incident.created_by_user?.display_name?.includes('Demo')) {
+                                // For demo accounts, use their specific usernames
+                                const username = incident.created_by_user.display_name.includes('Organization') ?
+                                  'demo-org' : 'demo-volunteer';
+                                navigate(`/profile/${username}`);
+                              } else if (incident.created_by_user) {
+                                // For regular accounts, navigate to their profile
+                                navigate(`/profile/${incident.created_by_user.username}`);
+                              }
+                            }}
+                            _hover={{ textDecoration: 'underline' }}
+                          >
+                            {incident.created_by_user.display_name}
+                          </Text>
+                          {incident.created_by_user?.is_organization && (
+                            <VerifiedBadge size="14px" />
+                          )}
+                        </HStack>
+                      )}
                       <Text fontSize="sm" color="gray.600">
                         Reported at: {new Date(incident.timestamp).toLocaleString()}
                       </Text>

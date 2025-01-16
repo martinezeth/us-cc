@@ -21,6 +21,7 @@ import { supabase } from '../supabaseClient';
 import LocationMapPreview from './LocationMapPreview';
 import { MdMyLocation } from 'react-icons/md';
 import { INCIDENT_TYPES } from '../constants/incidentTypes';
+import LocationSearch from './LocationSearch';
 
 const CreateIncidentModal = ({ isOpen, onClose, onCreateSuccess }) => {
     const [incidentType, setIncidentType] = useState('');
@@ -60,6 +61,19 @@ const CreateIncidentModal = ({ isOpen, onClose, onCreateSuccess }) => {
         }
     };
 
+    const generateUsername = (email, isOrg) => {
+        // Get the part before @ in email
+        const baseUsername = email.split('@')[0];
+
+        // For demo accounts, add a suffix based on account type
+        if (email.includes('demo@')) {
+            return isOrg ? 'demo-organization' : 'demo-volunteer';
+        }
+
+        // For regular accounts, use the email prefix
+        return baseUsername.toLowerCase().replace(/\s+/g, '-');
+    };
+
     const handleSubmit = async () => {
         if (!position) {
             toast({
@@ -73,8 +87,21 @@ const CreateIncidentModal = ({ isOpen, onClose, onCreateSuccess }) => {
 
         try {
             const { data: { user } } = await supabase.auth.getUser();
-            
-            // Create the incident with user metadata
+
+            // Get user profile information
+            const { data: profile, error: profileError } = await supabase
+                .from('profiles')
+                .select('full_name, organization_name')
+                .eq('id', user.id)
+                .single();
+
+            if (profileError) throw profileError;
+
+            const isOrganization = !!profile.organization_name;
+            const displayName = profile.organization_name || profile.full_name || user.email;
+            const username = generateUsername(user.email, isOrganization);
+
+            // Create the incident
             const { data, error } = await supabase
                 .from('incidents')
                 .insert([{
@@ -83,14 +110,8 @@ const CreateIncidentModal = ({ isOpen, onClose, onCreateSuccess }) => {
                     location_lat: position.lat,
                     location_lng: position.lng,
                     created_by: user.id,
-                    created_by_user: {
-                        id: user.id,
-                        user_metadata: {
-                            name: user.user_metadata?.name || user.email,
-                            username: user.email.split('@')[0],
-                            is_organization: user.user_metadata?.is_organization || false
-                        }
-                    },
+                    user_name: displayName,
+                    user_username: username,
                     timestamp: new Date().toISOString()
                 }])
                 .select();
@@ -162,24 +183,36 @@ const CreateIncidentModal = ({ isOpen, onClose, onCreateSuccess }) => {
 
                         <FormControl isRequired>
                             <FormLabel>Location</FormLabel>
-                            <HStack mb={2}>
-                                <Button
-                                    onClick={getCurrentLocation}
-                                    isLoading={isLoadingLocation}
-                                    leftIcon={<MdMyLocation />}
-                                >
-                                    Use Current Location
-                                </Button>
-                                {position && (
-                                    <Text fontSize="sm" color="gray.600">
-                                        Lat: {position.lat.toFixed(6)}, Lng: {position.lng.toFixed(6)}
-                                    </Text>
-                                )}
-                            </HStack>
-                            <LocationMapPreview
-                                position={position}
-                                setPosition={setPosition}
-                            />
+                            <VStack spacing={2} align="stretch">
+                                <LocationSearch
+                                    mode="address"
+                                    placeholder="Search for an address..."
+                                    onSelect={(locationData) => {
+                                        setPosition({
+                                            lat: locationData.lat,
+                                            lng: locationData.lng
+                                        });
+                                    }}
+                                />
+                                <HStack mb={2}>
+                                    <Button
+                                        onClick={getCurrentLocation}
+                                        isLoading={isLoadingLocation}
+                                        leftIcon={<MdMyLocation />}
+                                    >
+                                        Use Current Location
+                                    </Button>
+                                    {position && (
+                                        <Text fontSize="sm" color="gray.600">
+                                            Lat: {position.lat.toFixed(6)}, Lng: {position.lng.toFixed(6)}
+                                        </Text>
+                                    )}
+                                </HStack>
+                                <LocationMapPreview
+                                    position={position}
+                                    setPosition={setPosition}
+                                />
+                            </VStack>
                         </FormControl>
 
                         <HStack spacing={4} width="100%" justify="flex-end">
