@@ -351,8 +351,8 @@ const VolunteerResponsesDrawer = ({ isOpen, onClose, opportunity }) => {
                                                         <Wrap>
                                                             {volunteer.availability ? (
                                                                 // Split the availability string into an array if it's not already
-                                                                (Array.isArray(volunteer.availability) ? 
-                                                                    volunteer.availability : 
+                                                                (Array.isArray(volunteer.availability) ?
+                                                                    volunteer.availability :
                                                                     volunteer.availability.split(',')
                                                                 ).map((time, index) => (
                                                                     <WrapItem key={index}>

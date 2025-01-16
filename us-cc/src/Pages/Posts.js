@@ -1,7 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
-    Box, Button, VStack, Text, Divider, Flex,
+    Box,
+    Button,
+    VStack,
+    Text,
+    Divider,
+    Flex,
     HStack,
     Badge,
     Input,
@@ -15,17 +20,27 @@ import {
     useDisclosure,
     Heading,
     Select,
-    useToast
+    useToast,
+    Popover,
+    PopoverTrigger,
+    PopoverContent,
+    PopoverBody,
+    PopoverHeader,
+    PopoverCloseButton,
+    Portal,
+    IconButton,
+    useMediaQuery,
 } from '@chakra-ui/react';
-import '../Styles/styles.css';
-import CreatePostModal from '../Components/CreatePostModal';
+import { FiFilter } from 'react-icons/fi';
 import { supabase } from '../supabaseClient';
 import { AiFillHeart, AiOutlineHeart } from 'react-icons/ai';
 import { BiComment } from 'react-icons/bi';
 import { ChevronUpIcon, ChevronDownIcon, AddIcon } from '@chakra-ui/icons';
 import VerifiedBadge from '../Components/VerifiedBadge';
+import CreatePostModal from '../Components/CreatePostModal';
+import '../Styles/styles.css';
 
-const Comment = ({ comment, onReply, depth = 0 }) => {
+const Comment = ({ comment, onReply, depth = 0, isMobile }) => {
     const navigate = useNavigate();
     const [showReplyInput, setShowReplyInput] = useState(false);
     const [replyContent, setReplyContent] = useState('');
@@ -91,16 +106,16 @@ const Comment = ({ comment, onReply, depth = 0 }) => {
     };
 
     return (
-        <Box pl={depth * 4}>
+        <Box pl={depth * (isMobile ? 2 : 4)}>
             <Box
-                p={2}
+                p={isMobile ? 2 : 3}
                 bg="gray.50"
                 borderRadius="md"
                 borderLeft="2px solid"
                 borderLeftColor="blue.200"
             >
                 <Text
-                    fontSize="sm"
+                    fontSize={isMobile ? "xs" : "sm"}
                     fontWeight="bold"
                     cursor="pointer"
                     color="blue.500"
@@ -109,13 +124,13 @@ const Comment = ({ comment, onReply, depth = 0 }) => {
                 >
                     {comment.user_name}
                 </Text>
-                <Text>{comment.content}</Text>
+                <Text fontSize={isMobile ? "sm" : "md"}>{comment.content}</Text>
                 <HStack spacing={4} mt={1}>
-                    <Text fontSize="xs" color="gray.500">
+                    <Text fontSize={isMobile ? "xs" : "sm"} color="gray.500">
                         {new Date(comment.created_at).toLocaleString()}
                     </Text>
                     <Button
-                        size="xs"
+                        size={isMobile ? "xs" : "sm"}
                         variant="ghost"
                         onClick={handleReplyClick}
                     >
@@ -128,12 +143,12 @@ const Comment = ({ comment, onReply, depth = 0 }) => {
                 <Box mt={2} pl={4}>
                     <HStack>
                         <Input
-                            size="sm"
+                            size={isMobile ? "sm" : "md"}
                             value={replyContent}
                             onChange={(e) => setReplyContent(e.target.value)}
                             placeholder="Write a reply..."
                         />
-                        <Button size="sm" onClick={handleReply}>
+                        <Button size={isMobile ? "sm" : "md"} onClick={handleReply}>
                             Send
                         </Button>
                     </HStack>
@@ -142,7 +157,7 @@ const Comment = ({ comment, onReply, depth = 0 }) => {
 
             {replies.length > 0 && (
                 <Button
-                    size="xs"
+                    size={isMobile ? "xs" : "sm"}
                     variant="ghost"
                     leftIcon={showReplies ? <ChevronUpIcon /> : <ChevronDownIcon />}
                     onClick={() => setShowReplies(!showReplies)}
@@ -154,14 +169,14 @@ const Comment = ({ comment, onReply, depth = 0 }) => {
 
             {showReplies && replies.map(reply => (
                 <Box mt={2} key={reply.id}>
-                    <Comment comment={reply} depth={depth + 1} />
+                    <Comment comment={reply} depth={depth + 1} isMobile={isMobile} />
                 </Box>
             ))}
         </Box>
     );
 };
 
-export const Post = ({ postData, isDetailView = false }) => {
+const Post = ({ postData, isMobile = false }) => {
     const navigate = useNavigate();
     const [likes, setLikes] = useState(0);
     const [comments, setComments] = useState([]);
@@ -170,6 +185,52 @@ export const Post = ({ postData, isDetailView = false }) => {
     const [commentCount, setCommentCount] = useState(0);
     const { isOpen, onOpen, onClose } = useDisclosure();
     const [isLoggedIn, setIsLoggedIn] = useState(false);
+    const toast = useToast();
+
+    useEffect(() => {
+        const checkAuth = async () => {
+            const { data: { user } } = await supabase.auth.getUser();
+            setIsLoggedIn(!!user);
+            if (user) {
+                checkIfLiked();
+            }
+        };
+        checkAuth();
+    }, []);
+
+    useEffect(() => {
+        fetchLikeCount();
+        fetchCommentCount();
+
+        const likesSubscription = supabase
+            .channel('likes')
+            .on('postgres_changes', {
+                event: '*',
+                schema: 'public',
+                table: 'post_likes',
+                filter: `post_id=eq.${postData.id}`
+            }, () => {
+                fetchLikeCount();
+            })
+            .subscribe();
+
+        const commentsSubscription = supabase
+            .channel('comments')
+            .on('postgres_changes', {
+                event: '*',
+                schema: 'public',
+                table: 'post_comments',
+                filter: `post_id=eq.${postData.id}`
+            }, () => {
+                fetchCommentCount();
+            })
+            .subscribe();
+
+        return () => {
+            likesSubscription.unsubscribe();
+            commentsSubscription.unsubscribe();
+        };
+    }, [postData.id]);
 
     const fetchLikeCount = async () => {
         try {
@@ -178,10 +239,7 @@ export const Post = ({ postData, isDetailView = false }) => {
                 .select('id', { count: 'exact' })
                 .eq('post_id', postData.id);
 
-            if (error) {
-                console.error('Error in fetchLikeCount:', error);
-                throw error;
-            }
+            if (error) throw error;
             setLikes(count || 0);
         } catch (error) {
             console.error('Error fetching like count:', error);
@@ -195,71 +253,14 @@ export const Post = ({ postData, isDetailView = false }) => {
                 .select('id', { count: 'exact' })
                 .eq('post_id', postData.id);
 
-            if (error) {
-                console.error('Error in fetchCommentCount:', error);
-                throw error;
-            }
+            if (error) throw error;
             setCommentCount(count || 0);
         } catch (error) {
             console.error('Error fetching comment count:', error);
         }
     };
 
-    // Handles authentication check and like status for logged in users
-    useEffect(() => {
-        const checkAuth = async () => {
-            const { data: { user } } = await supabase.auth.getUser();
-            setIsLoggedIn(!!user);
-            if (user) {
-                checkIfLiked();
-            }
-        };
-        checkAuth();
-    }, []);
-
-    // Sets up subscriptions for updating likes and comments when they change
-    useEffect(() => {
-        fetchLikeCount();
-        fetchCommentCount();
-
-        const likesSubscription = supabase
-            .channel('likes')
-            .on('postgres_changes', {
-                event: '*',
-                schema: 'public',
-                table: 'post_likes',
-                filter: `post_id=eq.${postData.id}`
-            }, (payload) => {
-                console.log('Likes subscription triggered:', payload);
-                fetchLikeCount();
-            })
-            .subscribe();
-
-        const commentsSubscription = supabase
-            .channel('comments')
-            .on('postgres_changes', {
-                event: '*',
-                schema: 'public',
-                table: 'post_comments',
-                filter: `post_id=eq.${postData.id}`
-            }, (payload) => {
-                console.log('Comments subscription triggered:', payload);
-                fetchCommentCount();
-            })
-            .subscribe();
-
-        console.log('Subscriptions set up successfully');
-
-        return () => {
-            console.log('Cleaning up subscriptions');
-            likesSubscription.unsubscribe();
-            commentsSubscription.unsubscribe();
-        };
-    }, [postData.id]);
-
-    // Handles opening the post modal and fetching its comments
     const handleModalOpen = async () => {
-        console.log('Opening modal for post:', postData.id);
         onOpen();
         try {
             const { data, error } = await supabase
@@ -268,12 +269,7 @@ export const Post = ({ postData, isDetailView = false }) => {
                 .eq('post_id', postData.id)
                 .order('created_at', { ascending: false });
 
-            if (error) {
-                console.error('Error fetching comments:', error);
-                throw error;
-            }
-
-            console.log('Comments fetched:', data?.length || 0, 'comments');
+            if (error) throw error;
             setComments(data || []);
         } catch (error) {
             console.error('Error in handleModalOpen:', error);
@@ -309,7 +305,6 @@ export const Post = ({ postData, isDetailView = false }) => {
                 return;
             }
 
-            // Update UI
             const newLikeCount = isLiked ? likes - 1 : likes + 1;
             setLikes(newLikeCount);
             setIsLiked(!isLiked);
@@ -321,46 +316,25 @@ export const Post = ({ postData, isDetailView = false }) => {
                     .eq('post_id', postData.id)
                     .eq('user_id', user.id);
 
-                if (error) {
-                    setLikes(likes);
-                    setIsLiked(isLiked);
-                    throw error;
-                }
+                if (error) throw error;
             } else {
-                const { error: likeError } = await supabase
+                const { error } = await supabase
                     .from('post_likes')
                     .insert([{
                         post_id: postData.id,
                         user_id: user.id
                     }]);
 
-                if (likeError) {
-                    setLikes(likes);
-                    setIsLiked(isLiked);
-                    throw likeError;
-                }
-
-                if (user.id !== postData.user_id) {
-                    const { data: userData } = await supabase
-                        .from('profiles')
-                        .select('full_name')
-                        .eq('id', user.id)
-                        .single();
-
-                    const { error: notifError } = await supabase
-                        .from('notifications')
-                        .insert({
-                            user_id: postData.user_id,
-                            type: 'like',
-                            content: `${userData?.full_name || 'Someone'} liked your post`,
-                            related_id: postData.id
-                        });
-
-                    if (notifError) throw notifError;
-                }
+                if (error) throw error;
             }
         } catch (error) {
             console.error('Error toggling like:', error);
+            toast({
+                title: "Error",
+                description: "Failed to update like status",
+                status: "error",
+                duration: 3000
+            });
         }
     };
 
@@ -369,6 +343,11 @@ export const Post = ({ postData, isDetailView = false }) => {
 
         try {
             const { data: { user } } = await supabase.auth.getUser();
+            if (!user) {
+                navigate('/login');
+                return;
+            }
+
             const { data: commentData, error: commentError } = await supabase
                 .from('post_comments')
                 .insert([{
@@ -383,87 +362,74 @@ export const Post = ({ postData, isDetailView = false }) => {
 
             if (commentError) throw commentError;
 
-            // Create notification for post owner
-            if (user.id !== postData.user_id) {
-                const { data: userData } = await supabase
-                    .from('profiles')
-                    .select('full_name')
-                    .eq('id', user.id)
-                    .single();
-
-                const { error: notifError } = await supabase
-                    .from('notifications')
-                    .insert({
-                        user_id: postData.user_id,
-                        type: 'comment',
-                        content: `${userData?.full_name || 'Someone'} commented on your post`,
-                        related_id: postData.id
-                    });
-
-                if (notifError) console.error('Error creating notification:', notifError);
-            }
-
             setComments([commentData, ...comments]);
             setNewComment('');
             setCommentCount(prev => prev + 1);
         } catch (error) {
             console.error('Error adding comment:', error);
+            toast({
+                title: "Error",
+                description: "Failed to add comment",
+                status: "error",
+                duration: 3000
+            });
         }
     };
 
-    const PostContent = ({ postData }) => {
-        return (
-            <Box>
-                <Text fontSize="xl" fontWeight="bold">{postData.title}</Text>
-                <HStack spacing={2} mt={2}>
-                    <Text
-                        fontSize="sm"
-                        color="blue.500"
-                        cursor="pointer"
-                        onClick={(e) => {
-                            e.stopPropagation();
-                            navigate(`/profile/${postData.user_username}`);
-                        }}
-                        _hover={{ textDecoration: 'underline' }}
-                    >
-                        {postData.user_name}
+    const PostContent = () => (
+        <Box>
+            <Text fontSize={isMobile ? "lg" : "xl"} fontWeight="bold">
+                {postData.title}
+            </Text>
+            <HStack spacing={2} mt={2}>
+                <Text
+                    fontSize={isMobile ? "xs" : "sm"}
+                    color="blue.500"
+                    cursor="pointer"
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        navigate(`/profile/${postData.user_username}`);
+                    }}
+                    _hover={{ textDecoration: 'underline' }}
+                >
+                    {postData.user_name}
+                </Text>
+                {postData.is_organization && <VerifiedBadge size={isMobile ? "12px" : "16px"} />}
+            </HStack>
+            <Text mt={2} fontSize={isMobile ? "sm" : "md"}>
+                {postData.body}
+            </Text>
+            {postData.city && postData.state && (
+                <Badge colorScheme="blue" mt={2} fontSize={isMobile ? "xs" : "sm"}>
+                    📍 {postData.city}, {postData.state}
+                </Badge>
+            )}
+            <HStack spacing={4} mt={4}>
+                <Button
+                    size={isMobile ? "xs" : "sm"}
+                    leftIcon={isLiked ? <Icon as={AiFillHeart} color="red.500" /> : <Icon as={AiOutlineHeart} />}
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        handleLike();
+                    }}
+                    variant="ghost"
+                >
+                    {likes} {likes === 1 ? 'Like' : 'Likes'}
+                </Button>
+                <HStack spacing={1}>
+                    <Icon as={BiComment} />
+                    <Text fontSize={isMobile ? "xs" : "sm"} color="gray.600">
+                        {commentCount} {commentCount === 1 ? 'Comment' : 'Comments'}
                     </Text>
-                    {postData.is_organization ? (
-                        <VerifiedBadge />
-                    ) : (
-                        <Text display="none">Not an organization</Text>
-                    )}
                 </HStack>
-                <Text mt={2}>{postData.body}</Text>
-                {postData.city && postData.state && (
-                    <Badge colorScheme="blue" mt={2}>
-                        📍 {postData.city}, {postData.state}
-                    </Badge>
-                )}
-                <HStack spacing={4} mt={4}>
-                    <Button
-                        size="sm"
-                        leftIcon={isLiked ? <Icon as={AiFillHeart} color="red.500" /> : <Icon as={AiOutlineHeart} />}
-                        onClick={handleLike}
-                        variant="ghost"
-                    >
-                        {likes} {likes === 1 ? 'Like' : 'Likes'}
-                    </Button>
-                    <HStack spacing={1}>
-                        <Icon as={BiComment} />
-                        <Text fontSize="sm" color="gray.600">
-                            {commentCount} {commentCount === 1 ? 'Comment' : 'Comments'}
-                        </Text>
-                    </HStack>
-                </HStack>
-            </Box>
-        );
-    };
+            </HStack>
+        </Box>
+    );
 
     return (
         <>
             <Box
-                p={5}
+                p={isMobile ? 3 : 5}
                 shadow="md"
                 borderWidth="1px"
                 borderRadius="md"
@@ -473,14 +439,19 @@ export const Post = ({ postData, isDetailView = false }) => {
                 _hover={{ shadow: 'lg' }}
                 width="100%"
             >
-                <PostContent postData={postData} />
+                <PostContent />
             </Box>
 
-            <Modal isOpen={isOpen} onClose={onClose} size="xl" scrollBehavior="inside">
+            <Modal
+                isOpen={isOpen}
+                onClose={onClose}
+                size={isMobile ? "full" : "xl"}
+                scrollBehavior="inside"
+            >
                 <ModalOverlay />
                 <ModalContent>
                     <ModalHeader>
-                        <Text fontSize="sm" color="gray.500">
+                        <Text fontSize={isMobile ? "xs" : "sm"} color="gray.500">
                             Posted by{' '}
                             <Text
                                 as="span"
@@ -500,10 +471,8 @@ export const Post = ({ postData, isDetailView = false }) => {
                     <ModalCloseButton />
                     <ModalBody pb={6}>
                         <VStack align="stretch" spacing={4}>
-                            <PostContent postData={postData} />
-
+                            <PostContent />
                             <Divider my={4} />
-
                             <VStack align="stretch" spacing={4}>
                                 {isLoggedIn ? (
                                     <HStack>
@@ -511,11 +480,13 @@ export const Post = ({ postData, isDetailView = false }) => {
                                             placeholder="Write a comment..."
                                             value={newComment}
                                             onChange={(e) => setNewComment(e.target.value)}
+                                            size={isMobile ? "sm" : "md"}
                                         />
                                         <Button
                                             colorScheme="blue"
                                             onClick={handleComment}
                                             isDisabled={!newComment.trim()}
+                                            size={isMobile ? "sm" : "md"}
                                         >
                                             Post
                                         </Button>
@@ -525,13 +496,18 @@ export const Post = ({ postData, isDetailView = false }) => {
                                         onClick={() => navigate('/login')}
                                         colorScheme="blue"
                                         width="fit-content"
+                                        size={isMobile ? "sm" : "md"}
                                     >
                                         Login to Comment
                                     </Button>
                                 )}
 
                                 {comments.map((comment) => (
-                                    <Comment key={comment.id} comment={comment} />
+                                    <Comment
+                                        key={comment.id}
+                                        comment={comment}
+                                        isMobile={isMobile}
+                                    />
                                 ))}
                             </VStack>
                         </VStack>
@@ -539,6 +515,163 @@ export const Post = ({ postData, isDetailView = false }) => {
                 </ModalContent>
             </Modal>
         </>
+    );
+};
+
+const MobileFilterMenu = ({
+    searchRadius,
+    handleRadiusChange,
+    isLoadingLocation
+}) => {
+    return (
+        <Popover placement="bottom-end">
+            <PopoverTrigger>
+                <IconButton
+                    icon={<FiFilter />}
+                    variant="ghost"
+                    aria-label="Filter posts"
+                    size="md"
+                />
+            </PopoverTrigger>
+            <Portal>
+                <PopoverContent width="300px">
+                    <PopoverHeader fontWeight="semibold">Filter Posts</PopoverHeader>
+                    <PopoverCloseButton />
+                    <PopoverBody>
+                        <VStack spacing={4} align="stretch" p={2}>
+                            <Text fontSize="sm" fontWeight="medium">Distance Filter</Text>
+                            <Select
+                                value={searchRadius}
+                                onChange={(e) => handleRadiusChange(parseInt(e.target.value))}
+                                isDisabled={isLoadingLocation}
+                                size="sm"
+                            >
+                                <option value={0}>Show all posts</option>
+                                <option value={5}>Within 5 miles</option>
+                                <option value={10}>Within 10 miles</option>
+                                <option value={25}>Within 25 miles</option>
+                                <option value={50}>Within 50 miles</option>
+                                <option value={100}>Within 100 miles</option>
+                            </Select>
+                            {isLoadingLocation && (
+                                <Text fontSize="xs" color="gray.500">
+                                    Getting location...
+                                </Text>
+                            )}
+                        </VStack>
+                    </PopoverBody>
+                </PopoverContent>
+            </Portal>
+        </Popover>
+    );
+};
+
+const LocationFilter = ({
+    isMobileDrawer = false,
+    searchRadius,
+    setSearchRadius,
+    setUserCoords,
+    setPosts,
+    isLoadingLocation,
+    setIsLoadingLocation,
+    calculateDistance,
+    fetchPosts
+}) => {
+    const toast = useToast();
+    const navigate = useNavigate();
+    const [isMobile] = useMediaQuery("(max-width: 768px)");
+
+    return (
+        <Box
+            p={3}
+            bg="white"
+            borderRadius="lg"
+            shadow="sm"
+            width={isMobileDrawer ? "100%" : "200px"}
+            maxHeight="fit-content"
+        >
+            <VStack spacing={2} align="stretch">
+                <Text fontWeight="bold" fontSize="md">Filter by Location</Text>
+                <Select
+                    value={searchRadius || 0}
+                    onChange={async (e) => {
+                        const radius = parseInt(e.target.value);
+                        if (radius === 0) {
+                            setUserCoords(null);
+                            fetchPosts();
+                            return;
+                        }
+
+                        setIsLoadingLocation(true);
+                        try {
+                            const position = await new Promise((resolve, reject) => {
+                                navigator.geolocation.getCurrentPosition(resolve, reject);
+                            });
+
+                            const coords = {
+                                lat: position.coords.latitude,
+                                lng: position.coords.longitude
+                            };
+                            setUserCoords(coords);
+                            setSearchRadius(radius);
+
+                            let { data, error } = await supabase.rpc('get_posts_within_radius', {
+                                user_lat: coords.lat,
+                                user_lng: coords.lng,
+                                radius_miles: radius
+                            });
+
+                            if (error) {
+                                const { data: allPosts, error: fetchError } = await supabase
+                                    .from('posts')
+                                    .select('*')
+                                    .order('date_posted', { ascending: false });
+
+                                if (fetchError) throw fetchError;
+
+                                data = allPosts.filter(post => {
+                                    if (!post.city_coords) return false;
+                                    const [postLat, postLng] = post.city_coords.split(',').map(Number);
+                                    const distance = calculateDistance(
+                                        coords.lat,
+                                        coords.lng,
+                                        postLat,
+                                        postLng
+                                    );
+                                    return distance <= radius;
+                                });
+                            }
+
+                            setPosts(data || []);
+                        } catch (error) {
+                            console.error('Error:', error);
+                            toast({
+                                title: "Location Error",
+                                description: "Could not access your location. Please allow location access and try again.",
+                                status: "error",
+                                duration: 5000
+                            });
+                        } finally {
+                            setIsLoadingLocation(false);
+                        }
+                    }}
+                    placeholder="Filter by distance"
+                    isDisabled={isLoadingLocation}
+                >
+                    <option value={0}>Show all posts</option>
+                    <option value={5}>Within 5 miles</option>
+                    <option value={10}>Within 10 miles</option>
+                    <option value={25}>Within 25 miles</option>
+                    <option value={50}>Within 50 miles</option>
+                    <option value={100}>Within 100 miles</option>
+                </Select>
+                {isLoadingLocation && (
+                    <Text fontSize="sm" color="gray.500">
+                        Getting location...
+                    </Text>
+                )}
+            </VStack>
+        </Box>
     );
 };
 
@@ -550,8 +683,9 @@ export default function Posts() {
     const [userCoords, setUserCoords] = useState(null);
     const [searchRadius, setSearchRadius] = useState(25);
     const [isLoadingLocation, setIsLoadingLocation] = useState(false);
-    const [user, setUser] = useState(null);
+    const [isMobile] = useMediaQuery("(max-width: 768px)");
     const navigate = useNavigate();
+    const toast = useToast();
 
     useEffect(() => {
         const checkAuth = async () => {
@@ -559,115 +693,13 @@ export default function Posts() {
             if (user) {
                 setIsLoggedIn(true);
             }
-            // Fetch posts regardless of auth status
             fetchPosts();
         };
         checkAuth();
     }, [username]);
 
-    const LocationFilter = () => {
-        const toast = useToast();
-
-        return (
-            <Box
-                p={3}
-                bg="white"
-                borderRadius="lg"
-                shadow="sm"
-                width="200px"
-                maxHeight="fit-content"
-            >
-                <VStack spacing={2} align="stretch">
-                    <Text fontWeight="bold" fontSize="md">Filter by Location</Text>
-                    <Select
-                        value={searchRadius || 0}
-                        onChange={async (e) => {
-                            const radius = parseInt(e.target.value);
-                            if (radius === 0) {
-                                // Clear filter
-                                setUserCoords(null);
-                                fetchPosts();
-                                return;
-                            }
-
-                            setIsLoadingLocation(true);
-                            try {
-                                // Get current location
-                                const position = await new Promise((resolve, reject) => {
-                                    navigator.geolocation.getCurrentPosition(resolve, reject);
-                                });
-
-                                const coords = {
-                                    lat: position.coords.latitude,
-                                    lng: position.coords.longitude
-                                };
-                                setUserCoords(coords);
-                                setSearchRadius(radius);
-
-                                // Apply filter immediately
-                                let { data, error } = await supabase.rpc('get_posts_within_radius', {
-                                    user_lat: coords.lat,
-                                    user_lng: coords.lng,
-                                    radius_miles: radius
-                                });
-
-                                if (error) {
-                                    const { data: allPosts, error: fetchError } = await supabase
-                                        .from('posts')
-                                        .select('*')
-                                        .order('date_posted', { ascending: false });
-
-                                    if (fetchError) throw fetchError;
-
-                                    data = allPosts.filter(post => {
-                                        if (!post.city_coords) return false;
-                                        const [postLat, postLng] = post.city_coords.split(',').map(Number);
-                                        const distance = calculateDistance(
-                                            coords.lat,
-                                            coords.lng,
-                                            postLat,
-                                            postLng
-                                        );
-                                        return distance <= radius;
-                                    });
-                                }
-
-                                setPosts(data || []);
-                            } catch (error) {
-                                console.error('Error:', error);
-                                toast({
-                                    title: "Location Error",
-                                    description: "Could not access your location. Please allow location access and try again.",
-                                    status: "error",
-                                    duration: 5000
-                                });
-                            } finally {
-                                setIsLoadingLocation(false);
-                            }
-                        }}
-                        placeholder="Filter by distance"
-                        isDisabled={isLoadingLocation}
-                    >
-                        <option value={0}>Show all posts</option>
-                        <option value={5}>Within 5 miles</option>
-                        <option value={10}>Within 10 miles</option>
-                        <option value={25}>Within 25 miles</option>
-                        <option value={50}>Within 50 miles</option>
-                        <option value={100}>Within 100 miles</option>
-                    </Select>
-                    {isLoadingLocation && (
-                        <Text fontSize="sm" color="gray.500">
-                            Getting location...
-                        </Text>
-                    )}
-                </VStack>
-            </Box>
-        );
-    };
-
-    // Helper function for filter distance calculation
     const calculateDistance = (lat1, lon1, lat2, lon2) => {
-        const R = 3959; // Constant for calculating distance in miles
+        const R = 3959; // Radius of Earth in miles
         const dLat = (lat2 - lat1) * Math.PI / 180;
         const dLon = (lon2 - lon1) * Math.PI / 180;
         const a =
@@ -689,106 +721,165 @@ export default function Posts() {
                 query = query.eq('user_username', username);
             }
 
-            const { data: posts, error } = await query;
+            const { data, error } = await query;
             if (error) throw error;
-
-            // Get unique user IDs from posts
-            const userIds = [...new Set(posts.map(post => post.user_id))];
-
-            // Get user profiles for each user
-            const { data: profiles } = await supabase
-                .from('profiles')
-                .select('id, organization_name')
-                .in('id', userIds);
-
-            // Create a map of user IDs to organization status
-            const userOrgStatus = {};
-            profiles?.forEach(profile => {
-                userOrgStatus[profile.id] = profile.organization_name !== null;
-            });
-
-            // Add organization status to posts
-            const transformedData = posts.map(post => ({
-                ...post,
-                is_organization: userOrgStatus[post.user_id] || false
-            }));
-
-            setPosts(transformedData || []);
+            setPosts(data || []);
         } catch (error) {
             console.error('Error fetching posts:', error);
+            toast({
+                title: "Error",
+                description: "Failed to load posts",
+                status: "error",
+                duration: 3000
+            });
         }
     };
 
-    useEffect(() => {
-        const checkAuth = async () => {
-            const { data: { user } } = await supabase.auth.getUser();
-            if (user) {
-                setIsLoggedIn(true);
-            }
-            // Always fetch posts, regardless of auth status
+    const handleRadiusChange = async (radius) => {
+        if (radius === 0) {
+            setUserCoords(null);
             fetchPosts();
-        };
-        checkAuth();
-    }, [username]);
+            return;
+        }
 
+        setIsLoadingLocation(true);
+        try {
+            const position = await new Promise((resolve, reject) => {
+                navigator.geolocation.getCurrentPosition(resolve, reject);
+            });
 
-    const togglePostModal = () => {
-        setIsPostModalOpen(!isPostModalOpen);
+            const coords = {
+                lat: position.coords.latitude,
+                lng: position.coords.longitude
+            };
+            setUserCoords(coords);
+            setSearchRadius(radius);
+
+            let { data, error } = await supabase.rpc('get_posts_within_radius', {
+                user_lat: coords.lat,
+                user_lng: coords.lng,
+                radius_miles: radius
+            });
+
+            if (error) {
+                const { data: allPosts, error: fetchError } = await supabase
+                    .from('posts')
+                    .select('*')
+                    .order('date_posted', { ascending: false });
+
+                if (fetchError) throw fetchError;
+
+                data = allPosts.filter(post => {
+                    if (!post.city_coords) return false;
+                    const [postLat, postLng] = post.city_coords.split(',').map(Number);
+                    const distance = calculateDistance(
+                        coords.lat,
+                        coords.lng,
+                        postLat,
+                        postLng
+                    );
+                    return distance <= radius;
+                });
+            }
+
+            setPosts(data || []);
+        } catch (error) {
+            console.error('Error:', error);
+            toast({
+                title: "Location Error",
+                description: "Could not access your location. Please allow location access and try again.",
+                status: "error",
+                duration: 5000
+            });
+        } finally {
+            setIsLoadingLocation(false);
+        }
     };
 
     return (
-        <Box maxW="1200px" mx="auto" py={8} px={4} width="100%">
+        <Box
+            maxW="1200px"
+            mx="auto"
+            py={isMobile ? 4 : 8}
+            px={isMobile ? 2 : 4}
+            width="100%"
+        >
             <Flex gap={6} alignItems="flex-start" width="100%">
-                <Box
-                    width="200px"
-                    flexShrink={0}
-                    position="sticky"
-                    top="20px"
-                    alignSelf="flex-start"
-                >
-                    <LocationFilter />
-                </Box>
+                {!isMobile && (
+                    <Box
+                        width="200px"
+                        flexShrink={0}
+                        position="sticky"
+                        top="20px"
+                        alignSelf="flex-start"
+                    >
+                        <LocationFilter
+                            searchRadius={searchRadius}
+                            setSearchRadius={setSearchRadius}
+                            setUserCoords={setUserCoords}
+                            setPosts={setPosts}
+                            isLoadingLocation={isLoadingLocation}
+                            setIsLoadingLocation={setIsLoadingLocation}
+                            calculateDistance={calculateDistance}
+                            fetchPosts={fetchPosts}
+                        />
+                    </Box>
+                )}
 
-                <Box
-                    flex="1"
-                    width="100%"
-                    minWidth="0"
-                >
+                <Box flex="1" width="100%" minWidth="0">
                     <VStack spacing={4} align="stretch" width="100%">
-                        <Flex justify="space-between" align="center" mb={4}>
-                            <Heading size="lg">Community Posts</Heading>
-                            <Button
-                                leftIcon={<AddIcon />}
-                                colorScheme="blue"
-                                onClick={() => {
-                                    if (!isLoggedIn) {
-                                        navigate('/login');
-                                    } else {
-                                        togglePostModal();
-                                    }
-                                }}
-                            >
-                                Create Post
-                            </Button>
+                        <Flex
+                            justify="space-between"
+                            align="center"
+                            width="100%"
+                            mb={4}
+                        >
+                            <Heading size={isMobile ? "md" : "lg"}>Community Posts</Heading>
+                            <Flex gap={2} align="center">
+                                {isMobile && (
+                                    <MobileFilterMenu
+                                        searchRadius={searchRadius}
+                                        handleRadiusChange={handleRadiusChange}
+                                        isLoadingLocation={isLoadingLocation}
+                                    />
+                                )}
+                                <Button
+                                    leftIcon={<AddIcon />}
+                                    colorScheme="blue"
+                                    size={isMobile ? "sm" : "md"}
+                                    onClick={() => {
+                                        if (!isLoggedIn) {
+                                            navigate('/login');
+                                        } else {
+                                            setIsPostModalOpen(true);
+                                        }
+                                    }}
+                                >
+                                    {isMobile ? "New Post" : "Create Post"}
+                                </Button>
+                            </Flex>
                         </Flex>
 
                         {posts.length === 0 ? (
                             <Box
                                 textAlign="center"
-                                p={8}
+                                p={isMobile ? 4 : 8}
                                 bg="white"
                                 borderRadius="lg"
                                 shadow="sm"
-                                width="100%"
                             >
-                                <Text fontSize="lg" color="gray.500">
+                                <Text fontSize={isMobile ? "md" : "lg"} color="gray.500">
                                     No posts found in this area.
                                 </Text>
                             </Box>
                         ) : (
-                            <VStack spacing={4} width="100%" align="stretch">
+                            <VStack spacing={isMobile ? 3 : 4} width="100%" align="stretch">
                                 {posts.map((post, index) => (
-                                    <Post key={index} postData={post} />
+                                    <Post
+                                        key={index}
+                                        postData={post}
+                                        isMobile={isMobile}
+                                    />
                                 ))}
                             </VStack>
                         )}
@@ -799,7 +890,7 @@ export default function Posts() {
             {isLoggedIn && (
                 <CreatePostModal
                     isOpen={isPostModalOpen}
-                    onClose={togglePostModal}
+                    onClose={() => setIsPostModalOpen(false)}
                     onCreatePost={(newPost) => setPosts([newPost, ...posts])}
                 />
             )}
