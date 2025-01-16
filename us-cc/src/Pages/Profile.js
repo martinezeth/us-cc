@@ -104,27 +104,23 @@ export default function Profile() {
 
             // Profile lookup logic for other users' profiles
             if (!isOwn) {
-                // First try to find demo profiles (organization or volunteer)
-                // This uses a single query to check both demo profile types
-                const { data: profile, error } = await supabase
+                // First check if it's a demo profile
+                const { data: profile } = await supabase
                     .from('profiles')
                     .select('*')
-                    .or(`full_name.eq.Demo Volunteer,organization_name.eq.Demo Organization`)
-                    .eq(username === 'demo' ? 'organization_name' : 'full_name',
-                        username === 'demo' ? 'Demo Organization' : 'Demo Volunteer')
+                    .eq('id', targetUserId)
                     .single();
 
-                if (error) {
-                    // If not a demo profile, lookup regular user by email prefix
+                if (profile && isDemoProfile(profile)) {
+                    targetUserId = profile.id;
+                } else {
+                    // For regular users, lookup by email prefix
                     const { data: userId } = await supabase.rpc('get_user_id_by_email_prefix', {
                         prefix_param: username
                     });
 
                     if (!userId) throw new Error("User not found");
                     targetUserId = userId;
-                } else {
-                    // Demo profile found, use its ID
-                    targetUserId = profile.id;
                 }
             }
 
@@ -152,11 +148,11 @@ export default function Profile() {
                 address: profile.address || null,
                 mission_statement: profile.mission_statement || null,
                 organization_name: profile.organization_name || null,
-                is_organization: !!profile.organization_name // Set based on profile data, not metadata
+                is_organization: !!profile.organization_name
             });
 
             // Only fetch volunteer data if not an organization
-            if (!profile.organization_name) {
+            if (!currentUser.user_metadata?.is_organization) {
                 const { data: volunteerInfo } = await supabase
                     .from('volunteer_signups')
                     .select('*')
@@ -284,7 +280,7 @@ export default function Profile() {
                                                 📍 {profileData.city}, {profileData.state}
                                             </Text>
                                         )}
-                                        {volunteerData && !profileData.is_organization && (
+                                        {volunteerData && (
                                             <Badge
                                                 colorScheme="green"
                                                 px={2}
