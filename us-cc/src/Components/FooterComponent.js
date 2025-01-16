@@ -15,7 +15,7 @@ export default function FooterComponent() {
             left: 0
         }}>
             <p>© {currentYear} Crisis Companion. All Rights Reserved.</p>
-            {/* <p>Privacy Policy | Terms of Service</p> */}
+            <p style={{ fontWeight: 'bold' }}>This site is for demo purposes only. Do not use it to give or receive emergency information. All content is fictitious</p>
         </footer>
     );
 }

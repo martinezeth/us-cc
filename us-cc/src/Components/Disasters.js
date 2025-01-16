@@ -1,22 +1,3 @@
-// import React from "react";
-// import {Button, VStack, Select} from '@chakra-ui/react'
-// import {Link} from 'react-router-dom';
-
-// export default function DropDown(){
-    
-//     return(
-//         <VStack>
-//         <Select  placeholder="Disasters">
-//             <Button  as={Link} to="/wildfire">Wildfire</Button>
-//             <Button  as={Link} to="/flood">Flood</Button>
-//             <Button  as={Link} to="/hurricane">Hurricane</Button>
-//             <Button  as={Link} to="/earthquake">Earthquake</Button>
-//             <Button  as={Link} to="/COVID">COIVD-19</Button>
-//         </Select>
-//         </VStack>
-//     );
-// };
-
 import React from "react";
 import { VStack, Menu, MenuButton, MenuList, MenuItem, Button } from "@chakra-ui/react";
 import { ChevronDownIcon } from "@chakra-ui/icons";

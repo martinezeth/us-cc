@@ -104,23 +104,37 @@ export default function Profile() {
 
             // Profile lookup logic for other users' profiles
             if (!isOwn) {
-                // First check if it's a demo profile
-                const { data: profile } = await supabase
+                // First check if it's a demo profile or organization
+                const { data: profiles } = await supabase
                     .from('profiles')
                     .select('*')
-                    .eq('id', targetUserId)
-                    .single();
+                    .or(`organization_name.eq.'Demo Organization',full_name.eq.'Demo Volunteer'`);
 
-                if (profile && isDemoProfile(profile)) {
-                    targetUserId = profile.id;
-                } else {
-                    // For regular users, lookup by email prefix
-                    const { data: userId } = await supabase.rpc('get_user_id_by_email_prefix', {
-                        prefix_param: username
-                    });
+                // Try to find the demo profile first
+                let targetProfile = profiles?.find(p => getProfileUsername(p) === username);
 
-                    if (!userId) throw new Error("User not found");
-                    targetUserId = userId;
+                if (!targetProfile) {
+                    // If not a demo profile, try to find by organization name
+                    const { data: orgProfiles } = await supabase
+                        .from('profiles')
+                        .select('*')
+                        .not('organization_name', 'is', null);
+
+                    targetProfile = orgProfiles?.find(p => getProfileUsername(p) === username);
+
+                    // If still not found, try email prefix lookup
+                    if (!targetProfile) {
+                        const { data: userId } = await supabase.rpc('get_user_id_by_email_prefix', {
+                            prefix_param: username
+                        });
+
+                        if (!userId) throw new Error("User not found");
+                        targetUserId = userId;
+                    }
+                }
+
+                if (targetProfile) {
+                    targetUserId = targetProfile.id;
                 }
             }
 
