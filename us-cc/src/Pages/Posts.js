@@ -23,6 +23,7 @@ import { supabase } from '../supabaseClient';
 import { AiFillHeart, AiOutlineHeart } from 'react-icons/ai';
 import { BiComment } from 'react-icons/bi';
 import { ChevronUpIcon, ChevronDownIcon, AddIcon } from '@chakra-ui/icons';
+import VerifiedBadge from '../Components/VerifiedBadge';
 
 const Comment = ({ comment, onReply, depth = 0 }) => {
     const navigate = useNavigate();
@@ -30,10 +31,27 @@ const Comment = ({ comment, onReply, depth = 0 }) => {
     const [replyContent, setReplyContent] = useState('');
     const [showReplies, setShowReplies] = useState(false);
     const [replies, setReplies] = useState(comment.replies || []);
+    const [isLoggedIn, setIsLoggedIn] = useState(false);
+
+    useEffect(() => {
+        const checkAuth = async () => {
+            const { data: { user } } = await supabase.auth.getUser();
+            setIsLoggedIn(!!user);
+        };
+        checkAuth();
+    }, []);
 
     const handleUsernameClick = (e) => {
         e.stopPropagation();
         navigate(`/profile/${comment.user_email.split('@')[0]}`);
+    };
+
+    const handleReplyClick = () => {
+        if (!isLoggedIn) {
+            navigate('/login');
+            return;
+        }
+        setShowReplyInput(!showReplyInput);
     };
 
     const handleReply = async () => {
@@ -41,6 +59,11 @@ const Comment = ({ comment, onReply, depth = 0 }) => {
 
         try {
             const { data: { user } } = await supabase.auth.getUser();
+            if (!user) {
+                navigate('/login');
+                return;
+            }
+
             const newReply = {
                 post_id: comment.post_id,
                 parent_id: comment.id,
@@ -94,9 +117,9 @@ const Comment = ({ comment, onReply, depth = 0 }) => {
                     <Button
                         size="xs"
                         variant="ghost"
-                        onClick={() => setShowReplyInput(!showReplyInput)}
+                        onClick={handleReplyClick}
                     >
-                        Reply
+                        {isLoggedIn ? 'Reply' : 'Login to Reply'}
                     </Button>
                 </HStack>
             </Box>
@@ -146,18 +169,7 @@ export const Post = ({ postData, isDetailView = false }) => {
     const [isLiked, setIsLiked] = useState(false);
     const [commentCount, setCommentCount] = useState(0);
     const { isOpen, onOpen, onClose } = useDisclosure();
-
-    useEffect(() => {
-        fetchLikeCount();
-        checkIfLiked();
-        fetchCommentCount();
-    }, []);
-
-    useEffect(() => {
-        if (isOpen) {
-            fetchComments();
-        }
-    }, [isOpen]);
+    const [isLoggedIn, setIsLoggedIn] = useState(false);
 
     const fetchLikeCount = async () => {
         try {
@@ -166,16 +178,116 @@ export const Post = ({ postData, isDetailView = false }) => {
                 .select('id', { count: 'exact' })
                 .eq('post_id', postData.id);
 
-            if (error) throw error;
+            if (error) {
+                console.error('Error in fetchLikeCount:', error);
+                throw error;
+            }
             setLikes(count || 0);
         } catch (error) {
             console.error('Error fetching like count:', error);
         }
     };
 
+    const fetchCommentCount = async () => {
+        try {
+            const { count, error } = await supabase
+                .from('post_comments')
+                .select('id', { count: 'exact' })
+                .eq('post_id', postData.id);
+
+            if (error) {
+                console.error('Error in fetchCommentCount:', error);
+                throw error;
+            }
+            setCommentCount(count || 0);
+        } catch (error) {
+            console.error('Error fetching comment count:', error);
+        }
+    };
+
+    // Handles authentication check and like status for logged in users
+    useEffect(() => {
+        const checkAuth = async () => {
+            const { data: { user } } = await supabase.auth.getUser();
+            setIsLoggedIn(!!user);
+            if (user) {
+                checkIfLiked();
+            }
+        };
+        checkAuth();
+    }, []);
+
+    // Sets up subscriptions for updating likes and comments when they change
+    useEffect(() => {
+        fetchLikeCount();
+        fetchCommentCount();
+
+        const likesSubscription = supabase
+            .channel('likes')
+            .on('postgres_changes', {
+                event: '*',
+                schema: 'public',
+                table: 'post_likes',
+                filter: `post_id=eq.${postData.id}`
+            }, (payload) => {
+                console.log('Likes subscription triggered:', payload);
+                fetchLikeCount();
+            })
+            .subscribe();
+
+        const commentsSubscription = supabase
+            .channel('comments')
+            .on('postgres_changes', {
+                event: '*',
+                schema: 'public',
+                table: 'post_comments',
+                filter: `post_id=eq.${postData.id}`
+            }, (payload) => {
+                console.log('Comments subscription triggered:', payload);
+                fetchCommentCount();
+            })
+            .subscribe();
+
+        console.log('Subscriptions set up successfully');
+
+        return () => {
+            console.log('Cleaning up subscriptions');
+            likesSubscription.unsubscribe();
+            commentsSubscription.unsubscribe();
+        };
+    }, [postData.id]);
+
+    // Handles opening the post modal and fetching its comments
+    const handleModalOpen = async () => {
+        console.log('Opening modal for post:', postData.id);
+        onOpen();
+        try {
+            const { data, error } = await supabase
+                .from('post_comments')
+                .select('*')
+                .eq('post_id', postData.id)
+                .order('created_at', { ascending: false });
+
+            if (error) {
+                console.error('Error fetching comments:', error);
+                throw error;
+            }
+
+            console.log('Comments fetched:', data?.length || 0, 'comments');
+            setComments(data || []);
+        } catch (error) {
+            console.error('Error in handleModalOpen:', error);
+        }
+    };
+
     const checkIfLiked = async () => {
         try {
             const { data: { user } } = await supabase.auth.getUser();
+            if (!user) {
+                setIsLiked(false);
+                return;
+            }
+
             const { data, error } = await supabase
                 .from('post_likes')
                 .select('id')
@@ -192,19 +304,29 @@ export const Post = ({ postData, isDetailView = false }) => {
     const handleLike = async () => {
         try {
             const { data: { user } } = await supabase.auth.getUser();
+            if (!user) {
+                navigate('/login');
+                return;
+            }
+
+            // Update UI
+            const newLikeCount = isLiked ? likes - 1 : likes + 1;
+            setLikes(newLikeCount);
+            setIsLiked(!isLiked);
 
             if (isLiked) {
-                // Unlike
                 const { error } = await supabase
                     .from('post_likes')
                     .delete()
                     .eq('post_id', postData.id)
                     .eq('user_id', user.id);
 
-                if (error) throw error;
-                setLikes(prev => Math.max(0, prev - 1));
+                if (error) {
+                    setLikes(likes);
+                    setIsLiked(isLiked);
+                    throw error;
+                }
             } else {
-                // Like
                 const { error: likeError } = await supabase
                     .from('post_likes')
                     .insert([{
@@ -212,9 +334,12 @@ export const Post = ({ postData, isDetailView = false }) => {
                         user_id: user.id
                     }]);
 
-                if (likeError) throw likeError;
+                if (likeError) {
+                    setLikes(likes);
+                    setIsLiked(isLiked);
+                    throw likeError;
+                }
 
-                // Create notification for post owner
                 if (user.id !== postData.user_id) {
                     const { data: userData } = await supabase
                         .from('profiles')
@@ -231,12 +356,9 @@ export const Post = ({ postData, isDetailView = false }) => {
                             related_id: postData.id
                         });
 
-                    if (notifError) console.error('Error creating notification:', notifError);
+                    if (notifError) throw notifError;
                 }
-
-                setLikes(prev => prev + 1);
             }
-            setIsLiked(!isLiked);
         } catch (error) {
             console.error('Error toggling like:', error);
         }
@@ -289,78 +411,54 @@ export const Post = ({ postData, isDetailView = false }) => {
         }
     };
 
-    const fetchCommentCount = async () => {
-        try {
-            const { count, error } = await supabase
-                .from('post_comments')
-                .select('id', { count: 'exact' })
-                .eq('post_id', postData.id)
-                .is('parent_id', null);
-
-            if (error) throw error;
-            setCommentCount(count || 0);
-        } catch (error) {
-            console.error('Error fetching comment count:', error);
-        }
-    };
-
-    const fetchComments = async () => {
-        try {
-            const { data, error } = await supabase
-                .from('post_comments')
-                .select(`
-                    *,
-                    replies:post_comments!parent_id(*)
-                `)
-                .eq('post_id', postData.id)
-                .is('parent_id', null)
-                .order('created_at', { ascending: false });
-
-            if (error) throw error;
-
-            const commentsWithReplies = data?.map(comment => ({
-                ...comment,
-                replies: comment.replies || []
-            })) || [];
-
-            setComments(commentsWithReplies);
-        } catch (error) {
-            console.error('Error fetching comments:', error);
-        }
-    };
-
-    const handlePostClick = (e) => {
-        if (e.target.closest('button')) return;
-        onOpen();
-    };
-
-    const PostContent = () => (
-        <Box>
-            <Text fontSize="xl" fontWeight="bold">{postData.title}</Text>
-            <Text mt={2}>{postData.body}</Text>
-            {postData.city && postData.state && (
-                <Badge colorScheme="blue" mt={2}>
-                    📍 {postData.city}, {postData.state}
-                </Badge>
-            )}
-            <HStack spacing={4} mt={4}>
-                <Button
-                    size="sm"
-                    leftIcon={isLiked ? <Icon as={AiFillHeart} color="red.500" /> : <Icon as={AiOutlineHeart} />}
-                    onClick={handleLike}
-                    variant="ghost"
-                >
-                    {likes} {likes === 1 ? 'Like' : 'Likes'}
-                </Button>
-                <HStack spacing={1}>
-                    <Icon as={BiComment} />
-                    <Text fontSize="sm" color="gray.600">
-                        {commentCount} {commentCount === 1 ? 'Comment' : 'Comments'}
+    const PostContent = ({ postData }) => {
+        return (
+            <Box>
+                <Text fontSize="xl" fontWeight="bold">{postData.title}</Text>
+                <HStack spacing={2} mt={2}>
+                    <Text
+                        fontSize="sm"
+                        color="blue.500"
+                        cursor="pointer"
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            navigate(`/profile/${postData.user_username}`);
+                        }}
+                        _hover={{ textDecoration: 'underline' }}
+                    >
+                        {postData.user_name}
                     </Text>
+                    {postData.is_organization ? (
+                        <VerifiedBadge />
+                    ) : (
+                        <Text display="none">Not an organization</Text>
+                    )}
                 </HStack>
-            </HStack>
-        </Box>
-    );
+                <Text mt={2}>{postData.body}</Text>
+                {postData.city && postData.state && (
+                    <Badge colorScheme="blue" mt={2}>
+                        📍 {postData.city}, {postData.state}
+                    </Badge>
+                )}
+                <HStack spacing={4} mt={4}>
+                    <Button
+                        size="sm"
+                        leftIcon={isLiked ? <Icon as={AiFillHeart} color="red.500" /> : <Icon as={AiOutlineHeart} />}
+                        onClick={handleLike}
+                        variant="ghost"
+                    >
+                        {likes} {likes === 1 ? 'Like' : 'Likes'}
+                    </Button>
+                    <HStack spacing={1}>
+                        <Icon as={BiComment} />
+                        <Text fontSize="sm" color="gray.600">
+                            {commentCount} {commentCount === 1 ? 'Comment' : 'Comments'}
+                        </Text>
+                    </HStack>
+                </HStack>
+            </Box>
+        );
+    };
 
     return (
         <>
@@ -370,12 +468,12 @@ export const Post = ({ postData, isDetailView = false }) => {
                 borderWidth="1px"
                 borderRadius="md"
                 bg="white"
-                onClick={handlePostClick}
+                onClick={handleModalOpen}
                 cursor="pointer"
                 _hover={{ shadow: 'lg' }}
                 width="100%"
             >
-                <PostContent />
+                <PostContent postData={postData} />
             </Box>
 
             <Modal isOpen={isOpen} onClose={onClose} size="xl" scrollBehavior="inside">
@@ -402,25 +500,35 @@ export const Post = ({ postData, isDetailView = false }) => {
                     <ModalCloseButton />
                     <ModalBody pb={6}>
                         <VStack align="stretch" spacing={4}>
-                            <PostContent />
+                            <PostContent postData={postData} />
 
                             <Divider my={4} />
 
                             <VStack align="stretch" spacing={4}>
-                                <HStack>
-                                    <Input
-                                        placeholder="Write a comment..."
-                                        value={newComment}
-                                        onChange={(e) => setNewComment(e.target.value)}
-                                    />
+                                {isLoggedIn ? (
+                                    <HStack>
+                                        <Input
+                                            placeholder="Write a comment..."
+                                            value={newComment}
+                                            onChange={(e) => setNewComment(e.target.value)}
+                                        />
+                                        <Button
+                                            colorScheme="blue"
+                                            onClick={handleComment}
+                                            isDisabled={!newComment.trim()}
+                                        >
+                                            Post
+                                        </Button>
+                                    </HStack>
+                                ) : (
                                     <Button
+                                        onClick={() => navigate('/login')}
                                         colorScheme="blue"
-                                        onClick={handleComment}
-                                        isDisabled={!newComment.trim()}
+                                        width="fit-content"
                                     >
-                                        Post
+                                        Login to Comment
                                     </Button>
-                                </HStack>
+                                )}
 
                                 {comments.map((comment) => (
                                     <Comment key={comment.id} comment={comment} />
@@ -437,12 +545,11 @@ export const Post = ({ postData, isDetailView = false }) => {
 export default function Posts() {
     const [posts, setPosts] = useState([]);
     const { username } = useParams();
-    const [loggedIn, setLoggedIn] = useState(false);
+    const [isLoggedIn, setIsLoggedIn] = useState(false);
     const [isPostModalOpen, setIsPostModalOpen] = useState(false);
     const [userCoords, setUserCoords] = useState(null);
     const [searchRadius, setSearchRadius] = useState(25);
     const [isLoadingLocation, setIsLoadingLocation] = useState(false);
-    const [isApplyingFilter, setIsApplyingFilter] = useState(false);
     const [user, setUser] = useState(null);
     const navigate = useNavigate();
 
@@ -450,7 +557,7 @@ export default function Posts() {
         const checkAuth = async () => {
             const { data: { user } } = await supabase.auth.getUser();
             if (user) {
-                setLoggedIn(true);
+                setIsLoggedIn(true);
             }
             // Fetch posts regardless of auth status
             fetchPosts();
@@ -558,46 +665,6 @@ export default function Posts() {
         );
     };
 
-    const applyFilter = async () => {
-        if (!userCoords) return;
-        setIsApplyingFilter(true);
-        try {
-            let { data, error } = await supabase.rpc('get_posts_within_radius', {
-                user_lat: userCoords.lat,
-                user_lng: userCoords.lng,
-                radius_miles: Math.round(searchRadius)
-            });
-
-            if (error) {
-                console.error('RPC Error:', error);
-                const { data: allPosts, error: fetchError } = await supabase
-                    .from('posts')
-                    .select('*')
-                    .order('date_posted', { ascending: false });
-
-                if (fetchError) throw fetchError;
-
-                data = allPosts.filter(post => {
-                    if (!post.city_coords) return false;
-                    const [postLat, postLng] = post.city_coords.split(',').map(Number);
-                    const distance = calculateDistance(
-                        userCoords.lat,
-                        userCoords.lng,
-                        postLat,
-                        postLng
-                    );
-                    return distance <= searchRadius;
-                });
-            }
-
-            setPosts(data || []);
-        } catch (error) {
-            console.error('Error applying filter:', error);
-        } finally {
-            setIsApplyingFilter(false);
-        }
-    };
-
     // Helper function for filter distance calculation
     const calculateDistance = (lat1, lon1, lat2, lon2) => {
         const R = 3959; // Constant for calculating distance in miles
@@ -613,13 +680,40 @@ export default function Posts() {
 
     const fetchPosts = async () => {
         try {
-            const { data, error } = await supabase
+            let query = supabase
                 .from('posts')
                 .select('*')
                 .order('date_posted', { ascending: false });
 
+            if (username) {
+                query = query.eq('user_username', username);
+            }
+
+            const { data: posts, error } = await query;
             if (error) throw error;
-            setPosts(data || []);
+
+            // Get unique user IDs from posts
+            const userIds = [...new Set(posts.map(post => post.user_id))];
+
+            // Get user profiles for each user
+            const { data: profiles } = await supabase
+                .from('profiles')
+                .select('id, organization_name')
+                .in('id', userIds);
+
+            // Create a map of user IDs to organization status
+            const userOrgStatus = {};
+            profiles?.forEach(profile => {
+                userOrgStatus[profile.id] = profile.organization_name !== null;
+            });
+
+            // Add organization status to posts
+            const transformedData = posts.map(post => ({
+                ...post,
+                is_organization: userOrgStatus[post.user_id] || false
+            }));
+
+            setPosts(transformedData || []);
         } catch (error) {
             console.error('Error fetching posts:', error);
         }
@@ -629,7 +723,7 @@ export default function Posts() {
         const checkAuth = async () => {
             const { data: { user } } = await supabase.auth.getUser();
             if (user) {
-                setLoggedIn(true);
+                setIsLoggedIn(true);
             }
             // Always fetch posts, regardless of auth status
             fetchPosts();
@@ -637,25 +731,6 @@ export default function Posts() {
         checkAuth();
     }, [username]);
 
-
-    const getUserLocation = () => {
-        setIsLoadingLocation(true);
-        if (navigator.geolocation) {
-            navigator.geolocation.getCurrentPosition(
-                (position) => {
-                    setUserCoords({
-                        lat: position.coords.latitude,
-                        lng: position.coords.longitude
-                    });
-                    setIsLoadingLocation(false);
-                },
-                (error) => {
-                    console.error("Error getting location:", error);
-                    setIsLoadingLocation(false);
-                }
-            );
-        }
-    };
 
     const togglePostModal = () => {
         setIsPostModalOpen(!isPostModalOpen);
@@ -686,7 +761,7 @@ export default function Posts() {
                                 leftIcon={<AddIcon />}
                                 colorScheme="blue"
                                 onClick={() => {
-                                    if (!user) {
+                                    if (!isLoggedIn) {
                                         navigate('/login');
                                     } else {
                                         togglePostModal();
@@ -721,7 +796,7 @@ export default function Posts() {
                 </Box>
             </Flex>
 
-            {user && (
+            {isLoggedIn && (
                 <CreatePostModal
                     isOpen={isPostModalOpen}
                     onClose={togglePostModal}

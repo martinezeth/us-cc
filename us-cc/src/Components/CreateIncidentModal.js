@@ -73,6 +73,8 @@ const CreateIncidentModal = ({ isOpen, onClose, onCreateSuccess }) => {
 
         try {
             const { data: { user } } = await supabase.auth.getUser();
+            
+            // Create the incident with user metadata
             const { data, error } = await supabase
                 .from('incidents')
                 .insert([{
@@ -81,6 +83,14 @@ const CreateIncidentModal = ({ isOpen, onClose, onCreateSuccess }) => {
                     location_lat: position.lat,
                     location_lng: position.lng,
                     created_by: user.id,
+                    created_by_user: {
+                        id: user.id,
+                        user_metadata: {
+                            name: user.user_metadata?.name || user.email,
+                            username: user.email.split('@')[0],
+                            is_organization: user.user_metadata?.is_organization || false
+                        }
+                    },
                     timestamp: new Date().toISOString()
                 }])
                 .select();
@@ -94,11 +104,10 @@ const CreateIncidentModal = ({ isOpen, onClose, onCreateSuccess }) => {
                 duration: 3000
             });
 
-            // Reset form
+            // Reset form and close modal
             setIncidentType('');
             setDescription('');
             setPosition(null);
-
             if (onCreateSuccess) onCreateSuccess();
             onClose();
         } catch (error) {

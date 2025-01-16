@@ -27,6 +27,7 @@ export default function CreatePostModal({ isOpen, onClose, onCreatePost }) {
                 user_id: user.id,
                 user_name: user.user_metadata?.name || user.email,
                 user_username: user.email.split('@')[0],
+                is_organization: user.user_metadata?.is_organization === 'true',
                 title: title.trim(),
                 body: body.trim(),
                 city: location.city,

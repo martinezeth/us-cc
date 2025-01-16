@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, useMapEvents, useMap } from 'react-leaflet';
 import L from 'leaflet';
-import { Box, ChakraProvider, VStack, Text, Button, Select } from '@chakra-ui/react';
+import { Box, ChakraProvider, VStack, Text, Button, Select, HStack } from '@chakra-ui/react';
 import { supabase } from '../supabaseClient';
 import earthquakeIconUrl from '../Images/Icons/earthquakeEventIcon.svg';
 import fireIconUrl from '../Images/Icons/fireEventIcon.svg';
@@ -13,6 +13,8 @@ import blizzardIconUrl from '../Images/Icons/blizzardEventIcon.svg';
 import lightningIconUrl from '../Images/Icons/lightningEventIcon.svg';
 import mapCurrentLocation from '../Images/Icons/mapCurrentLocation.svg';
 import { INCIDENT_TYPES } from '../constants/incidentTypes';
+import VerifiedBadge from '../Components/VerifiedBadge';
+import { useNavigate } from 'react-router-dom';
 
 const baseIcon = L.Icon.extend({
   options: {
@@ -140,6 +142,8 @@ function MapPage() {
   const [position, setPosition] = useState(null);
   const [key, setKey] = useState(Date.now());
   const zoom = 13;
+  const navigate = useNavigate();
+  const [incidentCreators, setIncidentCreators] = useState({});
 
   useEffect(() => {
     console.log('Requesting current position...');
@@ -152,14 +156,34 @@ function MapPage() {
     });
   }, []);
 
+  const fetchIncidentCreator = async (userId) => {
+    try {
+      const { data: { user } } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', userId)
+        .single();
+      
+      return user;
+    } catch (error) {
+      console.error('Error fetching incident creator:', error);
+      return null;
+    }
+  };
+
   useEffect(() => {
     const fetchIncidents = async () => {
       if (position) {
-        console.log(`Fetching incidents with radius: ${radius} and position:`, position);
         try {
           const { data, error } = await supabase
             .from('incidents')
-            .select('*')
+            .select(`
+              *,
+              created_by_user:created_by (
+                id,
+                user_metadata
+              )
+            `)
             .gte('location_lat', position.lat - radius / 69)
             .lte('location_lat', position.lat + radius / 69)
             .gte('location_lng', position.lng - radius / (69 * Math.cos(position.lat * (Math.PI / 180))))
@@ -167,7 +191,6 @@ function MapPage() {
 
           if (error) throw error;
           setIncidents(data);
-          setKey(Date.now());
         } catch (error) {
           console.error('Error fetching incidents:', error);
         }
@@ -266,8 +289,24 @@ function MapPage() {
                 >
                   <Popup>
                     <Box p={1}>
-                      <Text fontWeight="bold">{INCIDENT_TYPES[incident.incident_type] || incident.incident_type}</Text>
+                      <Text fontWeight="bold">
+                        {INCIDENT_TYPES[incident.incident_type] || incident.incident_type}
+                      </Text>
                       <Text fontSize={{ base: "sm", md: "md" }}>{incident.description}</Text>
+                      <HStack spacing={2} mt={2}>
+                        <Text
+                          fontSize="sm"
+                          color="blue.500"
+                          cursor="pointer"
+                          onClick={() => navigate(`/profile/${incident.created_by_user.user_metadata.username}`)}
+                          _hover={{ textDecoration: 'underline' }}
+                        >
+                          {incident.created_by_user.user_metadata.name}
+                        </Text>
+                        {incident.created_by_user.user_metadata.is_organization && (
+                          <VerifiedBadge size="14px" />
+                        )}
+                      </HStack>
                       <Text fontSize="sm" color="gray.600">
                         Reported at: {new Date(incident.timestamp).toLocaleString()}
                       </Text>
