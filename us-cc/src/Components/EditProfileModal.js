@@ -13,7 +13,6 @@ import {
     Input,
     VStack,
     useToast,
-    Select,
     Wrap,
     WrapItem,
     Tag,
@@ -28,7 +27,7 @@ import {
     Box,
     Divider,
 } from '@chakra-ui/react';
-import { AddIcon, SmallCloseIcon } from '@chakra-ui/icons';
+import { AddIcon } from '@chakra-ui/icons';
 import { supabase } from '../supabaseClient';
 import { STANDARD_SKILLS, AVAILABILITY_OPTIONS } from '../constants/incidentTypes';
 import LocationSearch from './LocationSearch';
@@ -97,9 +96,9 @@ export default function EditProfileModal({ isOpen, onClose, userData, volunteerD
 
             // Update the user's metadata in Auth
             const { error: metadataError } = await supabase.auth.updateUser({
-                data: { 
+                data: {
                     name: formData.full_name,
-                    full_name: formData.full_name  // Adding both for consistency
+                    full_name: formData.full_name
                 }
             });
 
@@ -139,7 +138,7 @@ export default function EditProfileModal({ isOpen, onClose, userData, volunteerD
                 status: 'success',
                 duration: 3000,
             });
-            
+
             // Pass all updated data back to the parent component
             onUpdateSuccess({
                 ...userData,
@@ -157,10 +156,10 @@ export default function EditProfileModal({ isOpen, onClose, userData, volunteerD
                     .select('*')
                     .eq('id', user.id)
                     .single();
-                
+
                 // Trigger a global event to update the header
-                window.dispatchEvent(new CustomEvent('profileUpdate', { 
-                    detail: updatedProfile 
+                window.dispatchEvent(new CustomEvent('profileUpdate', {
+                    detail: updatedProfile
                 }));
             }
 
@@ -191,11 +190,11 @@ export default function EditProfileModal({ isOpen, onClose, userData, volunteerD
                         <FormControl>
                             <FormLabel>{isOrganization ? 'Organization Name' : 'Full Name'}</FormLabel>
                             {!isEditing.name ? (
-                                <Box 
-                                    p={2} 
-                                    borderWidth="1px" 
+                                <Box
+                                    p={2}
+                                    borderWidth="1px"
                                     borderRadius="md"
-                                    onClick={() => setIsEditing({...isEditing, name: true})}
+                                    onClick={() => setIsEditing({ ...isEditing, name: true })}
                                     cursor="pointer"
                                     _hover={{ bg: "gray.50" }}
                                 >
@@ -211,7 +210,7 @@ export default function EditProfileModal({ isOpen, onClose, userData, volunteerD
                                         full_name: e.target.value
                                     })}
                                     autoFocus
-                                    onBlur={() => setIsEditing({...isEditing, name: false})}
+                                    onBlur={() => setIsEditing({ ...isEditing, name: false })}
                                 />
                             )}
                         </FormControl>
@@ -219,16 +218,16 @@ export default function EditProfileModal({ isOpen, onClose, userData, volunteerD
                         <FormControl>
                             <FormLabel>Location</FormLabel>
                             {!isEditing.location ? (
-                                <Box 
-                                    p={2} 
-                                    borderWidth="1px" 
+                                <Box
+                                    p={2}
+                                    borderWidth="1px"
                                     borderRadius="md"
-                                    onClick={() => setIsEditing({...isEditing, location: true})}
+                                    onClick={() => setIsEditing({ ...isEditing, location: true })}
                                     cursor="pointer"
                                     _hover={{ bg: "gray.50" }}
                                 >
                                     <Text>
-                                        {formData.city && formData.state 
+                                        {formData.city && formData.state
                                             ? `${formData.city}, ${formData.state}`
                                             : "Click to edit location"}
                                     </Text>
@@ -243,7 +242,7 @@ export default function EditProfileModal({ isOpen, onClose, userData, volunteerD
                                             city: locationData.city,
                                             state: locationData.state,
                                         }));
-                                        setIsEditing({...isEditing, location: false});
+                                        setIsEditing({ ...isEditing, location: false });
                                     }}
                                 />
                             )}
@@ -253,7 +252,7 @@ export default function EditProfileModal({ isOpen, onClose, userData, volunteerD
                         {volunteerData && !isOrganization && (
                             <>
                                 <Divider />
-                                
+
                                 <FormControl>
                                     <FormLabel>Skills</FormLabel>
                                     <Menu>

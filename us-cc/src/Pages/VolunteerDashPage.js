@@ -29,7 +29,6 @@ import {
     ModalCloseButton,
     FormControl,
     FormLabel,
-    Input,
     Select,
     useDisclosure,
     Wrap,
@@ -43,7 +42,6 @@ import { supabase } from '../supabaseClient';
 import { STANDARD_SKILLS, AVAILABILITY_OPTIONS } from '../constants/incidentTypes';
 import VolunteerMessages from '../Components/VolunteerMessages';
 import LocationSearch from '../Components/LocationSearch';
-import LocationMapPreview from '../Components/LocationMapPreview';
 
 const VolunteerRegistrationModal = ({ isOpen, onClose, onRegister }) => {
     const [formData, setFormData] = useState({

@@ -1,6 +1,5 @@
 import React, { useState, useRef, forwardRef } from "react";
 import {
-  Box,
   Button,
   Container,
   FormControl,
@@ -240,39 +239,39 @@ function Login({ onSwitch }) {
 
     setIsLoading(true);
     try {
-        const { data, error } = await supabase.auth.signInWithPassword({
-            email,
-            password
-        });
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password
+      });
 
-        if (error) throw error;
+      if (error) throw error;
 
-        // Check user metadata to determine where to redirect
-        const isOrganization = data.user?.user_metadata?.is_organization;
+      // Check user metadata to determine where to redirect
+      const isOrganization = data.user?.user_metadata?.is_organization;
 
-        toast({
-            title: "Login successful!",
-            status: "success",
-            duration: 3000,
-            isClosable: true,
-        });
+      toast({
+        title: "Login successful!",
+        status: "success",
+        duration: 3000,
+        isClosable: true,
+      });
 
-        // Redirect based on user type with correct path
-        if (isOrganization) {
-            navigate('/organization-dashboard');
-        } else {
-            navigate('/volunteering');
-        }
+      // Redirect based on user type with correct path
+      if (isOrganization) {
+        navigate('/organization-dashboard');
+      } else {
+        navigate('/volunteering');
+      }
     } catch (error) {
-        toast({
-            title: "Login failed",
-            description: error.message,
-            status: "error",
-            duration: 5000,
-            isClosable: true,
-        });
+      toast({
+        title: "Login failed",
+        description: error.message,
+        status: "error",
+        duration: 5000,
+        isClosable: true,
+      });
     } finally {
-        setIsLoading(false);
+      setIsLoading(false);
     }
   };
 
@@ -281,49 +280,37 @@ function Login({ onSwitch }) {
     console.log('=== DEMO LOGIN DEBUG START ===');
 
     try {
-        const credentials = type === 'volunteer'
-            ? { email: 'demo@volunteer.com', password: 'demoVolunteer123!' }
-            : { email: 'demo@organization.com', password: 'demoOrg123!' };
+      const credentials = type === 'volunteer'
+        ? { email: 'demo@volunteer.com', password: 'demoVolunteer123!' }
+        : { email: 'demo@organization.com', password: 'demoOrg123!' };
 
-        await supabase.auth.signOut();
-        const { data, error } = await supabase.auth.signInWithPassword(credentials);
-        
-        if (error) throw error;
+      await supabase.auth.signOut();
+      const { data, error } = await supabase.auth.signInWithPassword(credentials);
 
-        // Use the correct route path from App.js
-        const targetPath = type === 'volunteer' ? '/volunteering' : '/organization-dashboard';
-        console.log('Target path:', targetPath);
-        
-        toast({
-            title: `Welcome to the ${type === 'volunteer' ? 'Volunteer' : 'Organization'} Demo!`,
-            status: "success",
-            duration: 3000,
-        });
+      if (error) throw error;
 
-        navigate(targetPath);
+      // Use the correct route path from App.js
+      const targetPath = type === 'volunteer' ? '/volunteering' : '/organization-dashboard';
+      console.log('Target path:', targetPath);
+
+      toast({
+        title: `Welcome to the ${type === 'volunteer' ? 'Volunteer' : 'Organization'} Demo!`,
+        status: "success",
+        duration: 3000,
+      });
+
+      navigate(targetPath);
     } catch (error) {
-        console.error('Login error:', error);
-        toast({
-            title: "Demo login failed",
-            description: error.message,
-            status: "error",
-            duration: 5000,
-        });
+      console.error('Login error:', error);
+      toast({
+        title: "Demo login failed",
+        description: error.message,
+        status: "error",
+        duration: 5000,
+      });
     } finally {
-        setIsLoading(false);
+      setIsLoading(false);
     }
-  };
-
-  const handleGuestMode = () => {
-    localStorage.setItem('guestMode', 'true');
-    toast({
-      title: "Continuing as guest",
-      description: "Some features will be limited. Try the demo account for full access!",
-      status: "info",
-      duration: 3000,
-      isClosable: true,
-    });
-    navigate('/');
   };
 
   return (
@@ -369,21 +356,21 @@ function Login({ onSwitch }) {
 
           <VStack spacing={4} width="100%">
             <Button
-                colorScheme="blue"
-                onClick={() => handleDemoLogin('volunteer')}
-                isLoading={isLoading}
-                width="100%"
+              colorScheme="blue"
+              onClick={() => handleDemoLogin('volunteer')}
+              isLoading={isLoading}
+              width="100%"
             >
-                Try Demo Volunteer
+              Try Demo Volunteer
             </Button>
-            
+
             <Button
-                colorScheme="green"
-                onClick={() => handleDemoLogin('organization')}
-                isLoading={isLoading}
-                width="100%"
+              colorScheme="green"
+              onClick={() => handleDemoLogin('organization')}
+              isLoading={isLoading}
+              width="100%"
             >
-                Try Demo Organization
+              Try Demo Organization
             </Button>
           </VStack>
 

@@ -2,9 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
     Box, Button, VStack, Text, Divider, Flex,
-    HStack, NumberInput, NumberInputField,
-    NumberInputStepper, NumberIncrementStepper,
-    NumberDecrementStepper, Badge, Input, Icon,
+    HStack,
+    Badge,
+    Input,
+    Icon,
     Modal,
     ModalOverlay,
     ModalContent,
@@ -12,7 +13,9 @@ import {
     ModalBody,
     ModalCloseButton,
     useDisclosure,
-    Heading
+    Heading,
+    Select,
+    useToast
 } from '@chakra-ui/react';
 import '../Styles/styles.css';
 import CreatePostModal from '../Components/CreatePostModal';
@@ -441,80 +444,119 @@ export default function Posts() {
     const [isLoadingLocation, setIsLoadingLocation] = useState(false);
     const [isApplyingFilter, setIsApplyingFilter] = useState(false);
     const [user, setUser] = useState(null);
+    const navigate = useNavigate();
 
     useEffect(() => {
         const checkAuth = async () => {
             const { data: { user } } = await supabase.auth.getUser();
-            setUser(user);
+            if (user) {
+                setLoggedIn(true);
+            }
+            // Fetch posts regardless of auth status
+            fetchPosts();
         };
-        
         checkAuth();
-    }, []);
+    }, [username]);
 
-    const LocationFilter = () => (
-        <Box
-            p={3}
-            bg="white"
-            borderRadius="lg"
-            shadow="sm"
-            width="200px"
-            maxHeight="fit-content"
-        >
-            <VStack spacing={2} align="stretch">
-                <Text fontWeight="bold" fontSize="md">Filter by Location</Text>
-                {!userCoords ? (
-                    <Button
-                        onClick={getUserLocation}
-                        isLoading={isLoadingLocation}
-                        colorScheme="blue"
-                        size="sm"
-                    >
-                        Use My Location
-                    </Button>
-                ) : (
-                    <VStack align="stretch" spacing={2}>
-                        <Text fontSize="sm">Distance (miles)</Text>
-                        <HStack spacing={2}>
-                            <NumberInput
-                                value={searchRadius}
-                                onChange={(value) => setSearchRadius(parseInt(value))}
-                                min={1}
-                                max={100}
-                                size="sm"
-                                w="70px"
-                            >
-                                <NumberInputField />
-                                <NumberInputStepper>
-                                    <NumberIncrementStepper />
-                                    <NumberDecrementStepper />
-                                </NumberInputStepper>
-                            </NumberInput>
-                            <Text fontSize="sm">miles</Text>
-                        </HStack>
-                        <Button
-                            colorScheme="blue"
-                            onClick={applyFilter}
-                            isLoading={isApplyingFilter}
-                            size="sm"
-                        >
-                            Apply
-                        </Button>
-                        <Button
-                            variant="ghost"
-                            onClick={() => {
+    const LocationFilter = () => {
+        const toast = useToast();
+
+        return (
+            <Box
+                p={3}
+                bg="white"
+                borderRadius="lg"
+                shadow="sm"
+                width="200px"
+                maxHeight="fit-content"
+            >
+                <VStack spacing={2} align="stretch">
+                    <Text fontWeight="bold" fontSize="md">Filter by Location</Text>
+                    <Select
+                        value={searchRadius || 0}
+                        onChange={async (e) => {
+                            const radius = parseInt(e.target.value);
+                            if (radius === 0) {
+                                // Clear filter
                                 setUserCoords(null);
-                                setSearchRadius(25);
                                 fetchPosts();
-                            }}
-                            size="sm"
-                        >
-                            Clear
-                        </Button>
-                    </VStack>
-                )}
-            </VStack>
-        </Box>
-    );
+                                return;
+                            }
+
+                            setIsLoadingLocation(true);
+                            try {
+                                // Get current location
+                                const position = await new Promise((resolve, reject) => {
+                                    navigator.geolocation.getCurrentPosition(resolve, reject);
+                                });
+
+                                const coords = {
+                                    lat: position.coords.latitude,
+                                    lng: position.coords.longitude
+                                };
+                                setUserCoords(coords);
+                                setSearchRadius(radius);
+
+                                // Apply filter immediately
+                                let { data, error } = await supabase.rpc('get_posts_within_radius', {
+                                    user_lat: coords.lat,
+                                    user_lng: coords.lng,
+                                    radius_miles: radius
+                                });
+
+                                if (error) {
+                                    const { data: allPosts, error: fetchError } = await supabase
+                                        .from('posts')
+                                        .select('*')
+                                        .order('date_posted', { ascending: false });
+
+                                    if (fetchError) throw fetchError;
+
+                                    data = allPosts.filter(post => {
+                                        if (!post.city_coords) return false;
+                                        const [postLat, postLng] = post.city_coords.split(',').map(Number);
+                                        const distance = calculateDistance(
+                                            coords.lat,
+                                            coords.lng,
+                                            postLat,
+                                            postLng
+                                        );
+                                        return distance <= radius;
+                                    });
+                                }
+
+                                setPosts(data || []);
+                            } catch (error) {
+                                console.error('Error:', error);
+                                toast({
+                                    title: "Location Error",
+                                    description: "Could not access your location. Please allow location access and try again.",
+                                    status: "error",
+                                    duration: 5000
+                                });
+                            } finally {
+                                setIsLoadingLocation(false);
+                            }
+                        }}
+                        placeholder="Filter by distance"
+                        isDisabled={isLoadingLocation}
+                    >
+                        <option value={0}>Show all posts</option>
+                        <option value={5}>Within 5 miles</option>
+                        <option value={10}>Within 10 miles</option>
+                        <option value={25}>Within 25 miles</option>
+                        <option value={50}>Within 50 miles</option>
+                        <option value={100}>Within 100 miles</option>
+                    </Select>
+                    {isLoadingLocation && (
+                        <Text fontSize="sm" color="gray.500">
+                            Getting location...
+                        </Text>
+                    )}
+                </VStack>
+            </Box>
+        );
+    };
 
     const applyFilter = async () => {
         if (!userCoords) return;
@@ -556,7 +598,7 @@ export default function Posts() {
         }
     };
 
-    // Helper function for distance calculation
+    // Helper function for filter distance calculation
     const calculateDistance = (lat1, lon1, lat2, lon2) => {
         const R = 3959; // Constant for calculating distance in miles
         const dLat = (lat2 - lat1) * Math.PI / 180;
@@ -588,11 +630,13 @@ export default function Posts() {
             const { data: { user } } = await supabase.auth.getUser();
             if (user) {
                 setLoggedIn(true);
-                fetchPosts();
             }
+            // Always fetch posts, regardless of auth status
+            fetchPosts();
         };
         checkAuth();
     }, [username]);
+
 
     const getUserLocation = () => {
         setIsLoadingLocation(true);
@@ -620,17 +664,15 @@ export default function Posts() {
     return (
         <Box maxW="1200px" mx="auto" py={8} px={4} width="100%">
             <Flex gap={6} alignItems="flex-start" width="100%">
-                {loggedIn && (
-                    <Box
-                        width="200px"
-                        flexShrink={0}
-                        position="sticky"
-                        top="20px"
-                        alignSelf="flex-start"
-                    >
-                        <LocationFilter />
-                    </Box>
-                )}
+                <Box
+                    width="200px"
+                    flexShrink={0}
+                    position="sticky"
+                    top="20px"
+                    alignSelf="flex-start"
+                >
+                    <LocationFilter />
+                </Box>
 
                 <Box
                     flex="1"
@@ -640,15 +682,19 @@ export default function Posts() {
                     <VStack spacing={4} align="stretch" width="100%">
                         <Flex justify="space-between" align="center" mb={4}>
                             <Heading size="lg">Community Posts</Heading>
-                            {user && (
-                                <Button
-                                    leftIcon={<AddIcon />}
-                                    colorScheme="blue"
-                                    onClick={togglePostModal}
-                                >
-                                    Create Post
-                                </Button>
-                            )}
+                            <Button
+                                leftIcon={<AddIcon />}
+                                colorScheme="blue"
+                                onClick={() => {
+                                    if (!user) {
+                                        navigate('/login');
+                                    } else {
+                                        togglePostModal();
+                                    }
+                                }}
+                            >
+                                Create Post
+                            </Button>
                         </Flex>
 
                         {posts.length === 0 ? (
@@ -675,11 +721,13 @@ export default function Posts() {
                 </Box>
             </Flex>
 
-            <CreatePostModal
-                isOpen={isPostModalOpen}
-                onClose={togglePostModal}
-                onCreatePost={(newPost) => setPosts([newPost, ...posts])}
-            />
+            {user && (
+                <CreatePostModal
+                    isOpen={isPostModalOpen}
+                    onClose={togglePostModal}
+                    onCreatePost={(newPost) => setPosts([newPost, ...posts])}
+                />
+            )}
         </Box>
     );
 }
