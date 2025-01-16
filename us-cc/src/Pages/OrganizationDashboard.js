@@ -561,6 +561,7 @@ const ContentCard = ({ item, type, onDelete, onViewResponses, onArchive, onEdit 
 
     const isArchived = item.status === 'archived';
 
+
     return (
         <Box
             bg="white"
@@ -572,6 +573,9 @@ const ContentCard = ({ item, type, onDelete, onViewResponses, onArchive, onEdit 
             position="relative"
             transition="transform 0.2s"
             _hover={{ transform: 'translateY(-2px)', boxShadow: 'md' }}
+            height="100%"
+            display="flex"
+            flexDirection="column"
         >
             {/* Header with Menu */}
             <Flex justify="space-between" align="start" mb={2}>
@@ -584,7 +588,7 @@ const ContentCard = ({ item, type, onDelete, onViewResponses, onArchive, onEdit 
                             {isArchived ? 'Archived' : 'Active'}
                         </Badge>
                     )}
-                    <Menu>
+                    <Menu placement="bottom-end">
                         <MenuButton
                             as={IconButton}
                             icon={<BsThreeDotsVertical />}
@@ -592,7 +596,7 @@ const ContentCard = ({ item, type, onDelete, onViewResponses, onArchive, onEdit 
                             size="sm"
                             aria-label="More options"
                         />
-                        <MenuList>
+                        <MenuList zIndex={1000}>
                             {type === 'opportunity' && !isArchived && (
                                 <>
                                     <MenuItem
@@ -630,35 +634,39 @@ const ContentCard = ({ item, type, onDelete, onViewResponses, onArchive, onEdit 
             </Flex>
 
             {/* Content */}
-            <Text color="gray.600" fontSize="sm">
-                Created {getFormattedDate(item.created_at || item.date_posted || item.timestamp)}
-                {isArchived && item.archived_at && ` • Archived ${getFormattedDate(item.archived_at)}`}
-            </Text>
-
-            <Text noOfLines={3} mt={2}>
-                {item.description || item.body}
-            </Text>
-
-            {type === 'opportunity' && item.location && (
-                <Text fontSize="sm" color="gray.600">
-                    Location: {item.location}
-                    {item.radius_miles && ` (${item.radius_miles} mile radius)`}
+            <VStack flex="1" align="stretch" spacing={2}>
+                <Text color="gray.600" fontSize="sm">
+                    Created {getFormattedDate(item.created_at || item.date_posted || item.timestamp)}
+                    {isArchived && item.archived_at && ` • Archived ${getFormattedDate(item.archived_at)}`}
                 </Text>
-            )}
 
-            {type === 'opportunity' && (
-                <Flex mt={4} justify="flex-start">
-                    <Button
-                        size="sm"
-                        colorScheme="blue"
-                        leftIcon={<ChatIcon />}
-                        onClick={() => onViewResponses(item)}
-                        minW="140px"
-                    >
-                        Responses ({item.response_count || 0})
-                    </Button>
-                </Flex>
-            )}
+                <Text noOfLines={3}>
+                    {item.description || item.body}
+                </Text>
+
+                {type === 'opportunity' && item.location && (
+                    <Text fontSize="sm" color="gray.600">
+                        Location: {item.location}
+                        {item.radius_miles && ` (${item.radius_miles} mile radius)`}
+                    </Text>
+                )}
+
+                <Box flex="1" />
+
+                {type === 'opportunity' && (
+                    <Box mt="auto" pt={4}>
+                        <Button
+                            size="sm"
+                            colorScheme="blue"
+                            leftIcon={<ChatIcon />}
+                            onClick={() => onViewResponses(item)}
+                            minW="140px"
+                        >
+                            Responses ({item.response_count || 0})
+                        </Button>
+                    </Box>
+                )}
+            </VStack>
 
             {/* Delete Alert Dialog */}
             <AlertDialog
