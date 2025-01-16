@@ -16,7 +16,6 @@ import Profile from './Pages/Profile';
 import Wildfire from './Pages/WildFire';
 import Flood from './Pages/Flood';
 import Hurricane from './Pages/Hurricane';
-import Covid from './Pages/Covid';
 import Earthquake from './Pages/Earthquake';
 import AboutPage from './Pages/About';
 import OrganizationDashboard from './Pages/OrganizationDashboard';
@@ -49,7 +48,6 @@ function App() {
             <Route path="/flood" element={<Flood />} />
             <Route path="/earthquake" element={<Earthquake />} />
             <Route path="/hurricane" element={<Hurricane />} />
-            <Route path="/COVID" element={<Covid />} />
             <Route path="/resources" element={<ResourcesPage />} />
             <Route path="/mapview" element={<MapPage />} />
             <Route path="/volunteering" element={<VolunteerDashPage />} />

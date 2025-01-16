@@ -180,7 +180,6 @@ const HeaderComponent = () => {
           <Stack direction="row" spacing={4} alignItems="center">
             <DropDown />
             <Button as={Link} to="/posts" variant="ghost">Posts</Button>
-            <Button as={Link} to="/about" variant="ghost">About</Button>
 
             {user ? (
               <>
@@ -227,7 +226,6 @@ const HeaderComponent = () => {
             <Stack spacing={4}>
               <DropDown />
               <Button as={Link} to="/posts" variant="ghost" onClick={onClose}>Posts</Button>
-              <Button as={Link} to="/about" variant="ghost" onClick={onClose}>About</Button>
 
               {user ? (
                 <>
