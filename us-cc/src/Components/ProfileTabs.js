@@ -333,6 +333,7 @@ const ProfileTabs = ({ profileData, volunteerData, isOwnProfile }) => {
                                 <Text color="gray.600">
                                     Member since {new Date(profileData.date_joined).toLocaleDateString()}
                                 </Text>
+                                {/* Show organization info if it's an organization */}
                                 {profileData.is_organization ? (
                                     <>
                                         {profileData.phone && (
@@ -353,7 +354,7 @@ const ProfileTabs = ({ profileData, volunteerData, isOwnProfile }) => {
                                         )}
                                     </>
                                 ) : (
-                                    // Your existing volunteer overview content
+                                    /* Show volunteer info if it's a volunteer profile */
                                     volunteerData && (
                                         <Text color="gray.600">
                                             Active volunteer in {volunteerData.city}
@@ -363,20 +364,14 @@ const ProfileTabs = ({ profileData, volunteerData, isOwnProfile }) => {
                             </VStack>
                         </SectionCard>
 
-                        {/* Only show skills and availability for volunteers */}
+                        {/* Show volunteer cards if it's a volunteer profile */}
                         {!profileData.is_organization && volunteerData && (
-                            // Your existing volunteer cards (Skills and Availability)
                             <>
                                 <SectionCard title="Skills">
                                     <Wrap>
                                         {volunteerData.skills?.map((skill, index) => (
                                             <WrapItem key={index}>
-                                                <Tag
-                                                    size="md"
-                                                    borderRadius="full"
-                                                    variant="solid"
-                                                    colorScheme="blue"
-                                                >
+                                                <Tag size="md" borderRadius="full" variant="solid" colorScheme="blue">
                                                     <TagLabel>{skill}</TagLabel>
                                                 </Tag>
                                             </WrapItem>
@@ -387,12 +382,7 @@ const ProfileTabs = ({ profileData, volunteerData, isOwnProfile }) => {
                                     <Wrap>
                                         {volunteerData.availability?.map((time, index) => (
                                             <WrapItem key={index}>
-                                                <Tag
-                                                    size="md"
-                                                    borderRadius="full"
-                                                    variant="solid"
-                                                    colorScheme="green"
-                                                >
+                                                <Tag size="md" borderRadius="full" variant="solid" colorScheme="green">
                                                     <TagLabel>{time}</TagLabel>
                                                 </Tag>
                                             </WrapItem>
