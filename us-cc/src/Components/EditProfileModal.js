@@ -39,6 +39,9 @@ export default function EditProfileModal({ isOpen, onClose, userData, volunteerD
         full_name: userData?.full_name || '',
         city: userData?.city || '',
         state: userData?.state || '',
+        phone: userData?.phone || '',
+        address: userData?.address || '',
+        mission_statement: userData?.mission_statement || '',
     });
     const [skills, setSkills] = useState(volunteerData?.skills || []);
     const [availability, setAvailability] = useState(volunteerData?.availability || []);
@@ -53,6 +56,9 @@ export default function EditProfileModal({ isOpen, onClose, userData, volunteerD
                 full_name: userData?.full_name || '',
                 city: userData?.city || '',
                 state: userData?.state || '',
+                phone: userData?.phone || '',
+                address: userData?.address || '',
+                mission_statement: userData?.mission_statement || '',
             });
         }
     }, [isOpen, userData]);
@@ -79,15 +85,20 @@ export default function EditProfileModal({ isOpen, onClose, userData, volunteerD
 
     const handleSubmit = async () => {
         setLoading(true);
-        console.log('Submitting form data:', formData); //DEBUG LINE
         try {
-            // Update profile
+            // Keep the original name if it wasn't changed
+            const updatedName = formData.full_name || userData.full_name;
+
+            // Update profile with all fields
             const { error: profileError } = await supabase
                 .from('profiles')
                 .update({
-                    full_name: formData.full_name,
+                    full_name: updatedName,
                     city: formData.city,
                     state: formData.state,
+                    phone: formData.phone || null,
+                    address: formData.address || null,
+                    mission_statement: formData.mission_statement || null,
                     updated_at: new Date(),
                 })
                 .eq('id', userData.id);
@@ -97,8 +108,9 @@ export default function EditProfileModal({ isOpen, onClose, userData, volunteerD
             // Update the user's metadata in Auth
             const { error: metadataError } = await supabase.auth.updateUser({
                 data: {
-                    name: formData.full_name,
-                    full_name: formData.full_name
+                    name: updatedName,
+                    full_name: updatedName,
+                    is_organization: isOrganization // Ensure we keep the organization status
                 }
             });
 
@@ -119,33 +131,22 @@ export default function EditProfileModal({ isOpen, onClose, userData, volunteerD
                 if (volunteerError) throw volunteerError;
             }
 
-            // If it's an organization, update the organization name in organizations table
-            if (isOrganization) {
-                const { error: orgError } = await supabase
-                    .from('organizations')
-                    .update({
-                        name: formData.full_name,
-                        city: formData.city,
-                        state: formData.state
-                    })
-                    .eq('user_id', userData.id);
-
-                if (orgError) throw orgError;
-            }
-
             toast({
                 title: 'Profile updated successfully',
                 status: 'success',
                 duration: 3000,
             });
 
-            // Pass all updated data back to the parent component
+            // Pass all updated data back to the parent component with the correct name
             onUpdateSuccess({
                 ...userData,
                 ...formData,
+                full_name: updatedName, // Ensure we pass the correct name
+                name: updatedName, // Add this for the profile display
                 ...(volunteerData && !isOrganization ? { skills, availability } : {}),
                 city: formData.city,
-                state: formData.state
+                state: formData.state,
+                is_organization: isOrganization // Ensure we keep the organization status
             });
 
             // Force refresh the auth context to update the header
@@ -157,9 +158,13 @@ export default function EditProfileModal({ isOpen, onClose, userData, volunteerD
                     .eq('id', user.id)
                     .single();
 
-                // Trigger a global event to update the header
+                // Ensure the profile update event includes the correct name
                 window.dispatchEvent(new CustomEvent('profileUpdate', {
-                    detail: updatedProfile
+                    detail: {
+                        ...updatedProfile,
+                        name: updatedName,
+                        full_name: updatedName
+                    }
                 }));
             }
 
@@ -215,40 +220,81 @@ export default function EditProfileModal({ isOpen, onClose, userData, volunteerD
                             )}
                         </FormControl>
 
-                        <FormControl>
-                            <FormLabel>Location</FormLabel>
-                            {!isEditing.location ? (
-                                <Box
-                                    p={2}
-                                    borderWidth="1px"
-                                    borderRadius="md"
-                                    onClick={() => setIsEditing({ ...isEditing, location: true })}
-                                    cursor="pointer"
-                                    _hover={{ bg: "gray.50" }}
-                                >
-                                    <Text>
-                                        {formData.city && formData.state
-                                            ? `${formData.city}, ${formData.state}`
-                                            : "Click to edit location"}
-                                    </Text>
-                                </Box>
-                            ) : (
-                                <LocationSearch
-                                    mode="city"
-                                    placeholder="Search for your city..."
-                                    onSelect={(locationData) => {
-                                        setFormData(prev => ({
-                                            ...prev,
-                                            city: locationData.city,
-                                            state: locationData.state,
-                                        }));
-                                        setIsEditing({ ...isEditing, location: false });
-                                    }}
-                                />
-                            )}
-                        </FormControl>
+                        {!isOrganization && (
+                            <FormControl>
+                                <FormLabel>Location</FormLabel>
+                                {!isEditing.location ? (
+                                    <Box
+                                        p={2}
+                                        borderWidth="1px"
+                                        borderRadius="md"
+                                        onClick={() => setIsEditing({ ...isEditing, location: true })}
+                                        cursor="pointer"
+                                        _hover={{ bg: "gray.50" }}
+                                    >
+                                        <Text>
+                                            {formData.city && formData.state
+                                                ? `${formData.city}, ${formData.state}`
+                                                : "Click to edit location"}
+                                        </Text>
+                                    </Box>
+                                ) : (
+                                    <LocationSearch
+                                        mode="city"
+                                        placeholder="Search for your city..."
+                                        onSelect={(locationData) => {
+                                            setFormData(prev => ({
+                                                ...prev,
+                                                city: locationData.city,
+                                                state: locationData.state,
+                                            }));
+                                            setIsEditing({ ...isEditing, location: false });
+                                        }}
+                                    />
+                                )}
+                            </FormControl>
+                        )}
 
-                        {/* Only show volunteer fields if not an organization */}
+                        {isOrganization && (
+                            <>
+                                <FormControl>
+                                    <FormLabel>Phone Number</FormLabel>
+                                    <Input
+                                        value={formData.phone}
+                                        onChange={(e) => setFormData({
+                                            ...formData,
+                                            phone: e.target.value
+                                        })}
+                                        placeholder="Enter phone number"
+                                    />
+                                </FormControl>
+
+                                <FormControl>
+                                    <FormLabel>Address</FormLabel>
+                                    <Input
+                                        value={formData.address}
+                                        onChange={(e) => setFormData({
+                                            ...formData,
+                                            address: e.target.value
+                                        })}
+                                        placeholder="Enter full address"
+                                    />
+                                </FormControl>
+
+                                <FormControl>
+                                    <FormLabel>Mission Statement</FormLabel>
+                                    <Input
+                                        value={formData.mission_statement}
+                                        onChange={(e) => setFormData({
+                                            ...formData,
+                                            mission_statement: e.target.value
+                                        })}
+                                        placeholder="Enter your organization's mission"
+                                    />
+                                </FormControl>
+                            </>
+                        )}
+
                         {volunteerData && !isOrganization && (
                             <>
                                 <Divider />

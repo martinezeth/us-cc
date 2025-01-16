@@ -42,8 +42,9 @@ const SectionCard = ({ children, title }) => (
 
 const ProfileTabs = ({ profileData, volunteerData, isOwnProfile }) => {
     const [posts, setPosts] = useState([]);
-    const [opportunityHistory, setOpportunityHistory] = useState([]);
+    const [opportunities, setOpportunities] = useState([]);
     const [likedPosts, setLikedPosts] = useState([]);
+    const [opportunityHistory, setOpportunityHistory] = useState([]);
     const navigate = useNavigate();
     const toast = useToast();
 
@@ -61,6 +62,17 @@ const ProfileTabs = ({ profileData, volunteerData, isOwnProfile }) => {
                 .order('date_posted', { ascending: false });
 
             setPosts(userPosts || []);
+
+            // If organization, fetch their opportunities
+            if (profileData.is_organization) {
+                const { data: orgOpportunities } = await supabase
+                    .from('volunteer_opportunities')
+                    .select('*')
+                    .eq('organization_id', profileData.id)
+                    .order('created_at', { ascending: false });
+
+                setOpportunities(orgOpportunities || []);
+            }
 
             // Fetch volunteer opportunity history with organization info
             const { data: opportunityResponses } = await supabase
@@ -267,13 +279,49 @@ const ProfileTabs = ({ profileData, volunteerData, isOwnProfile }) => {
         }
     };
 
+    const OpportunitiesList = ({ opportunities }) => (
+        <VStack spacing={4} align="stretch">
+            {opportunities.map(opp => (
+                <Box
+                    key={opp.id}
+                    p={4}
+                    bg="white"
+                    borderRadius="md"
+                    boxShadow="sm"
+                    borderWidth="1px"
+                    borderColor="gray.100"
+                >
+                    <Heading size="md" mb={2}>{opp.title}</Heading>
+                    <Text noOfLines={2} color="gray.600">{opp.description}</Text>
+                    <HStack mt={2} spacing={4} color="gray.500">
+                        <Badge colorScheme={opp.archived_at ? 'gray' : 'green'}>
+                            {opp.archived_at ? 'Archived' : 'Active'}
+                        </Badge>
+                        <Text fontSize="sm">
+                            📍 {opp.location}
+                        </Text>
+                    </HStack>
+                </Box>
+            ))}
+            {opportunities.length === 0 && (
+                <Text color="gray.500" textAlign="center">No opportunities posted yet</Text>
+            )}
+        </VStack>
+    );
+
     return (
         <Tabs variant="enclosed" colorScheme="blue">
             <TabList>
                 <Tab>Overview</Tab>
                 <Tab>Posts</Tab>
-                <Tab>Volunteer Activity</Tab>
-                {isOwnProfile && <Tab>Liked Posts</Tab>}
+                {profileData.is_organization ? (
+                    <Tab>Opportunities</Tab>
+                ) : (
+                    <>
+                        <Tab>Volunteer Activity</Tab>
+                        {isOwnProfile && <Tab>Liked Posts</Tab>}
+                    </>
+                )}
             </TabList>
 
             <TabPanels>
@@ -281,19 +329,43 @@ const ProfileTabs = ({ profileData, volunteerData, isOwnProfile }) => {
                 <TabPanel>
                     <Grid templateColumns="repeat(auto-fit, minmax(250px, 1fr))" gap={6}>
                         <SectionCard title="About">
-                            <VStack align="start" spacing={2}>
+                            <VStack align="start" spacing={3}>
                                 <Text color="gray.600">
                                     Member since {new Date(profileData.date_joined).toLocaleDateString()}
                                 </Text>
-                                {volunteerData && (
-                                    <Text color="gray.600">
-                                        Active volunteer in {volunteerData.city}
-                                    </Text>
+                                {profileData.is_organization ? (
+                                    <>
+                                        {profileData.phone && (
+                                            <Text color="gray.600">
+                                                📞 {profileData.phone}
+                                            </Text>
+                                        )}
+                                        {profileData.address && (
+                                            <Text color="gray.600">
+                                                📍 {profileData.address}
+                                            </Text>
+                                        )}
+                                        {profileData.mission_statement && (
+                                            <Box mt={2}>
+                                                <Text fontWeight="medium" mb={1}>Mission Statement</Text>
+                                                <Text color="gray.600">{profileData.mission_statement}</Text>
+                                            </Box>
+                                        )}
+                                    </>
+                                ) : (
+                                    // Your existing volunteer overview content
+                                    volunteerData && (
+                                        <Text color="gray.600">
+                                            Active volunteer in {volunteerData.city}
+                                        </Text>
+                                    )
                                 )}
                             </VStack>
                         </SectionCard>
 
-                        {volunteerData && (
+                        {/* Only show skills and availability for volunteers */}
+                        {!profileData.is_organization && volunteerData && (
+                            // Your existing volunteer cards (Skills and Availability)
                             <>
                                 <SectionCard title="Skills">
                                     <Wrap>
@@ -311,7 +383,6 @@ const ProfileTabs = ({ profileData, volunteerData, isOwnProfile }) => {
                                         ))}
                                     </Wrap>
                                 </SectionCard>
-
                                 <SectionCard title="Availability">
                                     <Wrap>
                                         {volunteerData.availability?.map((time, index) => (
@@ -338,16 +409,22 @@ const ProfileTabs = ({ profileData, volunteerData, isOwnProfile }) => {
                     <PostsList posts={posts} />
                 </TabPanel>
 
-                {/* Volunteer Activity Tab */}
-                <TabPanel>
-                    <VolunteerHistory history={opportunityHistory} />
-                </TabPanel>
-
-                {/* Liked Posts Tab (only for own profile) */}
-                {isOwnProfile && (
+                {/* Conditional Third Tab */}
+                {profileData.is_organization ? (
                     <TabPanel>
-                        <PostsList posts={likedPosts} />
+                        <OpportunitiesList opportunities={opportunities} />
                     </TabPanel>
+                ) : (
+                    <>
+                        <TabPanel>
+                            <VolunteerHistory history={opportunityHistory} />
+                        </TabPanel>
+                        {isOwnProfile && (
+                            <TabPanel>
+                                <PostsList posts={likedPosts} />
+                            </TabPanel>
+                        )}
+                    </>
                 )}
             </TabPanels>
         </Tabs>

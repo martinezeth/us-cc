@@ -277,11 +277,9 @@ function Login({ onSwitch }) {
 
   const handleDemoLogin = async (type) => {
     setIsLoading(true);
-    console.log('=== DEMO LOGIN DEBUG START ===');
-
     try {
       const credentials = type === 'volunteer'
-        ? { email: 'demo@volunteer.com', password: 'demoVolunteer123!' }
+        ? { email: 'demovolunteer@volunteer.com', password: 'demoVolunteer123!' }
         : { email: 'demo@organization.com', password: 'demoOrg123!' };
 
       await supabase.auth.signOut();

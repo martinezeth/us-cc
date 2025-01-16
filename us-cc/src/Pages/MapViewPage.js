@@ -15,6 +15,7 @@ import mapCurrentLocation from '../Images/Icons/mapCurrentLocation.svg';
 import { INCIDENT_TYPES } from '../constants/incidentTypes';
 import VerifiedBadge from '../Components/VerifiedBadge';
 import { useNavigate } from 'react-router-dom';
+import { getProfileUsername } from '../Components/ProfileHelpers';
 
 const baseIcon = L.Icon.extend({
   options: {
@@ -143,8 +144,7 @@ function MapEvents({ setIncidents, radius }) {
             ...profile,
             is_organization: !!profile.organization_name,
             display_name: profile.organization_name || profile.full_name,
-            // Use demo-organization/demo-volunteer for demo accounts, otherwise use email prefix
-            username: profile.organization_name ? 'demo-organization' : 'demo-volunteer' // For demo accounts ONLY
+            username: getProfileUsername(profile)
           };
         });
 
@@ -231,9 +231,7 @@ function MapPage() {
               ...profile,
               is_organization: !!profile.organization_name,
               display_name: profile.organization_name || profile.full_name,
-              username: profile.organization_name ?
-                profile.organization_name.toLowerCase().replace(/\s+/g, '-') :
-                profile.full_name.toLowerCase().replace(/\s+/g, '-')
+              username: getProfileUsername(profile)
             };
           });
 
@@ -354,14 +352,8 @@ function MapPage() {
                             cursor="pointer"
                             onClick={(e) => {
                               e.stopPropagation();
-                              if (incident.created_by_user?.display_name?.includes('Demo')) {
-                                // For demo accounts, use their specific usernames
-                                const username = incident.created_by_user.display_name.includes('Organization') ?
-                                  'demo-org' : 'demo-volunteer';
-                                navigate(`/profile/${username}`);
-                              } else if (incident.created_by_user) {
-                                // For regular accounts, navigate to their profile
-                                navigate(`/profile/${incident.created_by_user.username}`);
+                              if (incident.created_by_user) {
+                                navigate(`/profile/${getProfileUsername(incident.created_by_user)}`);
                               }
                             }}
                             _hover={{ textDecoration: 'underline' }}

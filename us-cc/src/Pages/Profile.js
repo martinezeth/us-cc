@@ -18,6 +18,7 @@ import { EditIcon } from '@chakra-ui/icons';
 import { supabase } from '../supabaseClient';
 import ProfileTabs from '../Components/ProfileTabs';
 import EditProfileModal from '../Components/EditProfileModal';
+import { getProfileUsername, isDemoProfile } from '../Components/ProfileHelpers';
 
 const SectionCard = ({ children, title }) => (
     <Box
@@ -79,9 +80,8 @@ export default function Profile() {
         try {
             setLoading(true);
 
-            // Get current authenticated user
+            // Authentication check
             const { data: { user: currentUser } } = await supabase.auth.getUser();
-
             if (!currentUser) {
                 toast({
                     title: "Authentication required",
@@ -93,39 +93,42 @@ export default function Profile() {
                 return;
             }
 
-            // Check if viewing own profile
+            // Determine if user is viewing their own profile
+            // by comparing the URL username with current user's email prefix
             const isOwn = currentUser.email.split('@')[0] === username;
             setIsOwnProfile(isOwn);
 
-            // If viewing own profile, use current user's ID
+            // Set initial targetUserId - if viewing own profile, use current user's ID
             let targetUserId = isOwn ? currentUser.id : null;
 
-            // If viewing someone else's profile, find their user ID
+            // Profile lookup logic for other users' profiles
             if (!isOwn) {
-                const { data: posts, error: postsError } = await supabase
-                    .from('posts')
-                    .select('user_id')
-                    .eq('user_username', username)
-                    .limit(1)
+                // First try to find demo profiles (organization or volunteer)
+                // This uses a single query to check both demo profile types
+                const { data: profile, error } = await supabase
+                    .from('profiles')
+                    .select('*')
+                    .or(`full_name.eq.Demo Volunteer,organization_name.eq.Demo Organization`)
+                    .eq(username === 'demo' ? 'organization_name' : 'full_name', 
+                        username === 'demo' ? 'Demo Organization' : 'Demo Volunteer')
                     .single();
 
-                if (postsError) {
-                    // If no posts found, try checking volunteer_signups
-                    const { data: volunteer, error: volunteerError } = await supabase
-                        .from('volunteer_signups')
-                        .select('user_id')
-                        .eq('user_id', username)
-                        .limit(1)
-                        .single();
-
-                    if (volunteerError) {
-                        throw new Error("User not found");
-                    }
-                    targetUserId = volunteer.user_id;
+                if (error) {
+                    // If not a demo profile, lookup regular user by email prefix
+                    const { data: userId } = await supabase.rpc('get_user_id_by_email_prefix', {
+                        prefix_param: username
+                    });
+                    
+                    if (!userId) throw new Error("User not found");
+                    targetUserId = userId;
                 } else {
-                    targetUserId = posts.user_id;
+                    // Demo profile found, use its ID
+                    targetUserId = profile.id;
                 }
             }
+
+            // Final check to ensure we have a valid user ID
+            if (!targetUserId) throw new Error("User not found");
 
             // Now fetch the profile data
             const { data: profile, error: profileError } = await supabase
@@ -136,13 +139,6 @@ export default function Profile() {
 
             if (profileError) throw profileError;
 
-            // Get the user's metadata to check organization status
-            const { data: userData, error: userError } = await supabase
-                .from('auth.users')
-                .select('raw_user_meta_data')
-                .eq('id', targetUserId)
-                .single();
-
             // Set profile data
             setProfileData({
                 id: targetUserId,
@@ -151,42 +147,40 @@ export default function Profile() {
                 date_joined: currentUser.created_at,
                 city: profile.city || null,
                 state: profile.state || null,
-                is_organization: profile.is_organization || currentUser.user_metadata?.is_organization || false
+                phone: profile.phone || null,
+                address: profile.address || null,
+                mission_statement: profile.mission_statement || null,
+                is_organization: currentUser.user_metadata?.is_organization || false
             });
 
-            // Fetch volunteer data and stats
-            const { data: volunteerInfo } = await supabase
-                .from('volunteer_signups')
-                .select('*')
-                .eq('user_id', targetUserId)
-                .single();
+            // Only fetch volunteer data if not an organization
+            if (!currentUser.user_metadata?.is_organization) {
+                const { data: volunteerInfo } = await supabase
+                    .from('volunteer_signups')
+                    .select('*')
+                    .eq('user_id', targetUserId)
+                    .single();
 
-            if (volunteerInfo) {
-                // Get total incident responses count
-                const { count: totalResponses } = await supabase
-                    .from('opportunity_responses')
-                    .select('*', { count: 'exact', head: true })
-                    .eq('volunteer_id', targetUserId);
+                if (volunteerInfo) {
+                    // Get total incident responses count
+                    const { count: totalResponses } = await supabase
+                        .from('opportunity_responses')
+                        .select('*', { count: 'exact', head: true })
+                        .eq('volunteer_id', targetUserId);
 
-                // Get active opportunities count
-                const { data: activeOpps } = await supabase
-                    .from('opportunity_responses')
-                    .select(`
-                        id,
-                        volunteer_opportunities!inner (
-                            id,
-                            archived_at
-                        )
-                    `)
-                    .eq('volunteer_id', targetUserId)
-                    .eq('status', 'accepted')
-                    .is('volunteer_opportunities.archived_at', null);
+                    // Get active opportunities count
+                    const { data: activeOpps } = await supabase
+                        .from('opportunity_responses')
+                        .select('id')
+                        .eq('volunteer_id', targetUserId)
+                        .eq('status', 'accepted');
 
-                setVolunteerData({
-                    ...volunteerInfo,
-                    total_responses: totalResponses || 0,
-                    active_opportunities: activeOpps?.length || 0
-                });
+                    setVolunteerData({
+                        ...volunteerInfo,
+                        total_responses: totalResponses || 0,
+                        active_opportunities: activeOpps?.length || 0
+                    });
+                }
             }
 
         } catch (error) {
@@ -208,11 +202,13 @@ export default function Profile() {
     };
 
     const handleUpdateSuccess = (updatedData) => {
-        // Update profile data
+        // Update profile data while preserving the name and username
         setProfileData(prev => ({
             ...prev,
             ...updatedData,
-            name: updatedData.full_name
+            name: prev.name || updatedData.full_name,
+            username: prev.username, // Preserve username
+            is_organization: prev.is_organization // Preserve organization status
         }));
 
         // Update volunteer data if it exists
@@ -323,6 +319,7 @@ export default function Profile() {
                                                 userData={profileData}
                                                 volunteerData={volunteerData}
                                                 onUpdateSuccess={handleUpdateSuccess}
+                                                isOrganization={profileData.is_organization}
                                             />
                                         </>
                                     )}
