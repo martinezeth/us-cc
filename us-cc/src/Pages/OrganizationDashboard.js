@@ -567,7 +567,7 @@ const ContentCard = ({ item, type, onDelete, onViewResponses, onArchive, onEdit 
             bg="white"
             borderRadius="lg"
             boxShadow="sm"
-            p={6}
+            p={{ base: 4, md: 6 }}
             border="1px solid"
             borderColor="gray.100"
             position="relative"
@@ -902,18 +902,19 @@ export default function OrganizationDashboard() {
 
     return (
         <Box bg="gray.50" minH="90vh">
-            <Container maxW="7xl" py={8}>
+            <Container maxW="7xl" py={8} px={{ base: 4, md: 8 }}>
                 <VStack spacing={8} align="stretch">
-                    <HStack justify="space-between">
-                        <VStack align="start" spacing={1}>
+                    <HStack justify="space-between" flexDir={{ base: 'column', md: 'row' }} spacing={{ base: 4, md: 0 }}>
+                        <VStack align={{ base: 'stretch', md: 'start' }} spacing={1} w="full">
                             <Heading size="lg">Organization Dashboard</Heading>
                             <Text color="gray.600">Manage your content and opportunities</Text>
                         </VStack>
-                        <HStack>
+                        <HStack spacing={2} w={{ base: 'full', md: 'auto' }} flexDir={{ base: 'column', md: 'row' }}>
                             <Button
                                 leftIcon={<Icon as={MdAssignment} />}
                                 colorScheme="blue"
                                 onClick={() => setIsOpportunityModalOpen(true)}
+                                w={{ base: 'full', md: 'auto' }}
                             >
                                 New Opportunity
                             </Button>
@@ -921,6 +922,7 @@ export default function OrganizationDashboard() {
                                 leftIcon={<Icon as={MdAnnouncement} />}
                                 colorScheme="green"
                                 onClick={() => setIsPostModalOpen(true)}
+                                w={{ base: 'full', md: 'auto' }}
                             >
                                 New Post
                             </Button>
@@ -928,6 +930,7 @@ export default function OrganizationDashboard() {
                                 leftIcon={<WarningIcon />}
                                 colorScheme="red"
                                 onClick={() => setIsIncidentModalOpen(true)}
+                                w={{ base: 'full', md: 'auto' }}
                             >
                                 Report Incident
                             </Button>
@@ -952,13 +955,34 @@ export default function OrganizationDashboard() {
                     </DashboardCard>
 
                     <Tabs colorScheme="blue" variant="enclosed">
-                        <TabList>
-                            <Tab>Active Opportunities ({activeOpportunities.length})</Tab>
-                            <Tab>Archived Opportunities ({archivedOpportunities.length})</Tab>
-                            <Tab>Posts ({posts.length})</Tab>
-                            <Tab>Incidents ({incidents.length})</Tab>
-                        </TabList>
-
+                        <Box 
+                            overflowX={{ base: 'auto', md: 'visible' }} 
+                            width="100%"
+                            sx={{
+                                '@media screen and (min-width: 48em)': {
+                                    '&::-webkit-scrollbar': {
+                                        display: 'none'
+                                    },
+                                    scrollbarWidth: 'none',
+                                    '-ms-overflow-style': 'none'
+                                }
+                            }}
+                        >
+                            <TabList>
+                                <Tab whiteSpace="nowrap" minW="auto">
+                                    Active Opportunities ({activeOpportunities.length})
+                                </Tab>
+                                <Tab whiteSpace="nowrap" minW="auto">
+                                    Archived Opportunities ({archivedOpportunities.length})
+                                </Tab>
+                                <Tab whiteSpace="nowrap" minW="auto">
+                                    Posts ({posts.length})
+                                </Tab>
+                                <Tab whiteSpace="nowrap" minW="auto">
+                                    Incidents ({incidents.length})
+                                </Tab>
+                            </TabList>
+                        </Box>
                         <TabPanels>
                             <TabPanel>
                                 <Grid templateColumns="repeat(auto-fill, minmax(350px, 1fr))" gap={6}>

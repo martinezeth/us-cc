@@ -63,7 +63,7 @@ const Hero = () => {
             onClick={handleDemoRedirect}
             minW="250px"
           >
-            Try Our Demo Accounts
+            Try Demo Accounts
           </Button>
         </VStack>
       </Box>

@@ -1,89 +1,99 @@
 # Crisis Companion
 
-## Team Members
-- Ethan Martinez
-- Nicolas Randazzo
-- Jacob Franco
+[Insert Project Banner/Logo Image Here]
 
-## Project Overview
-The Crisis Companion project aims to deliver a web-based platform that empowers communities and local authorities to respond quickly to disasters. It facilitates the reporting of incidents, management of resources, coordination of volunteer efforts, and utilization of real-time data for informed decision-making. The primary goal is to enable users within communities to report, confirm, converse about, and share information regarding weather anomalies and disaster response resources before losing internet connectivity.
+## Live Demo Access
+Visit the live demo at: [Crisis Companion Demo](https://[your-github-username].github.io/crisis-companion)
 
-## Technology Stack
+### Demo Accounts
+From the landing page, you can click the "Try Demo Accounts" button, or simply click 'Login' on the header component to be greeted with the
+option to choose from a demo 'Organization' account or a demo 'Volunteer' account.
 
-### Database
-- **Language:** SQL
-- **Framework:** MySQL
 
-### API Server
-- **Language:** JavaScript
-- **Framework:** Node.js / Express.js
+## About Crisis Companion
+Crisis Companion is a comprehensive disaster response and community coordination platform that bridges the gap between local organizations, volunteers, and communities during times of crisis. Built with React and powered by Supabase, it provides real-time incident tracking, volunteer coordination, and community communication tools.
 
-### UI Server
-- **Language:** JavaScript
+[Insert Dashboard Screenshot Here]
 
-### Frontend Components
-- **Language:** JavaScript
-- **Framework:** React.js
+## Key Features
 
-### Backend Services
-- **Language:** JavaScript (Node.js)
-- **Framework:** Express.js (RESTful API)
+### 🗺️ Interactive Incident Map
+- Real-time incident visualization and reporting
+- Location-based filtering and incident details
+- Support for multiple incident types (fires, wildfires, floods, earthquakes, etc.)
 
-### Data Models
-- **Language:** JavaScript
-- **Frameworks:** Sequelize or Mongoose (for MongoDB)
+![App Screenshot](src/Images/README-images/incident-map-image.png)
 
-### Authentication and Authorization Middleware
-- **Language:** JavaScript (Node.js)
+### 👥 Community Posts & Engagement
+- Location-based community posts
+- Real-time commenting and discussion system
+- Post filtering by proximity
+- Like and interaction features
 
-## Use Cases
+![App Screenshot](src/Images/README-images/community-posts-image.png)
 
-1. **User Registration and Authentication**
-2. **Incident Reporting**
-3. **Resource Management**
-4. **Volunteer Signup and Coordination**
-5. **Incident Mapping**
-6. **User Profile Management**
+### 🤝 Volunteer Management System
+#### For Organizations:
+- Create and manage volunteer opportunities
+- Track volunteer responses and applications
+- Direct messaging with volunteers
+- Analytics dashboard for volunteer engagement
+- Opportunity status tracking (active/archived)
 
-## Project Milestones
+![App Screenshot](src/Images/README-images/organization-dashboard-image.png)
 
-### Week 1: Planning and Initial Setup
-- Finalize technology stack
-- Set up GitHub repository
-- Begin database design and setup
+![App Screenshot](src/Images/README-images/organization-dashboard-responses.png)
 
-### Week 2: Begin Initial Frontend Development
-- Design UI mock-ups and wireframes
-- Start frontend development with React/Vue.js
+#### For Volunteers:
+- Skill-based opportunity matching
+- Real-time messaging with organizations
+- Response tracking and history
+- Customizable volunteer profile
+- Location-based opportunity discovery
 
-### Week 3: Continue Frontend Development
-- Create Incident Reporting Interface
-- Integrate map functionality
+![App Screenshot](src/Images/README-images/volunteer-dashboard-image.png)
 
-### Week 4: Begin Backend Development
-- Set up Node.js server with Express.js
-- Connect backend to database and establish API endpoints
+### 📱 Responsive Design
+- Fully responsive mobile-first design
+- Optimized for all device sizes
+- Native-like mobile experience
 
-### Week 5: Continue Backend Development
-- Implement authentication and authorization
-- Define access control rules
+[Insert Mobile View Screenshot Here]
 
-### Week 6: Integration and Testing
-- Integrate frontend and backend
-- Conduct unit and integration testing
 
-### Week 7: Finalization and Deployment
-- Final UI refinements
-- Address any remaining issues
-- Deploy application for final testing
+## Technical Features
+- **Frontend**: React.js with Chakra UI
+- **Backend**: Supabase (PostgreSQL)
+- **Authentication**: Supabase Auth
+- **Real-time Updates**: Supabase Real-time subscriptions
+- **Mapping**: Leaflet.js integration
+- **State Management**: React Hooks
+- **Styling**: Chakra UI
 
----
-This command allows for legacy code (as proposed by Prof).
-# export NODE_OPTIONS=--openssl-legacy-provider 
----
+## User Guide
 
-## How to Contribute
-Contributions to the Crisis Companion project are welcome. Please refer to the [CONTRIBUTING.md](CONTRIBUTING.md) file for more information on how to submit pull requests, report issues, or suggest enhancements.
+### For Organizations
+1. **Sign In**: Use the organization demo account
+2. **Create Opportunities**: Navigate to the Organization Dashboard
+3. **Manage Volunteers**: Track responses and communicate with volunteers
+4. **Report Incidents**: Use the incident reporting feature
+5. **Post Updates**: Share community updates and announcements
 
-## License
-This project is licensed under the MIT License - see the [LICENSE.md](LICENSE.md) file for details.
+### For Volunteers
+1. **Sign In**: Use the volunteer demo account
+2. **Browse Opportunities**: Explore available volunteer positions
+3. **Apply**: Sign up for opportunities matching your skills
+4. **Communicate**: Use the messaging system to coordinate with organizations
+5. **Track**: Monitor your volunteer history and engagement
+
+## Local Development
+```bash
+# Clone the repository
+git clone https://github.com/[your-username]/crisis-companion.git
+
+# Install dependencies
+cd crisis-companion
+npm install
+
+# Start the development server
+npm start

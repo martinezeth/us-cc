@@ -19,7 +19,7 @@ import {
   Alert,
   AlertIcon,
   Checkbox,
-  Select
+  Select,
 } from "@chakra-ui/react";
 import { HiEye, HiEyeOff } from 'react-icons/hi';
 import { useNavigate } from 'react-router-dom';
@@ -221,59 +221,6 @@ function Login({ onSwitch }) {
   const navigate = useNavigate();
   const toast = useToast();
   const [isLoading, setIsLoading] = useState(false);
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [errors, setErrors] = useState({});
-
-  const validateForm = () => {
-    const newErrors = {};
-    if (!email.trim()) newErrors.email = "Email is required";
-    if (!email.includes('@')) newErrors.email = "Invalid email address";
-    if (!password) newErrors.password = "Password is required";
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
-
-  const handleLogin = async () => {
-    if (!validateForm()) return;
-
-    setIsLoading(true);
-    try {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password
-      });
-
-      if (error) throw error;
-
-      // Check user metadata to determine where to redirect
-      const isOrganization = data.user?.user_metadata?.is_organization;
-
-      toast({
-        title: "Login successful!",
-        status: "success",
-        duration: 3000,
-        isClosable: true,
-      });
-
-      // Redirect based on user type with correct path
-      if (isOrganization) {
-        navigate('/organization-dashboard');
-      } else {
-        navigate('/volunteering');
-      }
-    } catch (error) {
-      toast({
-        title: "Login failed",
-        description: error.message,
-        status: "error",
-        duration: 5000,
-        isClosable: true,
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
   const handleDemoLogin = async (type) => {
     setIsLoading(true);
@@ -287,7 +234,6 @@ function Login({ onSwitch }) {
 
       if (error) throw error;
 
-      // Use the correct route path from App.js
       const targetPath = type === 'volunteer' ? '/volunteering' : '/organization-dashboard';
       console.log('Target path:', targetPath);
 
@@ -315,66 +261,38 @@ function Login({ onSwitch }) {
     <Container maxW="lg" py={{ base: '12', md: '24' }} px={{ base: '0', sm: '8' }} centerContent>
       <Stack spacing={4} align="center">
         <Logo style={{ width: '150px', height: '150px' }} />
-        <Heading size="lg" mb="8">Log in to your account</Heading>
+        <Heading size="lg" mb="8">Demo Login</Heading>
         <VStack spacing={4} bg="bg.surface" p={{ base: '4', sm: '8' }} borderRadius="xl" boxShadow="md" width="100%">
           <Alert status="info" borderRadius="md">
             <AlertIcon />
             <Text fontSize="sm">
-              👋 Welcome! Try the demo account to explore all features.
+              👋 Choose a demo account to explore the platform's features:
             </Text>
           </Alert>
 
-          <FormControl isRequired isInvalid={errors.email}>
-            <FormLabel>Email</FormLabel>
-            <Input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="Enter your email"
-            />
-            {errors.email && <Text color="red.500" fontSize="sm">{errors.email}</Text>}
-          </FormControl>
-
-          <FormControl isRequired isInvalid={errors.password}>
-            <PasswordField
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-            />
-            {errors.password && <Text color="red.500" fontSize="sm">{errors.password}</Text>}
-          </FormControl>
-
-          <Button
-            colorScheme="blue"
-            onClick={handleLogin}
-            isLoading={isLoading}
-            width="100%"
-          >
-            Sign In
-          </Button>
-
-          <VStack spacing={4} width="100%">
+          <VStack spacing={6} width="100%" pt={4}>
             <Button
               colorScheme="blue"
+              size="lg"
               onClick={() => handleDemoLogin('volunteer')}
               isLoading={isLoading}
               width="100%"
+              height="60px"
             >
               Try Demo Volunteer
             </Button>
 
             <Button
               colorScheme="green"
+              size="lg"
               onClick={() => handleDemoLogin('organization')}
               isLoading={isLoading}
               width="100%"
+              height="60px"
             >
               Try Demo Organization
             </Button>
           </VStack>
-
-          <Text mt="4">
-            Don't have an account? <Link color="blue.500" onClick={onSwitch}>Sign up</Link>
-          </Text>
         </VStack>
       </Stack>
     </Container>
@@ -382,8 +300,19 @@ function Login({ onSwitch }) {
 }
 
 function AuthenticationPage({ RegoOrLogin }) {
-  const [isRegister, setIsRegister] = useState(RegoOrLogin === "Register");
-  const toggleForm = () => setIsRegister(!isRegister);
+  // Force login view in demo mode
+  const [isRegister] = useState(false);
+  const toast = useToast();
+
+  // Remove the toggle functionality
+  const toggleForm = () => {
+    toast({
+      title: "Demo Mode",
+      description: "New account creation is disabled in demo mode. Please use the provided demo accounts.",
+      status: "info",
+      duration: 5000,
+    });
+  };
 
   return isRegister ? <Register onSwitch={toggleForm} /> : <Login onSwitch={toggleForm} />;
 }
