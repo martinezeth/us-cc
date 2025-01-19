@@ -2,7 +2,7 @@
 
 
 ## Live Demo Access
-Visit the live demo at: [Crisis Companion Demo](https://[your-github-username].github.io/crisis-companion)
+Visit the live demo at: [Crisis Companion Demo](https://martinezeth.github.io/us-cc/)
 
 ### Demo Accounts
 From the landing page, you can click the "Try Demo Accounts" button, or simply click 'Login' on the header component to be greeted with the
@@ -20,15 +20,14 @@ Crisis Companion is a comprehensive disaster response and community coordination
 - Location-based filtering and incident details
 - Support for multiple incident types (fires, wildfires, floods, earthquakes, etc.)
 
-![App Screenshot](src/Images/README-images/incident-map-image.png)
-
+![App Screenshot](https://raw.githubusercontent.com/martinezeth/us-cc/live-demo/src/Images/README-images/incident-map-image.png)
 ### 👥 Community Posts & Engagement
 - Location-based community posts
 - Real-time commenting and discussion system
 - Post filtering by proximity
 - Like and interaction features
 
-![App Screenshot](src/Images/README-images/community-posts-image.png)
+![App Screenshot](https://raw.githubusercontent.com/martinezeth/us-cc/live-demo/src/Images/README-images/community-posts-image.png)
 
 ### 🤝 Volunteer Management System
 #### For Organizations:
@@ -38,10 +37,8 @@ Crisis Companion is a comprehensive disaster response and community coordination
 - Analytics dashboard for volunteer engagement
 - Opportunity status tracking (active/archived)
 
-![App Screenshot](src/Images/README-images/organization-dashboard-image.png)
-
-![App Screenshot](src/Images/README-images/organization-dashboard-responses.png)
-
+![App Screenshot](https://raw.githubusercontent.com/martinezeth/us-cc/live-demo/src/Images/README-images/organization-dashboard-image.png)
+![App Screenshot](https://raw.githubusercontent.com/martinezeth/us-cc/live-demo/src/Images/README-images/organization-dashboard-responses.png)
 #### For Volunteers:
 - Skill-based opportunity matching
 - Real-time messaging with organizations
@@ -49,13 +46,14 @@ Crisis Companion is a comprehensive disaster response and community coordination
 - Customizable volunteer profile
 - Location-based opportunity discovery
 
-![App Screenshot](src/Images/README-images/volunteer-dashboard-image.png)
+![App Screenshot](https://raw.githubusercontent.com/martinezeth/us-cc/live-demo/src/Images/README-images/volunteer-dashboard-image.png)
 
 ### 📱 Responsive Design
-- Responsive mobile design
+- Fully responsive mobile-first design
+- Optimized for all device sizes
+- Native-like mobile experience
 
-![App Screenshot](src/Images/README-images/mobile-org-dash.png)
-
+![App Screenshot](https://raw.githubusercontent.com/martinezeth/us-cc/live-demo/src/Images/README-images/mobile-org-dash.png)
 
 ## Technical Features
 - **Frontend**: React.js with Chakra UI
@@ -68,21 +66,19 @@ Crisis Companion is a comprehensive disaster response and community coordination
 
 ## User Guide
 
-## Each Account Type:
-1. **Report Incidents**: Use the incident reporting feature
-2. **View Incidents**: Use the map view of georeferenced incident reports
-3. **Create Community Posts**: Post on the community forums
-4. **Interact with Community Posts**: Like and comment on community forum posts
+## Both Account Types:
+1. **Report Incidents**:  Use the incident reporting feature
+2. **View Incidents**: View incidents on the interactive map view for your local area
+3. **Create Community Posts**: Share community updates and announcements
+
 
 ### For Organizations
-1. **Sign In**: Use the 'Organization Demo' account
+1. **Sign In**: Use the organization demo account
 2. **Create Opportunities**: Navigate to the Organization Dashboard
 3. **Manage Volunteers**: Track responses and communicate with volunteers
-4. **Verified check**: Showcased on incident reports and posts
-5. **Track**: Monitor organization opportunities and volunteer engagement
 
 ### For Volunteers
-1. **Sign In**: Use the 'Volunteer Demo' account
+1. **Sign In**: Use the volunteer demo account
 2. **Browse Opportunities**: Explore available volunteer positions
 3. **Apply**: Sign up for opportunities matching your skills
 4. **Communicate**: Use the messaging system to coordinate with organizations
@@ -94,7 +90,7 @@ Crisis Companion is a comprehensive disaster response and community coordination
 git clone https://github.com/martinezeth/us-cc
 
 # Install dependencies
-cd crisis-companion
+cd us-cc
 npm install
 
 # Start the development server
