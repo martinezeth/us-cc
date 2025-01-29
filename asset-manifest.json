@@ -1,7 +1,7 @@
 {
   "files": {
     "main.css": "/us-cc/static/css/main.8dbf6028.css",
-    "main.js": "/us-cc/static/js/main.f6796752.js",
+    "main.js": "/us-cc/static/js/main.5f166380.js",
     "static/js/952.ed15af73.chunk.js": "/us-cc/static/js/952.ed15af73.chunk.js",
     "static/media/landingPageMainImage.png": "/us-cc/static/media/landingPageMainImage.da6569a5e7a82538c399.png",
     "static/media/US-CC-header.png": "/us-cc/static/media/US-CC-header.d2d217737d67ce27f675.png",
@@ -15,6 +15,7 @@
     "static/media/hailEventIcon.svg": "/us-cc/static/media/hailEventIcon.568a53a5faac1eba250d8f0d361fc22b.svg",
     "static/media/lightningEventIcon.svg": "/us-cc/static/media/lightningEventIcon.915618588e35239f4362b4bddf852120.svg",
     "static/media/wildfire.png": "/us-cc/static/media/wildfire.d34eb418db5b1ce5fb50.png",
+    "static/media/covid.png": "/us-cc/static/media/covid.5b9dd62047791534923c.png",
     "static/media/fireEventIcon.svg": "/us-cc/static/media/fireEventIcon.f89a057d90104b88b426b835f9a0493e.svg",
     "static/media/usccLogoDraft.svg": "/us-cc/static/media/usccLogoDraft.feacb5f449092c661fc3433b2f0e2446.svg",
     "static/media/earthquake.png": "/us-cc/static/media/earthquake.5c60f0d94fb4d32cd58b.png",
@@ -23,11 +24,11 @@
     "index.html": "/us-cc/index.html",
     "static/media/mapCurrentLocation.svg": "/us-cc/static/media/mapCurrentLocation.681e7f8a9ef7eafd3e7990f10e9f86ed.svg",
     "main.8dbf6028.css.map": "/us-cc/static/css/main.8dbf6028.css.map",
-    "main.f6796752.js.map": "/us-cc/static/js/main.f6796752.js.map",
+    "main.5f166380.js.map": "/us-cc/static/js/main.5f166380.js.map",
     "952.ed15af73.chunk.js.map": "/us-cc/static/js/952.ed15af73.chunk.js.map"
   },
   "entrypoints": [
     "static/css/main.8dbf6028.css",
-    "static/js/main.f6796752.js"
+    "static/js/main.5f166380.js"
   ]
 }
