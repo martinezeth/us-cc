@@ -20,20 +20,14 @@ import Covid from './Pages/Covid';
 import Earthquake from './Pages/Earthquake';
 import AboutPage from './Pages/About';
 import OrganizationDashboard from './Pages/OrganizationDashboard';
-
-import { CookiesProvider, useCookies } from 'react-cookie';
-
 import theme from './Styles/theme';
 import './Styles/styles.css';
 import ResourcesPage from './Pages/ResourcesPage';
 
 function App() {
-
-
   return (
-
     <ChakraProvider theme={theme}>
-      <Router>
+      <Router basename="/us-cc">
         <div className="App">
           <HeaderComponent />
           <Routes>
