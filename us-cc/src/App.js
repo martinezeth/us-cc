@@ -1,12 +1,10 @@
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { HashRouter as Router, Routes, Route } from 'react-router-dom';
 import { ChakraProvider } from "@chakra-ui/react";
-
 import HeaderComponent from './Components/HeaderComponent';
 import FooterComponent from './Components/FooterComponent';
 import LandingPage from './Pages/LandingPage';
 import NewReportPage from './Pages/NewReportPage';
-import NotFoundPage from './Pages/NotFoundPage';
 import MapPage from './Pages/MapViewPage';
 import { AuthenticationPage } from './Pages/LoginRegisterPage';
 import VolunteerSignupPage from './Pages/VolunteerSignupPage';
@@ -19,18 +17,12 @@ import Hurricane from './Pages/Hurricane';
 import Earthquake from './Pages/Earthquake';
 import AboutPage from './Pages/About';
 import OrganizationDashboard from './Pages/OrganizationDashboard';
-
-import { CookiesProvider, useCookies } from 'react-cookie';
-
 import theme from './Styles/theme';
 import './Styles/styles.css';
 import ResourcesPage from './Pages/ResourcesPage';
 
 function App() {
-
-
   return (
-
     <ChakraProvider theme={theme}>
       <Router>
         <div className="App">
