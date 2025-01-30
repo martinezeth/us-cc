@@ -20,14 +20,14 @@ Crisis Companion is a comprehensive disaster response and community coordination
 - Location-based filtering and incident details
 - Support for multiple incident types (fires, wildfires, floods, earthquakes, etc.)
 
-![App Screenshot](https://raw.githubusercontent.com/martinezeth/us-cc/live-demo/src/Images/README-images/incident-map-image.png)
+![Incident Map Image](https://raw.githubusercontent.com/martinezeth/us-cc/live-demo/us-cc/src/Images/README-images/incident-map-image.png)
 ### 👥 Community Posts & Engagement
 - Location-based community posts
 - Real-time commenting and discussion system
 - Post filtering by proximity
 - Like and interaction features
 
-![App Screenshot](https://raw.githubusercontent.com/martinezeth/us-cc/live-demo/src/Images/README-images/community-posts-image.png)
+![Community Posts Image](https://raw.githubusercontent.com/martinezeth/us-cc/live-demo/us-cc/src/Images/README-images/community-posts-image.png)
 
 ### 🤝 Volunteer Management System
 #### For Organizations:
@@ -37,8 +37,8 @@ Crisis Companion is a comprehensive disaster response and community coordination
 - Analytics dashboard for volunteer engagement
 - Opportunity status tracking (active/archived)
 
-![App Screenshot](https://raw.githubusercontent.com/martinezeth/us-cc/live-demo/src/Images/README-images/organization-dashboard-image.png)
-![App Screenshot](https://raw.githubusercontent.com/martinezeth/us-cc/live-demo/src/Images/README-images/organization-dashboard-responses.png)
+![Organization Dashboard Image](https://raw.githubusercontent.com/martinezeth/us-cc/live-demo/us-cc/src/Images/README-images/organization-dashboard-image.png)
+![Organization Dashboard Responses Image](https://raw.githubusercontent.com/martinezeth/us-cc/live-demo/us-cc/src/Images/README-images/organization-dashboard-responses.png)
 #### For Volunteers:
 - Skill-based opportunity matching
 - Real-time messaging with organizations
@@ -46,14 +46,14 @@ Crisis Companion is a comprehensive disaster response and community coordination
 - Customizable volunteer profile
 - Location-based opportunity discovery
 
-![App Screenshot](https://raw.githubusercontent.com/martinezeth/us-cc/live-demo/src/Images/README-images/volunteer-dashboard-image.png)
+![Volunteer Dashboard Image](https://raw.githubusercontent.com/martinezeth/us-cc/live-demo/us-cc/src/Images/README-images/volunteer-dashboard-image.png)
 
 ### 📱 Responsive Design
 - Fully responsive mobile-first design
 - Optimized for all device sizes
 - Native-like mobile experience
 
-![App Screenshot](https://raw.githubusercontent.com/martinezeth/us-cc/live-demo/src/Images/README-images/mobile-org-dash.png)
+![Image of Mobile UI](https://raw.githubusercontent.com/martinezeth/us-cc/live-demo/us-cc/src/Images/README-images/mobile-org-dash.png)
 
 ## Technical Features
 - **Frontend**: React.js with Chakra UI
