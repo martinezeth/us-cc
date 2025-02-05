@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, useMapEvents, useMap } from 'react-leaflet';
 import L from 'leaflet';
-import { Box, ChakraProvider, VStack, Text, Button, Select, HStack } from '@chakra-ui/react';
+import { Box, ChakraProvider, VStack, Text, Button, Select, HStack, Badge } from '@chakra-ui/react';
 import { supabase } from '../supabaseClient';
 import earthquakeIconUrl from '../Images/Icons/earthquakeEventIcon.svg';
 import fireIconUrl from '../Images/Icons/fireEventIcon.svg';
@@ -43,18 +43,76 @@ const mapIcons = {
   lightning: new baseIcon({ iconUrl: lightningIconUrl }),
 };
 
-const ListView = ({ incidents }) => (
-  <VStack spacing={4} align="stretch">
-    {incidents.map(incident => (
-      <Box key={incident.id} p={5} shadow="md" borderWidth="1px">
-        <Text fontSize="xl">{INCIDENT_TYPES[incident.incident_type] || incident.incident_type}</Text>
-        <Text mt={4}>{incident.description}</Text>
-        <Text mt={2}>Reported at: {new Date(incident.timestamp).toLocaleString()}</Text>
-        <Text mt={2}>Location: ({incident.location_lat.toFixed(2)}, {incident.location_lng.toFixed(2)})</Text>
-      </Box>
-    ))}
-  </VStack>
-);
+const ListView = ({ incidents }) => {
+  const navigate = useNavigate();
+  
+  return (
+    <VStack spacing={4} align="stretch">
+      {incidents.map(incident => (
+        <Box
+          key={incident.id}
+          p={5}
+          shadow="md"
+          borderWidth="1px"
+          borderRadius="md"
+          bg="white"
+          _hover={{ shadow: 'lg' }}
+        >
+          <HStack spacing={3} align="flex-start">
+            <Box>
+              <img 
+                src={mapIcons[incident.incident_type]?.options?.iconUrl || earthquakeIconUrl} 
+                alt={incident.incident_type} 
+                style={{ width: '30px', height: '30px' }}
+              />
+            </Box>
+            <Box flex="1">
+              <Text fontSize="xl" fontWeight="bold">
+                {INCIDENT_TYPES[incident.incident_type] || incident.incident_type}
+              </Text>
+              {incident.created_by_user && (
+                <HStack spacing={2} mt={1}>
+                  <Text
+                    fontSize="sm"
+                    color="blue.500"
+                    cursor="pointer"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (incident.created_by_user) {
+                        navigate(`/profile/${getProfileUsername(incident.created_by_user)}`);
+                      }
+                    }}
+                    _hover={{ textDecoration: 'underline' }}
+                  >
+                    {incident.created_by_user.display_name}
+                  </Text>
+                  {incident.created_by_user?.is_organization && (
+                    <VerifiedBadge size="14px" />
+                  )}
+                </HStack>
+              )}
+              <Text mt={2}>{incident.description}</Text>
+              <HStack spacing={4} mt={4}>
+                <Text fontSize="sm" color="gray.600">
+                  Reported at: {new Date(incident.timestamp).toLocaleString()}
+                </Text>
+                {incident.city && incident.state ? (
+                  <Badge colorScheme="blue">
+                    📍 {incident.city}, {incident.state}
+                  </Badge>
+                ) : (
+                  <Badge colorScheme="blue">
+                    📍 ({incident.location_lat.toFixed(2)}, {incident.location_lng.toFixed(2)})
+                  </Badge>
+                )}
+              </HStack>
+            </Box>
+          </HStack>
+        </Box>
+      ))}
+    </VStack>
+  );
+};
 
 function LocationMarker() {
   const [position, setPosition] = useState(null);
