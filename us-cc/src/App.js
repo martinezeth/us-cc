@@ -17,6 +17,7 @@ import Hurricane from './Pages/Hurricane';
 import Earthquake from './Pages/Earthquake';
 import AboutPage from './Pages/About';
 import OrganizationDashboard from './Pages/OrganizationDashboard';
+import MajorIncidentDashboard from './Pages/MajorIncidentDashboard';
 import theme from './Styles/theme';
 import './Styles/styles.css';
 import ResourcesPage from './Pages/ResourcesPage';
@@ -45,6 +46,7 @@ function App() {
             <Route path="/volunteering" element={<VolunteerDashPage />} />
             <Route path="/organization-dashboard" element={<OrganizationDashboard />} />
             <Route path="/volunteer-signup" element={<VolunteerSignupPage />} />
+            <Route path="/major-incident/:id" element={<MajorIncidentDashboard />} />
           </Routes>
           <div className="footerSpacer"> </div>
           <FooterComponent />

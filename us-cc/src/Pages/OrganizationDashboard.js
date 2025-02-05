@@ -64,7 +64,9 @@ import CreateVolunteerOpportunityModal from '../Components/CreateVolunteerOpport
 import CreateIncidentModal from '../Components/CreateIncidentModal';
 import CreatePostModal from '../Components/CreatePostModal';
 import EditVolunteerOpportunityModal from '../Components/EditVolunteerOpportunityModal';
+import CreateMajorIncidentModal from '../Components/CreateMajorIncidentModal';
 import { INCIDENT_TYPES } from '../constants/incidentTypes';
+import { useNavigate } from 'react-router-dom';
 
 window.debugOrganization = {
     updateMetadata: async () => {
@@ -705,7 +707,8 @@ export default function OrganizationDashboard() {
     const [stats, setStats] = useState({
         activeOpportunities: 0,
         totalResponses: 0,
-        volunteersEngaged: 0
+        volunteersEngaged: 0,
+        majorIncidents: 0
     });
     const [selectedOpportunity, setSelectedOpportunity] = useState(null);
     const [isResponsesDrawerOpen, setIsResponsesDrawerOpen] = useState(false);
@@ -713,7 +716,10 @@ export default function OrganizationDashboard() {
     const [isPostModalOpen, setIsPostModalOpen] = useState(false);
     const [isIncidentModalOpen, setIsIncidentModalOpen] = useState(false);
     const [selectedOpportunityForEdit, setSelectedOpportunityForEdit] = useState(null);
-
+    const [majorIncidents, setMajorIncidents] = useState([]);
+    const [loading, setLoading] = useState(false);
+    const [isMajorIncidentModalOpen, setIsMajorIncidentModalOpen] = useState(false);
+    const navigate = useNavigate();
     const toast = useToast();
 
     useEffect(() => {
@@ -722,6 +728,7 @@ export default function OrganizationDashboard() {
 
     const fetchDashboardData = async () => {
         try {
+            setLoading(true);
             const { data: { user } } = await supabase.auth.getUser();
 
             // Fetch active opportunities
@@ -777,25 +784,46 @@ export default function OrganizationDashboard() {
 
             setIncidents(incidentsData || []);
 
-            // Calculate stats
+            // Fetch major incidents this organization is involved in
+            const { data: majorIncidentsData } = await supabase
+                .from('major_incident_organizations')
+                .select(`
+                    major_incident:major_incidents (
+                        id,
+                        title,
+                        severity_level,
+                        status,
+                        created_at
+                    )
+                `)
+                .eq('organization_id', user.id);
+
+            setMajorIncidents(majorIncidentsData?.map(item => item.major_incident) || []);
+
+            // Calculate volunteer engagement stats
             const { data: responsesData } = await supabase
                 .from('opportunity_responses')
                 .select('volunteer_id')
                 .in('opportunity_id', [...(activeOpps || []), ...(archivedOpps || [])].map(opp => opp.id));
 
+            // Update all stats
             setStats({
                 activeOpportunities: activeOpps?.length || 0,
                 totalResponses: responsesData?.length || 0,
-                volunteersEngaged: new Set(responsesData?.map(r => r.volunteer_id))?.size || 0
+                volunteersEngaged: new Set(responsesData?.map(r => r.volunteer_id))?.size || 0,
+                majorIncidents: majorIncidentsData?.length || 0
             });
 
         } catch (error) {
+            console.error('Error loading dashboard:', error);
             toast({
                 title: "Error loading dashboard",
                 description: error.message,
                 status: "error",
                 duration: 5000,
             });
+        } finally {
+            setLoading(false);
         }
     };
 
@@ -934,6 +962,14 @@ export default function OrganizationDashboard() {
                             >
                                 Report Incident
                             </Button>
+                            <Button
+                                leftIcon={<WarningIcon />}
+                                colorScheme="yellow"
+                                onClick={() => setIsMajorIncidentModalOpen(true)}
+                                w={{ base: 'full', md: 'auto' }}
+                                >
+                                    Create Major Incident
+                                </Button>
                         </HStack>
                     </HStack>
 
@@ -955,8 +991,8 @@ export default function OrganizationDashboard() {
                     </DashboardCard>
 
                     <Tabs colorScheme="blue" variant="enclosed">
-                        <Box 
-                            overflowX={{ base: 'auto', md: 'visible' }} 
+                        <Box
+                            overflowX={{ base: 'auto', md: 'visible' }}
                             width="100%"
                             sx={{
                                 '@media screen and (min-width: 48em)': {
@@ -980,6 +1016,9 @@ export default function OrganizationDashboard() {
                                 </Tab>
                                 <Tab whiteSpace="nowrap" minW="auto">
                                     Incidents ({incidents.length})
+                                </Tab>
+                                <Tab whiteSpace="nowrap" minW="auto">
+                                    Major Incidents ({majorIncidents.length})
                                 </Tab>
                             </TabList>
                         </Box>
@@ -1043,6 +1082,59 @@ export default function OrganizationDashboard() {
                                     ))}
                                 </Grid>
                             </TabPanel>
+                            <TabPanel>
+                                <Grid templateColumns="repeat(auto-fill, minmax(350px, 1fr))" gap={6}>
+                                    {majorIncidents.map(incident => (
+                                        <Box
+                                            key={incident.id}
+                                            p={6}
+                                            bg="white"
+                                            borderRadius="lg"
+                                            shadow="sm"
+                                            border="1px solid"
+                                            borderColor="gray.100"
+                                            transition="all 0.2s"
+                                            _hover={{ transform: 'translateY(-2px)', shadow: 'md' }}
+                                            cursor="pointer"
+                                            onClick={() => {
+                                                try {
+                                                    navigate(`/major-incident/${incident.id}`)
+                                                } catch (error) {
+                                                    console.error('Navigation error:', error);
+                                                    toast({
+                                                        title: "Error",
+                                                        description: "Cold not open incident dashboard",
+                                                        status: "error",
+                                                        duration: 5000
+                                                    });
+                                                }
+                                            }}
+
+                                        >
+                                            <HStack justify="space-between" mb={4}>
+                                                <Heading size="md">{incident.title}</Heading>
+                                                <Badge
+                                                    colorScheme={
+                                                        incident.severity_level === 'high' ? 'red' :
+                                                            incident.severity_level === 'medium' ? 'orange' :
+                                                            'yellow'
+                                                    }
+                                                >
+                                                    {incident.severity_level.toUpperCase()}
+                                                </Badge>
+                                            </HStack>
+                                            <Text color="gray.600" mb={2}>
+                                                Created: {new Date(incident.created_at).toLocaleDateString()}
+                                            </Text>
+                                            <Badge
+                                                colorScheme={incident.status === 'active' ? 'green' : 'gray'}
+                                            >
+                                                {incident.status.toUpperCase()}
+                                            </Badge>
+                                        </Box>
+                                    ))}
+                                </Grid>
+                            </TabPanel>
                         </TabPanels>
                     </Tabs>
                 </VStack>
@@ -1061,6 +1153,12 @@ export default function OrganizationDashboard() {
             <CreateIncidentModal
                 isOpen={isIncidentModalOpen}
                 onClose={() => setIsIncidentModalOpen(false)}
+                onCreateSuccess={fetchDashboardData}
+            />
+
+            <CreateMajorIncidentModal
+                isOpen={isMajorIncidentModalOpen}
+                onClose={() => setIsMajorIncidentModalOpen(false)}
                 onCreateSuccess={fetchDashboardData}
             />
 
