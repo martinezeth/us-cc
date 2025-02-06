@@ -35,6 +35,8 @@ import { MapContainer, TileLayer, Circle, Popup } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import OrganizationChannel from '../Components/OrganizationChannel';
 import JoinResponseButton from '../Components/JoinResponseButton';
+import VolunteerPool from '../Components/VolunteerPool';
+import VolunteerPoolHeader from '../Components/VolunteerPoolHeader';
 
 const MajorIncidentDashboard = () => {
     const { id } = useParams();
@@ -50,11 +52,17 @@ const MajorIncidentDashboard = () => {
         totalUpdates: 0
     });
     const toast = useToast();
+    const [isOrganization, setIsOrganization] = useState(false);
 
     useEffect(() => {
         if (id) {
             fetchIncidentData();
         }
+        const checkUserRole = async () => {
+            const { data: { user } } = await supabase.auth.getUser();
+            setIsOrganization(user?.user_metadata?.is_organization || false);
+        };
+        checkUserRole();
     }, [id]);
 
     const fetchIncidentData = async () => {
@@ -215,7 +223,7 @@ const MajorIncidentDashboard = () => {
                                     <Tab>Overview</Tab>
                                     <Tab>Updates</Tab>
                                     <Tab>Organizations</Tab>
-                                    <Tab>Resources</Tab>
+                                    {isOrganization && <Tab>Volunteer Pool</Tab>}
                                 </TabList>
 
                                 <TabPanels>
@@ -316,10 +324,19 @@ const MajorIncidentDashboard = () => {
                                         </VStack>
                                     </TabPanel>
 
-                                    {/* Resources Tab */}
-                                    <TabPanel>
-                                        <Text>Resources management coming soon...</Text>
-                                    </TabPanel>
+                                    {isOrganization && (
+                                        <TabPanel>
+                                            <VStack spacing={4} align="stretch">
+                                                <VolunteerPoolHeader
+                                                    majorIncidentId={id}
+                                                    onVolunteerJoin={fetchIncidentData}
+                                                />
+                                                <VolunteerPool
+                                                    majorIncidentId={id}
+                                                />
+                                            </VStack>
+                                        </TabPanel>
+                                    )}
                                 </TabPanels>
                             </Tabs>
                         </Box>
