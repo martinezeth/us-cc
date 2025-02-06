@@ -67,6 +67,7 @@ import EditVolunteerOpportunityModal from '../Components/EditVolunteerOpportunit
 import CreateMajorIncidentModal from '../Components/CreateMajorIncidentModal';
 import { INCIDENT_TYPES } from '../constants/incidentTypes';
 import { useNavigate } from 'react-router-dom';
+import AvailableMajorIncidents from '../Components/AvailableMajorIncidents';
 
 window.debugOrganization = {
     updateMetadata: async () => {
@@ -1018,7 +1019,10 @@ export default function OrganizationDashboard() {
                                     Incidents ({incidents.length})
                                 </Tab>
                                 <Tab whiteSpace="nowrap" minW="auto">
-                                    Major Incidents ({majorIncidents.length})
+                                    Your Major Incidents ({majorIncidents.length})
+                                </Tab>
+                                <Tab whiteSpace="nowrap" minW="auto">
+                                    Available Major Incidents ({AvailableMajorIncidents.length})
                                 </Tab>
                             </TabList>
                         </Box>

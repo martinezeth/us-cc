@@ -34,6 +34,7 @@ import { supabase } from '../supabaseClient';
 import { MapContainer, TileLayer, Circle, Popup } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import OrganizationChannel from '../Components/OrganizationChannel';
+import JoinResponseButton from '../Components/JoinResponseButton';
 
 const MajorIncidentDashboard = () => {
     const { id } = useParams();
@@ -174,13 +175,19 @@ const MajorIncidentDashboard = () => {
                                 Created: {new Date(activeIncident.created_at).toLocaleDateString()}
                             </Text>
                         </VStack>
-                        <Button
-                            colorScheme="blue"
-                            leftIcon={<AddIcon />}
-                            onClick={() => {/* Handle post update */ }}
-                        >
-                            Post Update
-                        </Button>
+                        <HStack>
+                            <JoinResponseButton
+                                majorIncidentId={id}
+                                onJoinSuccess={fetchIncidentData}
+                            />
+                            <Button
+                                colorScheme="blue"
+                                leftIcon={<AddIcon />}
+                                onClick={() => {/* Handle post update */ }}
+                            >
+                                Post Update
+                            </Button>
+                        </HStack>
                     </HStack>
 
                     {/* Stats */}
