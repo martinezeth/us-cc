@@ -42,6 +42,7 @@ import { supabase } from '../supabaseClient';
 import { STANDARD_SKILLS, AVAILABILITY_OPTIONS } from '../constants/incidentTypes';
 import VolunteerMessages from '../Components/VolunteerMessages';
 import LocationSearch from '../Components/LocationSearch';
+import VolunteerMajorIncidents from '../Components/VolunteerMajorIncidents';    
 
 const VolunteerRegistrationModal = ({ isOpen, onClose, onRegister }) => {
     const [formData, setFormData] = useState({
@@ -649,6 +650,9 @@ export default function VolunteerDashPage() {
                                     )}
                                 </Flex>
                             </Tab>
+                            <Tab>
+                                Major Incidents
+                            </Tab>
                         </TabList>
 
                         <TabPanels>
@@ -707,6 +711,9 @@ export default function VolunteerDashPage() {
                                 <VolunteerMessages
                                     onUnreadCountChange={setTotalUnreadMessages}
                                 />
+                            </TabPanel>
+                            <TabPanel>
+                                <VolunteerMajorIncidents />
                             </TabPanel>
                         </TabPanels>
                     </Tabs>

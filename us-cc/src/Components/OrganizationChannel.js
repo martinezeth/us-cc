@@ -96,31 +96,79 @@ const OrganizationChannel = ({ majorIncidentId, channelId }) => {
         fetchParticipants();
     }, [majorIncidentId]);
 
-    // Reuse the real-time subscription pattern from VolunteerMessages
+    // Update the useEffect for real-time subscription
     useEffect(() => {
         if (!currentChannel) return;
-
-        const subscription = supabase
-            .channel(`coordination-${currentChannel}`)
-            .on('postgres_changes', {
-                event: '*',
-                schema: 'public',
-                table: 'coordination_messages',
-                filter: `channel_id=eq.${currentChannel}`
-            }, (payload) => {
-                if (payload.new) {
-                    setMessages(prev => [...prev, payload.new]);
-                }
-            })
-            .subscribe();
 
         // Fetch initial messages
         fetchMessages(currentChannel);
 
+        // Create a channel for both broadcast and postgres changes
+        const channel = supabase.channel(`room_${currentChannel}`, {
+            config: {
+                broadcast: { self: true },
+                presence: { key: currentUser?.id },
+            },
+        });
+
+        // Handle broadcast messages
+        channel
+            .on('broadcast', { event: 'new_message' }, ({ payload }) => {
+                console.log('Received broadcast message:', payload);
+                // Update messages immediately for better real-time feel
+                setMessages(prev => [...prev, payload.message]);
+                setTimeout(() => {
+                    messageEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+                }, 100);
+            })
+            // Handle postgres changes as backup
+            .on(
+                'postgres_changes',
+                {
+                    event: '*',
+                    schema: 'public',
+                    table: 'coordination_messages',
+                    filter: `channel_id=eq.${currentChannel}`
+                },
+                async (payload) => {
+                    console.log('Received postgres change:', payload);
+                    // Refresh messages to ensure consistency
+                    const { data, error } = await supabase
+                        .from('coordination_messages')
+                        .select(`
+                            *,
+                            organization:profiles(id, organization_name)
+                        `)
+                        .eq('channel_id', currentChannel)
+                        .order('created_at', { ascending: true });
+
+                    if (!error && data) {
+                        setMessages(data);
+                    }
+                }
+            )
+            .subscribe(async (status) => {
+                console.log(`Channel status:`, status);
+                if (status === 'SUBSCRIBED') {
+                    await channel.track({
+                        user: currentUser?.id,
+                        online_at: new Date().toISOString(),
+                    });
+                }
+            });
+
         return () => {
-            subscription.unsubscribe();
+            channel.unsubscribe();
+            supabase.removeChannel(channel);
         };
-    }, [currentChannel]);
+    }, [currentChannel, currentUser]);
+
+    // Add this useEffect to handle channel changes
+    useEffect(() => {
+        if (channelId && !currentChannel) {
+            setCurrentChannel(channelId);
+        }
+    }, [channelId, currentChannel]);
 
     const fetchChannels = async () => {
         try {
@@ -159,6 +207,7 @@ const OrganizationChannel = ({ majorIncidentId, channelId }) => {
 
     const fetchMessages = async (channelId) => {
         try {
+            setMessages([]); // Clear messages when switching channels
             const { data, error } = await supabase
                 .from('coordination_messages')
                 .select(`
@@ -182,27 +231,46 @@ const OrganizationChannel = ({ majorIncidentId, channelId }) => {
         }, 100);
     };
 
-    const handleSendMessage = async () => {
-        if (!newMessage.trim()) return;
-
+    // Update sendMessage function to use broadcast
+    const sendMessage = async (messageContent) => {
         try {
-            const { error } = await supabase
+            const { data: { user } } = await supabase.auth.getUser();
+            
+            const newMessage = {
+                channel_id: currentChannel,
+                organization_id: user.id,
+                content: messageContent,
+                created_at: new Date().toISOString()
+            };
+
+            // First, insert the message into the database
+            const { data, error } = await supabase
                 .from('coordination_messages')
-                .insert([{
-                    channel_id: currentChannel,
-                    organization_id: currentUser.id,
-                    content: newMessage,
-                    message_type: 'text'
-                }]);
+                .insert([newMessage])
+                .select(`
+                    *,
+                    organization:profiles(id, organization_name)
+                `)
+                .single();
 
             if (error) throw error;
-            setNewMessage('');
+
+            // Then broadcast the message to all clients
+            const channel = supabase.channel(`room_${currentChannel}`);
+            await channel.send({
+                type: 'broadcast',
+                event: 'new_message',
+                payload: { message: data }
+            });
+
+            setNewMessage(''); // Clear input field
+            
         } catch (error) {
             toast({
                 title: "Error sending message",
                 description: error.message,
                 status: "error",
-                duration: 3000
+                duration: 5000
             });
         }
     };
@@ -287,7 +355,7 @@ const OrganizationChannel = ({ majorIncidentId, channelId }) => {
                         onKeyPress={(e) => {
                             if (e.key === 'Enter' && !e.shiftKey) {
                                 e.preventDefault();
-                                handleSendMessage();
+                                sendMessage(newMessage);
                             }
                         }}
                     />
@@ -297,7 +365,7 @@ const OrganizationChannel = ({ majorIncidentId, channelId }) => {
                     />
                     <Button
                         colorScheme="blue"
-                        onClick={handleSendMessage}
+                        onClick={() => sendMessage(newMessage)}
                         isDisabled={!newMessage.trim()}
                     >
                         Send

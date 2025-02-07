@@ -68,6 +68,7 @@ import CreateMajorIncidentModal from '../Components/CreateMajorIncidentModal';
 import { INCIDENT_TYPES } from '../constants/incidentTypes';
 import { useNavigate } from 'react-router-dom';
 import AvailableMajorIncidents from '../Components/AvailableMajorIncidents';
+import { useRealtimeMessages } from '../hooks/useRealtimeMessages';
 
 window.debugOrganization = {
     updateMetadata: async () => {
@@ -97,79 +98,17 @@ const VolunteerResponsesDrawer = ({ isOpen, onClose, opportunity }) => {
     const [selectedVolunteer, setSelectedVolunteer] = useState(null);
     const [directMessage, setDirectMessage] = useState('');
     const [groupMessage, setGroupMessage] = useState('');
-    const [existingMessages, setExistingMessages] = useState([]);
     const [searchQuery, setSearchQuery] = useState('');
     const toast = useToast();
 
-    const fetchMessages = async () => {
-        if (!opportunity?.id) return;
-
-        try {
-            // First get messages
-            const { data: messages, error: messagesError } = await supabase
-                .from('messages')
-                .select('*')
-                .eq('opportunity_id', opportunity.id)
-                .order('sent_at', { ascending: true });
-
-            if (messagesError) throw messagesError;
-
-            // Get unique organization IDs from messages
-            const orgIds = [...new Set(messages.map(msg => msg.organization_id))];
-
-            // Fetch profile data for these organizations
-            const { data: profiles, error: profilesError } = await supabase
-                .from('profiles')
-                .select('id, full_name, organization_name')
-                .in('id', orgIds);
-
-            if (profilesError) throw profilesError;
-
-            // Create a lookup map for organization names
-            const orgNameMap = {};
-            profiles.forEach(profile => {
-                orgNameMap[profile.id] = profile.organization_name || profile.full_name;
-            });
-
-            // Combine messages with organization names
-            const messagesWithNames = messages.map(message => ({
-                ...message,
-                organization_name: orgNameMap[message.organization_id] || 'Unknown Organization'
-            }));
-
-            setExistingMessages(messagesWithNames);
-        } catch (error) {
-            console.error('Error fetching messages:', error);
-            toast({
-                title: "Error fetching messages",
-                description: error.message,
-                status: "error",
-                duration: 5000
-            });
-        }
-    };
-
-    useEffect(() => {
-        fetchMessages();
-
-        // Set up real-time subscription for new messages
-        const subscription = supabase
-            .channel(`messages-${opportunity?.id}`)
-            .on('postgres_changes', {
-                event: '*',
-                schema: 'public',
-                table: 'messages',
-                filter: `opportunity_id=eq.${opportunity?.id}`
-            }, (payload) => {
-                console.log('Message change received:', payload);
-                fetchMessages(); // Refresh messages when changes occur
-            })
-            .subscribe();
-
-        return () => {
-            subscription.unsubscribe();
-        };
-    }, [opportunity?.id]);
+    const { messages: existingMessages, loading, error, refreshMessages } = useRealtimeMessages({
+        table: 'messages',
+        select: '*',
+        filter: {
+            opportunity_id: opportunity?.id
+        },
+        broadcastEnabled: true
+    });
 
     const handleSendDirectMessage = async () => {
         if (!selectedVolunteer) return;
@@ -185,7 +124,7 @@ const VolunteerResponsesDrawer = ({ isOpen, onClose, opportunity }) => {
                     opportunity_id: opportunity.id,
                     message: directMessage,
                     is_group_message: false,
-                    sent_at: new Date().toISOString()
+                    created_at: new Date().toISOString()
                 }]);
 
             if (error) throw error;
@@ -218,7 +157,7 @@ const VolunteerResponsesDrawer = ({ isOpen, onClose, opportunity }) => {
                     opportunity_id: opportunity.id,
                     message: groupMessage,
                     is_group_message: true,
-                    sent_at: new Date().toISOString()
+                    created_at: new Date().toISOString()
                 }]);
 
             if (error) throw error;
@@ -385,7 +324,7 @@ const VolunteerResponsesDrawer = ({ isOpen, onClose, opportunity }) => {
                                                                     >
                                                                         <Text>{msg.message}</Text>
                                                                         <Text fontSize="xs" color="gray.500" mt={1}>
-                                                                            {new Date(msg.sent_at).toLocaleString()}
+                                                                            {new Date(msg.created_at).toLocaleString()}
                                                                         </Text>
                                                                     </Box>
                                                                 ))
@@ -440,7 +379,7 @@ const VolunteerResponsesDrawer = ({ isOpen, onClose, opportunity }) => {
                                             >
                                                 <Text>{msg.message}</Text>
                                                 <Text fontSize="xs" color="gray.500" mt={1}>
-                                                    {new Date(msg.sent_at).toLocaleString()}
+                                                    {new Date(msg.created_at).toLocaleString()}
                                                 </Text>
                                             </Box>
                                         ))
@@ -720,6 +659,7 @@ export default function OrganizationDashboard() {
     const [majorIncidents, setMajorIncidents] = useState([]);
     const [loading, setLoading] = useState(false);
     const [isMajorIncidentModalOpen, setIsMajorIncidentModalOpen] = useState(false);
+    const [availableMajorIncidents, setAvailableMajorIncidents] = useState([]);
     const navigate = useNavigate();
     const toast = useToast();
 
@@ -800,6 +740,24 @@ export default function OrganizationDashboard() {
                 .eq('organization_id', user.id);
 
             setMajorIncidents(majorIncidentsData?.map(item => item.major_incident) || []);
+
+            // Fetch available major incidents
+            const { data: availableIncidents } = await supabase
+                .from('major_incidents')
+                .select(`
+                    id,
+                    title,
+                    severity_level,
+                    status,
+                    created_at,
+                    major_incident_organizations!inner(
+                        organization_id
+                    )
+                `)
+                .eq('status', 'active')
+                .not('major_incident_organizations.organization_id', 'eq', user.id);
+
+            setAvailableMajorIncidents(availableIncidents || []);
 
             // Calculate volunteer engagement stats
             const { data: responsesData } = await supabase
@@ -1022,7 +980,7 @@ export default function OrganizationDashboard() {
                                     Your Major Incidents ({majorIncidents.length})
                                 </Tab>
                                 <Tab whiteSpace="nowrap" minW="auto">
-                                    Available Major Incidents ({AvailableMajorIncidents.length})
+                                    Available Major Incidents ({availableMajorIncidents.length})
                                 </Tab>
                             </TabList>
                         </Box>
@@ -1138,6 +1096,9 @@ export default function OrganizationDashboard() {
                                         </Box>
                                     ))}
                                 </Grid>
+                            </TabPanel>
+                            <TabPanel>
+                                <AvailableMajorIncidents />
                             </TabPanel>
                         </TabPanels>
                     </Tabs>

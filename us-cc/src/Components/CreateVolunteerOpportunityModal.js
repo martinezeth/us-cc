@@ -4,7 +4,6 @@ import {
     ModalOverlay,
     ModalContent,
     ModalHeader,
-    ModalFooter,
     ModalBody,
     ModalCloseButton,
     FormControl,
@@ -14,20 +13,24 @@ import {
     Button,
     VStack,
     HStack,
+    useToast,
+    Text,
     Select,
     NumberInput,
     NumberInputField,
     NumberInputStepper,
     NumberIncrementStepper,
     NumberDecrementStepper,
-    useToast,
-    Text,
+    Alert,
+    AlertIcon,
+    Box,
+    ModalFooter,
+    FormErrorMessage,
     Tag,
     TagLabel,
     TagCloseButton,
     Wrap,
     WrapItem,
-    FormErrorMessage,
 } from '@chakra-ui/react';
 import { MdMyLocation } from 'react-icons/md';
 import { supabase } from '../supabaseClient';
@@ -35,37 +38,43 @@ import LocationMapPreview from './LocationMapPreview';
 import LocationSearch from './LocationSearch';
 import { STANDARD_SKILLS } from '../constants/incidentTypes';
 
-const CreateVolunteerOpportunityModal = ({ isOpen, onClose, onCreateSuccess }) => {
+const CreateVolunteerOpportunityModal = ({
+    isOpen,
+    onClose,
+    onCreateSuccess,
+    majorIncidentId = null,
+    majorIncidentData = null
+}) => {
     const [formData, setFormData] = useState({
         title: '',
         description: '',
         location: '',
+        position: null,
         radius_miles: 10,
         required_skills: [],
-        position: null
+        newSkill: ''
     });
-    const [isLoadingLocation, setIsLoadingLocation] = useState(false);
-    const [newSkill, setNewSkill] = useState('');
     const [errors, setErrors] = useState({});
+    const [isLoadingLocation, setIsLoadingLocation] = useState(false);
     const toast = useToast();
 
     useEffect(() => {
         if (isOpen) {
-            getCurrentLocation();
+            // If we have major incident data, use its location
+            if (majorIncidentData && majorIncidentData.location_lat && majorIncidentData.location_lng) {
+                setFormData(prev => ({
+                    ...prev,
+                    position: {
+                        lat: majorIncidentData.location_lat,
+                        lng: majorIncidentData.location_lng
+                    }
+                }));
+            } else {
+                // If no major incident data, get current location
+                getCurrentLocation();
+            }
         }
-    }, [isOpen]);
-
-    const validateForm = () => {
-        const newErrors = {};
-        if (!formData.title.trim()) newErrors.title = "Title is required";
-        if (!formData.description.trim()) newErrors.description = "Description is required";
-        if (!formData.location.trim()) newErrors.location = "Location is required";
-        if (!formData.position) newErrors.position = "Location coordinates are required";
-        if (formData.required_skills.length === 0) newErrors.required_skills = "At least one skill is required";
-
-        setErrors(newErrors);
-        return Object.keys(newErrors).length === 0;
-    };
+    }, [isOpen, majorIncidentData]);
 
     const getCurrentLocation = () => {
         setIsLoadingLocation(true);
@@ -85,7 +94,7 @@ const CreateVolunteerOpportunityModal = ({ isOpen, onClose, onCreateSuccess }) =
                     console.error("Error obtaining location:", error);
                     toast({
                         title: "Location Error",
-                        description: "Could not get your location. Please select on map or enter address.",
+                        description: "Could not get your location. Please select on map.",
                         status: "error",
                         duration: 5000
                     });
@@ -93,6 +102,17 @@ const CreateVolunteerOpportunityModal = ({ isOpen, onClose, onCreateSuccess }) =
                 }
             );
         }
+    };
+
+    const validateForm = () => {
+        const newErrors = {};
+        if (!formData.title.trim()) newErrors.title = "Title is required";
+        if (!formData.description.trim()) newErrors.description = "Description is required";
+        if (!formData.position) newErrors.position = "Location is required";
+        if (formData.required_skills.length === 0) newErrors.skills = "At least one skill is required";
+
+        setErrors(newErrors);
+        return Object.keys(newErrors).length === 0;
     };
 
     const handleSubmit = async () => {
@@ -109,31 +129,35 @@ const CreateVolunteerOpportunityModal = ({ isOpen, onClose, onCreateSuccess }) =
         try {
             const { data: { user } } = await supabase.auth.getUser();
 
+            const opportunityData = {
+                organization_id: user.id,
+                title: formData.title,
+                description: formData.description,
+                location: formData.location,
+                location_lat: formData.position.lat,
+                location_lng: formData.position.lng,
+                radius_miles: formData.radius_miles,
+                required_skills: formData.required_skills,
+                status: 'open',
+                major_incident_id: majorIncidentId
+            };
+
             const { data, error } = await supabase
                 .from('volunteer_opportunities')
-                .insert([{
-                    organization_id: user.id,
-                    title: formData.title,
-                    description: formData.description,
-                    location: formData.location,
-                    location_lat: formData.position.lat,
-                    location_lng: formData.position.lng,
-                    radius_miles: formData.radius_miles,
-                    required_skills: formData.required_skills,
-                    status: 'open'
-                }])
-                .select();
+                .insert([opportunityData])
+                .select()
+                .single();
 
             if (error) throw error;
 
             toast({
                 title: "Success",
-                description: "Volunteer opportunity created successfully",
+                description: `Volunteer opportunity created ${majorIncidentId ? 'for major incident' : 'successfully'}`,
                 status: "success",
                 duration: 3000
             });
 
-            if (onCreateSuccess) onCreateSuccess(data[0]);
+            if (onCreateSuccess) onCreateSuccess(data);
             handleClose();
         } catch (error) {
             toast({
@@ -150,30 +174,30 @@ const CreateVolunteerOpportunityModal = ({ isOpen, onClose, onCreateSuccess }) =
             title: '',
             description: '',
             location: '',
+            position: null,
             radius_miles: 10,
             required_skills: [],
-            position: null
+            newSkill: ''
         });
-        setNewSkill('');
         setErrors({});
         onClose();
     };
 
     const handleAddSkill = () => {
-        if (newSkill && !formData.required_skills.includes(newSkill)) {
+        if (formData.newSkill && !formData.required_skills.includes(formData.newSkill)) {
             setFormData(prev => ({
                 ...prev,
-                required_skills: [...prev.required_skills, newSkill]
+                required_skills: [...prev.required_skills, formData.newSkill],
+                newSkill: ''
             }));
-            setNewSkill('');
-            setErrors(prev => ({ ...prev, required_skills: undefined }));
+            setErrors(prev => ({ ...prev, skills: undefined }));
         }
     };
 
-    const handleRemoveSkill = (skill) => {
+    const handleRemoveSkill = (skillToRemove) => {
         setFormData(prev => ({
             ...prev,
-            required_skills: prev.required_skills.filter(s => s !== skill)
+            required_skills: prev.required_skills.filter(skill => skill !== skillToRemove)
         }));
     };
 
@@ -181,23 +205,27 @@ const CreateVolunteerOpportunityModal = ({ isOpen, onClose, onCreateSuccess }) =
         <Modal isOpen={isOpen} onClose={handleClose} size="xl">
             <ModalOverlay />
             <ModalContent maxW="800px">
-                <ModalHeader>Create Volunteer Opportunity</ModalHeader>
+                <ModalHeader>
+                    {majorIncidentId ? 'Create Major Incident Opportunity' : 'Create Volunteer Opportunity'}
+                </ModalHeader>
                 <ModalCloseButton />
                 <ModalBody pb={6}>
+                    {majorIncidentId && (
+                        <Alert status="info" mb={4}>
+                            <AlertIcon />
+                            This opportunity will be associated with the current major incident and visible to all volunteers in the incident pool.
+                        </Alert>
+                    )}
+
                     <VStack spacing={4}>
                         <FormControl isRequired isInvalid={errors.title}>
                             <FormLabel>Title</FormLabel>
                             <Input
                                 value={formData.title}
-                                onChange={(e) => {
-                                    setFormData(prev => ({
-                                        ...prev,
-                                        title: e.target.value
-                                    }));
-                                    if (e.target.value.trim()) {
-                                        setErrors(prev => ({ ...prev, title: undefined }));
-                                    }
-                                }}
+                                onChange={(e) => setFormData(prev => ({
+                                    ...prev,
+                                    title: e.target.value
+                                }))}
                                 placeholder="Enter opportunity title"
                             />
                             {errors.title && <FormErrorMessage>{errors.title}</FormErrorMessage>}
@@ -207,22 +235,17 @@ const CreateVolunteerOpportunityModal = ({ isOpen, onClose, onCreateSuccess }) =
                             <FormLabel>Description</FormLabel>
                             <Textarea
                                 value={formData.description}
-                                onChange={(e) => {
-                                    setFormData(prev => ({
-                                        ...prev,
-                                        description: e.target.value
-                                    }));
-                                    if (e.target.value.trim()) {
-                                        setErrors(prev => ({ ...prev, description: undefined }));
-                                    }
-                                }}
+                                onChange={(e) => setFormData(prev => ({
+                                    ...prev,
+                                    description: e.target.value
+                                }))}
                                 placeholder="Describe the volunteer opportunity"
                                 rows={4}
                             />
                             {errors.description && <FormErrorMessage>{errors.description}</FormErrorMessage>}
                         </FormControl>
 
-                        <FormControl isRequired isInvalid={errors.required_skills}>
+                        <FormControl isRequired isInvalid={errors.skills}>
                             <FormLabel>Required Skills</FormLabel>
                             <Wrap mb={2}>
                                 {formData.required_skills.map(skill => (
@@ -243,8 +266,11 @@ const CreateVolunteerOpportunityModal = ({ isOpen, onClose, onCreateSuccess }) =
                             </Wrap>
                             <HStack>
                                 <Select
-                                    value={newSkill}
-                                    onChange={(e) => setNewSkill(e.target.value)}
+                                    value={formData.newSkill}
+                                    onChange={(e) => setFormData(prev => ({
+                                        ...prev,
+                                        newSkill: e.target.value
+                                    }))}
                                     placeholder="Select skill"
                                 >
                                     {STANDARD_SKILLS
@@ -257,17 +283,16 @@ const CreateVolunteerOpportunityModal = ({ isOpen, onClose, onCreateSuccess }) =
                                 </Select>
                                 <Button onClick={handleAddSkill}>Add</Button>
                             </HStack>
-                            {errors.required_skills &&
-                                <FormErrorMessage>{errors.required_skills}</FormErrorMessage>}
+                            {errors.skills && <FormErrorMessage>{errors.skills}</FormErrorMessage>}
                         </FormControl>
 
-                        <FormControl isRequired isInvalid={errors.location || errors.position}>
+                        <FormControl isRequired isInvalid={errors.position}>
                             <FormLabel>Location</FormLabel>
                             <VStack spacing={2} align="stretch">
                                 <LocationSearch
                                     mode="address"
                                     placeholder="Enter the opportunity location..."
-                                    onSelect={locationData => {
+                                    onSelect={(locationData) => {
                                         setFormData(prev => ({
                                             ...prev,
                                             location: locationData.address,
@@ -276,31 +301,27 @@ const CreateVolunteerOpportunityModal = ({ isOpen, onClose, onCreateSuccess }) =
                                                 lng: locationData.lng
                                             }
                                         }));
-                                        setErrors(prev => ({
-                                            ...prev,
-                                            position: undefined,
-                                            location: undefined
-                                        }));
+                                        setErrors(prev => ({ ...prev, position: undefined }));
                                     }}
                                 />
 
-                                <Text fontSize="sm" color="gray.600">Or select location on map:</Text>
+                                {!majorIncidentData && (
+                                    <HStack mb={2}>
+                                        <Button
+                                            onClick={getCurrentLocation}
+                                            isLoading={isLoadingLocation}
+                                            leftIcon={<MdMyLocation />}
+                                        >
+                                            Use Current Location
+                                        </Button>
+                                    </HStack>
+                                )}
 
-                                <HStack>
-                                    <Button
-                                        size="sm"
-                                        onClick={getCurrentLocation}
-                                        isLoading={isLoadingLocation}
-                                        leftIcon={<MdMyLocation />}
-                                    >
-                                        Use Current Location
-                                    </Button>
-                                    {formData.position && (
-                                        <Text fontSize="sm" color="gray.600">
-                                            Selected: {formData.position.lat.toFixed(6)}, {formData.position.lng.toFixed(6)}
-                                        </Text>
-                                    )}
-                                </HStack>
+                                {formData.position && (
+                                    <Text fontSize="sm" color="gray.600">
+                                        Selected: {formData.position.lat.toFixed(6)}, {formData.position.lng.toFixed(6)}
+                                    </Text>
+                                )}
 
                                 <LocationMapPreview
                                     position={formData.position}
@@ -312,12 +333,11 @@ const CreateVolunteerOpportunityModal = ({ isOpen, onClose, onCreateSuccess }) =
                                         setErrors(prev => ({ ...prev, position: undefined }));
                                     }}
                                 />
-                                {(errors.location || errors.position) &&
-                                    <FormErrorMessage>{errors.location || errors.position}</FormErrorMessage>}
                             </VStack>
+                            {errors.position && <FormErrorMessage>{errors.position}</FormErrorMessage>}
                         </FormControl>
 
-                        <FormControl isRequired>
+                        <FormControl>
                             <FormLabel>Search Radius (miles)</FormLabel>
                             <NumberInput
                                 value={formData.radius_miles}

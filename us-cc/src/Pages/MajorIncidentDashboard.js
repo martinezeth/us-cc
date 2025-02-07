@@ -37,6 +37,7 @@ import OrganizationChannel from '../Components/OrganizationChannel';
 import JoinResponseButton from '../Components/JoinResponseButton';
 import VolunteerPool from '../Components/VolunteerPool';
 import VolunteerPoolHeader from '../Components/VolunteerPoolHeader';
+import MajorIncidentOpportunities from '../Components/MajorIncidentOpportunities';
 
 const MajorIncidentDashboard = () => {
     const { id } = useParams();
@@ -53,6 +54,7 @@ const MajorIncidentDashboard = () => {
     });
     const toast = useToast();
     const [isOrganization, setIsOrganization] = useState(false);
+    const [isParticipating, setIsParticipating] = useState(false);
 
     useEffect(() => {
         if (id) {
@@ -63,6 +65,7 @@ const MajorIncidentDashboard = () => {
             setIsOrganization(user?.user_metadata?.is_organization || false);
         };
         checkUserRole();
+        checkParticipationStatus();
     }, [id]);
 
     const fetchIncidentData = async () => {
@@ -136,6 +139,55 @@ const MajorIncidentDashboard = () => {
         }
     };
 
+    const checkParticipationStatus = async () => {
+        try {
+            const { data: { user } } = await supabase.auth.getUser();
+            const { data } = await supabase
+                .from('major_incident_organizations')
+                .select('id')
+                .eq('major_incident_id', id)
+                .eq('organization_id', user.id)
+                .single();
+
+            setIsParticipating(!!data);
+        } catch (error) {
+            console.error('Error checking participation:', error);
+            setIsParticipating(false);
+        }
+    };
+
+    const handleUnregister = async () => {
+        try {
+            const { data: { user } } = await supabase.auth.getUser();
+            
+            const { error } = await supabase
+                .from('major_incident_organizations')
+                .delete()
+                .eq('major_incident_id', id)
+                .eq('organization_id', user.id);
+
+            if (error) throw error;
+
+            toast({
+                title: "Unregistered Successfully",
+                description: "You have been removed from this incident response effort",
+                status: "success",
+                duration: 3000
+            });
+
+            // Refresh participation status and data
+            checkParticipationStatus();
+            fetchIncidentData();
+        } catch (error) {
+            toast({
+                title: "Error Unregistering",
+                description: error.message,
+                status: "error",
+                duration: 5000
+            });
+        }
+    };
+
     if (loading) {
         return (
             <Box p={8} textAlign="center">
@@ -184,14 +236,23 @@ const MajorIncidentDashboard = () => {
                             </Text>
                         </VStack>
                         <HStack>
-                            <JoinResponseButton
-                                majorIncidentId={id}
-                                onJoinSuccess={fetchIncidentData}
-                            />
+                            {isParticipating ? (
+                                <Button
+                                    colorScheme="red"
+                                    onClick={handleUnregister}
+                                >
+                                    [TEMP] Unregister from Effort
+                                </Button>
+                            ) : (
+                                <JoinResponseButton
+                                    majorIncidentId={id}
+                                    onJoinSuccess={fetchIncidentData}
+                                />
+                            )}
                             <Button
                                 colorScheme="blue"
                                 leftIcon={<AddIcon />}
-                                onClick={() => {/* Handle post update */ }}
+                                onClick={() => {/* Handle post update */}}
                             >
                                 Post Update
                             </Button>
@@ -216,14 +277,16 @@ const MajorIncidentDashboard = () => {
 
                     {/* Main Content */}
                     <Grid templateColumns="repeat(12, 1fr)" gap={6}>
-                        {/* Left Column */}
-                        <Box gridColumn="span 8">
+                        {/* Left Column - Always show but adjust width based on participation */}
+                        <Box gridColumn={isParticipating ? "span 8" : "span 12"}>
                             <Tabs>
                                 <TabList>
                                     <Tab>Overview</Tab>
-                                    <Tab>Updates</Tab>
                                     <Tab>Organizations</Tab>
-                                    {isOrganization && <Tab>Volunteer Pool</Tab>}
+                                    <Tab>Updates</Tab>
+                                    <Tab>Opportunities</Tab>
+                                    {isParticipating && <Tab>Volunteer Pool</Tab>}
+                                    {isParticipating && <Tab>Channels</Tab>}
                                 </TabList>
 
                                 <TabPanels>
@@ -324,32 +387,52 @@ const MajorIncidentDashboard = () => {
                                         </VStack>
                                     </TabPanel>
 
-                                    {isOrganization && (
+                                    <TabPanel>
+                                        <MajorIncidentOpportunities
+                                            majorIncidentId={id}
+                                            majorIncidentData={activeIncident}
+                                        />
+                                    </TabPanel>
+
+                                    {isParticipating && (
                                         <TabPanel>
-                                            <VStack spacing={4} align="stretch">
-                                                <VolunteerPoolHeader
-                                                    majorIncidentId={id}
-                                                    onVolunteerJoin={fetchIncidentData}
-                                                />
-                                                <VolunteerPool
-                                                    majorIncidentId={id}
-                                                />
-                                            </VStack>
+                                            <VolunteerPoolHeader
+                                                majorIncidentId={id}
+                                                onVolunteerJoin={fetchIncidentData}
+                                            />
+                                            <VolunteerPool
+                                                majorIncidentId={id}
+                                            />
                                         </TabPanel>
                                     )}
                                 </TabPanels>
                             </Tabs>
                         </Box>
 
-                        {/* Right Column - Communication Channel */}
-                        <Box gridColumn="span 4">
-                            <Box bg="white" p={4} borderRadius="lg" shadow="sm" height="100%">
-                                <OrganizationChannel
-                                    majorIncidentId={id}
-                                />
+                        {/* Right Column - Only show when participating */}
+                        {isParticipating && (
+                            <Box gridColumn="span 4">
+                                <Box bg="white" p={4} borderRadius="lg" shadow="sm" height="100%">
+                                    <OrganizationChannel
+                                        majorIncidentId={id}
+                                    />
+                                </Box>
                             </Box>
-                        </Box>
+                        )}
                     </Grid>
+
+                    {/* Add a call-to-action for non-participating organizations */}
+                    {!isParticipating && isOrganization && (
+                        <Box mt={6} p={6} bg="blue.50" borderRadius="lg" textAlign="center">
+                            <Text fontSize="lg" mb={3}>
+                                Join this incident response effort to access additional features like the volunteer pool and coordination channels.
+                            </Text>
+                            <JoinResponseButton
+                                majorIncidentId={id}
+                                onJoinSuccess={fetchIncidentData}
+                            />
+                        </Box>
+                    )}
                 </VStack>
             </Container>
         </Box>

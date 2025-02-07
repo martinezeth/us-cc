@@ -6,6 +6,7 @@ import {
 } from '@chakra-ui/react';
 import { ChatIcon, CheckIcon } from '@chakra-ui/icons';
 import { supabase } from '../supabaseClient';
+import { useRealtimeMessages } from '../hooks/useRealtimeMessages';
 
 const MessageList = ({ messages }) => {
     // Sort messages in reverse chronological order
@@ -44,8 +45,40 @@ const MessageList = ({ messages }) => {
 
 const VolunteerMessages = ({ onUnreadCountChange }) => {
     const [opportunityMessages, setOpportunityMessages] = useState({});
-    const [loading, setLoading] = useState(true);
+    const [currentUser, setCurrentUser] = useState(null);
     const toast = useToast();
+
+    // Get current user on component mount
+    useEffect(() => {
+        const getCurrentUser = async () => {
+            const { data: { user } } = await supabase.auth.getUser();
+            setCurrentUser(user);
+        };
+        getCurrentUser();
+    }, []);
+
+    // Only set up real-time messages once we have the current user
+    const { messages, loading, error, refreshMessages } = useRealtimeMessages({
+        table: 'messages',
+        select: `
+            *,
+            opportunity:volunteer_opportunities (
+                id,
+                title,
+                organization_id,
+                status
+            ),
+            read_receipts:message_read_receipts!message_id (
+                volunteer_id,
+                read_at
+            )
+        `,
+        filter: currentUser ? {
+            volunteer_id: currentUser.id,
+        } : null,
+        orderBy: { column: 'sent_at', ascending: false },
+        enabled: !!currentUser
+    });
 
     const fetchMessages = async () => {
         try {
@@ -130,7 +163,6 @@ const VolunteerMessages = ({ onUnreadCountChange }) => {
             }, {});
 
             setOpportunityMessages(grouped);
-            setLoading(false);
 
             // Calculate and update unread count
             const totalUnread = Object.values(grouped).reduce((count, { messages }) =>
@@ -140,7 +172,12 @@ const VolunteerMessages = ({ onUnreadCountChange }) => {
 
         } catch (error) {
             console.error('Error in fetchMessages:', error);
-            setLoading(false);
+            toast({
+                title: "Error fetching messages",
+                description: error.message,
+                status: "error",
+                duration: 5000
+            });
         }
     };
 
@@ -288,10 +325,18 @@ const VolunteerMessages = ({ onUnreadCountChange }) => {
         calculateUnreadCount();
     }, [opportunityMessages, onUnreadCountChange]);
 
-    if (loading) {
+    if (loading || !currentUser) {
         return (
-            <Box textAlign="center" py={10}>
-                <Spinner />
+            <Box p={4}>
+                <Text>Loading messages...</Text>
+            </Box>
+        );
+    }
+
+    if (error) {
+        return (
+            <Box p={4}>
+                <Text color="red.500">Error loading messages: {error.message}</Text>
             </Box>
         );
     }
