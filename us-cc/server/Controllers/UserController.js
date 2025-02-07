@@ -18,6 +18,4 @@ async function getUserData(userId) {
     }
 }
 
-// Update other functions similarly...
-
 module.exports = { getUserData, /* other functions */ };

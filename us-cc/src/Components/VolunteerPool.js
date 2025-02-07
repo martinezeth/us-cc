@@ -34,6 +34,7 @@ import {
 import { ChevronDownIcon } from '@chakra-ui/icons';
 import { supabase } from '../supabaseClient';
 import VolunteerStatusBoard from './VolunteerStatusBoard';
+import VolunteerPoolHeader from './VolunteerPoolHeader';
 
 const VolunteerPool = ({ majorIncidentId, refreshTrigger }) => {
     const [isOrganization, setIsOrganization] = useState(false);
@@ -42,6 +43,7 @@ const VolunteerPool = ({ majorIncidentId, refreshTrigger }) => {
     const [loading, setLoading] = useState(true);
     const [user, setUser] = useState(null);
     const toast = useToast();
+    const [localRefreshTrigger, setLocalRefreshTrigger] = useState(0);
 
     useEffect(() => {
         const checkUserRole = async () => {
@@ -305,6 +307,8 @@ const VolunteerPool = ({ majorIncidentId, refreshTrigger }) => {
                 duration: 3000
             });
 
+            // Trigger refresh of all components
+            setLocalRefreshTrigger(prev => prev + 1);
             fetchVolunteers();
         } catch (error) {
             console.error('Error assigning volunteer:', error);
@@ -337,7 +341,7 @@ const VolunteerPool = ({ majorIncidentId, refreshTrigger }) => {
                             <Tr>
                                 <Th>Volunteer</Th>
                                 <Th>Skills</Th>
-                                <Th>Location</Th>
+                                <Th>Availability</Th>
                                 <Th>Actions</Th>
                             </Tr>
                         </Thead>
@@ -363,7 +367,20 @@ const VolunteerPool = ({ majorIncidentId, refreshTrigger }) => {
                                             ))}
                                         </Wrap>
                                     </Td>
-                                    <Td>{volunteer.location}</Td>
+                                    <Td>
+                                        <Wrap>
+                                            {volunteer.availability?.map(time => (
+                                                <Tag
+                                                    key={time}
+                                                    size="sm"
+                                                    colorScheme="green"
+                                                    borderRadius="full"
+                                                >
+                                                    <TagLabel>{time}</TagLabel>
+                                                </Tag>
+                                            ))}
+                                        </Wrap>
+                                    </Td>
                                     <Td>
                                         <Menu>
                                             <MenuButton
@@ -425,6 +442,11 @@ const VolunteerPool = ({ majorIncidentId, refreshTrigger }) => {
 
     return (
         <Box>
+            <VolunteerPoolHeader 
+                majorIncidentId={majorIncidentId} 
+                onVolunteerJoin={() => setLocalRefreshTrigger(prev => prev + 1)}
+                refreshTrigger={localRefreshTrigger}
+            />
             <Tabs colorScheme="blue" variant="enclosed">
                 <TabList>
                     <Tab>Status Board</Tab>

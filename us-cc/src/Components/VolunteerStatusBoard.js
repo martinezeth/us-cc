@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Box, VStack, HStack, Text, Badge, Stat, StatLabel, StatNumber, StatGroup, Select, Table, Thead, Tbody, Tr, Th, Td, Tag, TagLabel, useToast, Menu, MenuButton, MenuList, MenuItem, IconButton } from '@chakra-ui/react';
+import { Box, VStack, HStack, Text, Badge, Stat, StatLabel, StatNumber, StatGroup, Select, Table, Thead, Tbody, Tr, Th, Td, Tag, TagLabel, useToast, Menu, MenuButton, MenuList, MenuItem, IconButton, Wrap } from '@chakra-ui/react';
 import { supabase } from '../supabaseClient';
 import { ChevronDownIcon } from '@chakra-ui/icons';
 
@@ -226,7 +226,7 @@ const VolunteerStatusBoard = ({ majorIncidentId, refreshTrigger }) => {
                     <Thead>
                         <Tr>
                             <Th>Volunteer</Th>
-                            <Th>Location</Th>
+                            <Th>Availability</Th>
                             <Th>Skills</Th>
                             <Th>Assignment</Th>
                             <Th>Organization</Th>
@@ -236,7 +236,20 @@ const VolunteerStatusBoard = ({ majorIncidentId, refreshTrigger }) => {
                         {filteredVolunteers.map(volunteer => (
                             <Tr key={volunteer.id}>
                                 <Td>{volunteer.name}</Td>
-                                <Td>{volunteer.location}</Td>
+                                <Td>
+                                    <Wrap>
+                                        {volunteer.availability?.map(time => (
+                                            <Tag
+                                                key={time}
+                                                size="sm"
+                                                colorScheme="green"
+                                                borderRadius="full"
+                                            >
+                                                <TagLabel>{time}</TagLabel>
+                                            </Tag>
+                                        ))}
+                                    </Wrap>
+                                </Td>
                                 <Td>
                                     <HStack spacing={2} wrap="wrap">
                                         {volunteer.skills.map(skill => (

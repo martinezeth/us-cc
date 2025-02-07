@@ -17,6 +17,5 @@ async function getUserPostData(userId) {
     }
 }
 
-// Update other functions similarly...
 
-module.exports = { getUserPostData, /* other functions */ };
+module.exports = { getUserPostData, };
