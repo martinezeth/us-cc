@@ -28,9 +28,13 @@ import {
 import { AddIcon, AttachmentIcon } from '@chakra-ui/icons';
 import { supabase } from '../supabaseClient';
 import VerifiedBadge from './VerifiedBadge';
+import { useNavigate } from 'react-router-dom';
+import { getProfileUsername } from '../Components/ProfileHelpers';
+import { handleProfileClick } from '../utils/navigationHelpers';
 
 // Reuse the message display component pattern from VolunteerMessages
 const MessageDisplay = ({ message, currentOrganization }) => {
+    const navigate = useNavigate();
     const isOwnMessage = message.organization_id === currentOrganization;
 
     return (
@@ -45,10 +49,19 @@ const MessageDisplay = ({ message, currentOrganization }) => {
                 <Avatar
                     size="sm"
                     name={message.organization?.organization_name}
+                    cursor="pointer"
+                    onClick={(e) => handleProfileClick(e, message.organization, navigate)}
                 />
                 <VStack align="start" spacing={0}>
                     <HStack>
-                        <Text fontWeight="bold" fontSize="sm">
+                        <Text 
+                            fontWeight="bold" 
+                            fontSize="sm"
+                            cursor="pointer"
+                            color="blue.500"
+                            _hover={{ textDecoration: 'underline' }}
+                            onClick={(e) => handleProfileClick(e, message.organization, navigate)}
+                        >
                             {message.organization?.organization_name}
                         </Text>
                         <VerifiedBadge size="12px" />

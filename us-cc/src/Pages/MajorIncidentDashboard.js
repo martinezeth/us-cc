@@ -31,13 +31,51 @@ import {
 } from '@chakra-ui/react';
 import { WarningIcon, AddIcon } from '@chakra-ui/icons';
 import { supabase } from '../supabaseClient';
-import { MapContainer, TileLayer, Circle, Popup } from 'react-leaflet';
+import { MapContainer, TileLayer, Circle, Popup, useMap } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import OrganizationChannel from '../Components/OrganizationChannel';
 import JoinResponseButton from '../Components/JoinResponseButton';
 import VolunteerPool from '../Components/VolunteerPool';
 import VolunteerPoolHeader from '../Components/VolunteerPoolHeader';
 import MajorIncidentOpportunities from '../Components/MajorIncidentOpportunities';
+import { handleProfileClick } from '../utils/navigationHelpers';
+import { MdCenterFocusWeak } from 'react-icons/md';
+
+const capitalizeFirstLetter = (string) => {
+    return string.charAt(0).toUpperCase() + string.slice(1);
+};
+
+const getZoomLevel = (radiusMiles) => {
+    if (radiusMiles <= 5) return 11;
+    if (radiusMiles <= 10) return 10;
+    if (radiusMiles <= 25) return 9;
+    if (radiusMiles <= 50) return 8;
+    if (radiusMiles <= 100) return 7;
+    return 6;
+};
+
+const RecenterButton = ({ position, radius }) => {
+    const map = useMap();
+    
+    const handleRecenter = () => {
+        const zoom = getZoomLevel(radius);
+        map.setView(position, zoom);
+    };
+
+    return (
+        <div className="leaflet-bottom leaflet-right" style={{ marginBottom: "20px", marginRight: "10px" }}>
+            <Button
+                onClick={handleRecenter}
+                className="leaflet-control"
+                colorScheme="blue"
+                size="sm"
+                leftIcon={<Icon as={MdCenterFocusWeak} />}
+            >
+                Re-center
+            </Button>
+        </div>
+    );
+};
 
 const MajorIncidentDashboard = () => {
     const { id } = useParams();
@@ -132,7 +170,10 @@ const MajorIncidentDashboard = () => {
             // Fetch updates
             const { data: updatesData } = await supabase
                 .from('major_incident_updates')
-                .select('*')
+                .select(`
+                    *,
+                    organization:profiles(id, organization_name)
+                `)
                 .eq('major_incident_id', id)
                 .order('created_at', { ascending: false });
 
@@ -383,7 +424,7 @@ const MajorIncidentDashboard = () => {
                             </HStack>
                             <Text color="gray.600">
                                 Impact Radius: {activeIncident.radius_miles} miles |
-                                Status: {activeIncident.status} |
+                                Status: {capitalizeFirstLetter(activeIncident.status)} |
                                 Created: {new Date(activeIncident.created_at).toLocaleDateString()}
                             </Text>
                         </VStack>
@@ -437,7 +478,7 @@ const MajorIncidentDashboard = () => {
                                             <Box height="400px" borderRadius="lg" overflow="hidden">
                                                 <MapContainer
                                                     center={[activeIncident.location_lat, activeIncident.location_lng]}
-                                                    zoom={11}
+                                                    zoom={getZoomLevel(activeIncident.radius_miles)}
                                                     style={{ height: '100%', width: '100%' }}
                                                 >
                                                     <TileLayer
@@ -455,6 +496,10 @@ const MajorIncidentDashboard = () => {
                                                             Impact Zone
                                                         </Popup>
                                                     </Circle>
+                                                    <RecenterButton 
+                                                        position={[activeIncident.location_lat, activeIncident.location_lng]}
+                                                        radius={activeIncident.radius_miles}
+                                                    />
                                                 </MapContainer>
                                             </Box>
 
@@ -481,9 +526,17 @@ const MajorIncidentDashboard = () => {
                                                         <Avatar
                                                             name={org.organization?.organization_name}
                                                             size="md"
+                                                            cursor="pointer"
+                                                            onClick={(e) => handleProfileClick(e, org.organization, navigate)}
                                                         />
                                                         <VStack align="start" spacing={1}>
-                                                            <Text fontWeight="bold">
+                                                            <Text 
+                                                                fontWeight="bold"
+                                                                cursor="pointer"
+                                                                color="blue.500"
+                                                                _hover={{ textDecoration: 'underline' }}
+                                                                onClick={(e) => handleProfileClick(e, org.organization, navigate)}
+                                                            >
                                                                 {org.organization?.organization_name}
                                                             </Text>
                                                             <Badge>{org.role}</Badge>
@@ -512,8 +565,8 @@ const MajorIncidentDashboard = () => {
                                                         <Badge
                                                             colorScheme={
                                                                 update.priority_level === 'emergency' ? 'red' :
-                                                                    update.priority_level === 'urgent' ? 'orange' :
-                                                                        'blue'
+                                                                update.priority_level === 'urgent' ? 'orange' :
+                                                                'blue'
                                                             }
                                                         >
                                                             {update.priority_level}
@@ -523,6 +576,22 @@ const MajorIncidentDashboard = () => {
                                                         </Text>
                                                     </HStack>
                                                     <Text>{update.content}</Text>
+                                                    <HStack justify="space-between" mt={4}>
+                                                        <HStack spacing={1}>
+                                                            <Text fontSize="sm" color="gray.500">
+                                                                Posted by
+                                                            </Text>
+                                                            <Text
+                                                                fontSize="sm"
+                                                                color="gray.500"
+                                                                cursor="pointer"
+                                                                _hover={{ color: "blue.500", textDecoration: "underline" }}
+                                                                onClick={(e) => handleProfileClick(e, update.organization, navigate)}
+                                                            >
+                                                                {update.organization?.organization_name}
+                                                            </Text>
+                                                        </HStack>
+                                                    </HStack>
                                                 </Box>
                                             ))}
                                         </VStack>
