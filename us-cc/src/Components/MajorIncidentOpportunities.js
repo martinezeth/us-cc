@@ -60,8 +60,7 @@ const MajorIncidentOpportunities = ({ majorIncidentId, majorIncidentData, onOppo
                         volunteer_id,
                         status,
                         response_date
-                    ),
-                    response_count:opportunity_responses!left(count)
+                    )
                 `)
                 .eq('major_incident_id', majorIncidentId)
                 .order('created_at', { ascending: false });
@@ -87,21 +86,60 @@ const MajorIncidentOpportunities = ({ majorIncidentId, majorIncidentData, onOppo
                 };
             });
 
-            // Combine the data
-            const enrichedOpportunities = opportunitiesData.map(opp => ({
-                ...opp,
-                organization: orgNameMap[opp.organization_id] || {
-                    organization_name: 'Unknown Organization',
-                    full_name: 'Unknown Organization'
-                }
-            }));
+            // Fetch assignments separately for these opportunities
+            const { data: assignmentsData, error: assignmentsError } = await supabase
+                .from('major_incident_volunteer_assignments')
+                .select(`
+                    id,
+                    pool_entry_id,
+                    organization_id,
+                    status,
+                    pool_entry:major_incident_volunteer_pool!inner(
+                        id,
+                        volunteer_id,
+                        major_incident_id
+                    )
+                `)
+                .eq('status', 'active');
+
+            if (assignmentsError) throw assignmentsError;
+
+            // Filter assignments to only include those for this major incident
+            const relevantAssignments = assignmentsData?.filter(a => 
+                a.pool_entry.major_incident_id === majorIncidentId
+            ).map(assignment => ({
+                id: assignment.id,
+                volunteer_id: assignment.pool_entry.volunteer_id,
+                status: assignment.status
+            })) || [];
+
+            // Update the enrichedOpportunities mapping
+            const enrichedOpportunities = opportunitiesData.map(opp => {
+                const responses = opp.responses || [];
+                // For now, include all assignments for this major incident with each opportunity
+                // You may want to modify this based on your business logic
+                const assignments = relevantAssignments;
+                const totalResponses = responses.length + assignments.length;
+
+                return {
+                    ...opp,
+                    organization: orgNameMap[opp.organization_id] || {
+                        organization_name: 'Unknown Organization',
+                        full_name: 'Unknown Organization'
+                    },
+                    response_count: [{ count: totalResponses }],
+                    responses: [...responses, ...assignments.map(a => ({
+                        id: a.id,
+                        volunteer_id: a.volunteer_id,
+                        status: 'assigned',
+                        response_date: null
+                    }))]
+                };
+            });
 
             // Calculate stats
             const active = enrichedOpportunities?.filter(opp => opp.status === 'open').length || 0;
-            const totalResponses = enrichedOpportunities?.reduce((sum, opp) => {
-                const count = opp.response_count?.[0]?.count || 0;
-                return sum + count;
-            }, 0) || 0;
+            const totalResponses = enrichedOpportunities?.reduce((sum, opp) => sum + opp.response_count[0].count, 0);
             const responseRate = enrichedOpportunities?.length ?
                 (totalResponses / enrichedOpportunities.length).toFixed(1) : 0;
 
@@ -187,7 +225,7 @@ const MajorIncidentOpportunities = ({ majorIncidentId, majorIncidentData, onOppo
 
             // Call the refresh handler after successful archive
             onOpportunityStatusChange?.();
-            
+
             toast({
                 title: "Success",
                 description: "Opportunity archived and volunteers released",
@@ -211,9 +249,47 @@ const MajorIncidentOpportunities = ({ majorIncidentId, majorIncidentData, onOppo
     const handleViewResponses = async (opportunity) => {
         try {
             console.log("Viewing responses for opportunity:", opportunity);
-            
-            // Process responses before showing drawer
-            const processedResponses = await Promise.all(opportunity.responses.map(async (response) => {
+
+            // Fetch both responses and assignments
+            const [responseResult, assignmentResult] = await Promise.all([
+                supabase
+                    .from('opportunity_responses')
+                    .select('*')
+                    .eq('opportunity_id', opportunity.id),
+                supabase
+                    .from('major_incident_volunteer_assignments')
+                    .select(`
+                        id,
+                        pool_entry_id,
+                        organization_id,
+                        status,
+                        pool_entry:major_incident_volunteer_pool!inner(
+                            volunteer_id,
+                            major_incident_id
+                        )
+                    `)
+                    .eq('status', 'active')
+            ]);
+
+            if (responseResult.error) throw responseResult.error;
+            if (assignmentResult.error) throw assignmentResult.error;
+
+            // Filter assignments to only include those for this major incident
+            const relevantAssignments = assignmentResult.data
+                .filter(a => a.pool_entry.major_incident_id === majorIncidentId);
+
+            const allResponses = [
+                ...responseResult.data,
+                ...relevantAssignments.map(a => ({
+                    id: a.id,
+                    volunteer_id: a.pool_entry.volunteer_id,
+                    status: 'assigned',
+                    response_date: null
+                }))
+            ];
+
+            // Process responses with volunteer details
+            const processedResponses = await Promise.all(allResponses.map(async (response) => {
                 // Get volunteer details from volunteer_signups
                 const { data: signupData } = await supabase
                     .from('volunteer_signups')
@@ -318,7 +394,7 @@ const MajorIncidentOpportunities = ({ majorIncidentId, majorIncidentData, onOppo
                                             size="sm"
                                         />
                                         <MenuList>
-                                            <MenuItem 
+                                            <MenuItem
                                                 onClick={() => handleArchiveOpportunity(opportunity.id)}
                                                 isDisabled={opportunity.status === 'archived'}
                                             >
