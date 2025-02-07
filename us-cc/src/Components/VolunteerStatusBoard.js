@@ -1,149 +1,128 @@
 import React, { useState, useEffect } from 'react';
-import { Box, VStack, HStack, Text, Badge, Stat, StatLabel, StatNumber, StatGroup, Select, Table, Thead, Tbody, Tr, Th, Td, Tag, TagLabel, useToast, Menu, MenuButton, MenuList, MenuItem, IconButton, Wrap } from '@chakra-ui/react';
+import { Box, VStack, HStack, Text, Badge, Stat, StatLabel, StatNumber, StatGroup, Select, Table, Thead, Tbody, Tr, Th, Td, Tag, TagLabel, useToast, Menu, MenuButton, MenuList, MenuItem, IconButton, Wrap, Input, InputGroup, InputLeftElement } from '@chakra-ui/react';
+import { ChevronDownIcon, SearchIcon } from '@chakra-ui/icons';
 import { supabase } from '../supabaseClient';
-import { ChevronDownIcon } from '@chakra-ui/icons';
+import {
+    processVolunteerData,
+    filterVolunteers,
+    calculatePoolStats,
+    sortVolunteers,
+    getSkillMatch
+} from '../utils/volunteerPoolHelpers';
+import VolunteerFilterBar from './VolunteerFilterBar';
 
 const VolunteerStatusBoard = ({ majorIncidentId, refreshTrigger }) => {
-    const [stats, setStats] = useState({
-        totalVolunteers: 0,
-        assignedVolunteers: 0,
-        availableVolunteers: 0,
-        skillDistribution: {}
-    });
     const [volunteers, setVolunteers] = useState([]);
-    const [assignments, setAssignments] = useState([]);
+    const [filters, setFilters] = useState({
+        status: 'available',
+        skill: '',
+        searchQuery: '',
+        sortBy: 'skills'
+    });
+    const [stats, setStats] = useState(null);
     const [loading, setLoading] = useState(true);
-    const [skillFilter, setSkillFilter] = useState('');
-    const [assignmentFilter, setAssignmentFilter] = useState('');
+    const [availableSkills, setAvailableSkills] = useState([]);
     const toast = useToast();
+
+    useEffect(() => {
+        fetchVolunteers();
+    }, [majorIncidentId, refreshTrigger]);
 
     const fetchVolunteers = async () => {
         try {
             setLoading(true);
 
-            // Get all volunteers in the pool
             const { data: poolData, error: poolError } = await supabase
                 .from('major_incident_volunteer_pool')
-                .select('id, volunteer_id')
+                .select('*')
                 .eq('major_incident_id', majorIncidentId);
 
             if (poolError) throw poolError;
 
-            // Get volunteer profiles
-            const volunteerIds = poolData.map(entry => entry.volunteer_id);
-            const { data: profiles, error: profilesError } = await supabase
-                .from('profiles')
-                .select('id, full_name, city, state')
-                .in('id', volunteerIds);
-
-            if (profilesError) throw profilesError;
-
-            // Get volunteer signups data
-            const { data: signupsData, error: signupsError } = await supabase
-                .from('volunteer_signups')
-                .select('user_id, skills, availability')
-                .in('user_id', volunteerIds);
-
-            if (signupsError) throw signupsError;
-
-            // Get assignments
-            const { data: assignmentsData, error: assignmentsError } = await supabase
+            const { data: assignments } = await supabase
                 .from('major_incident_volunteer_assignments')
-                .select(`
-                    id,
-                    pool_entry_id,
-                    organization_id,
-                    status,
-                    assigned_at,
-                    organization:profiles(id, organization_name)
-                `)
+                .select('*')
                 .in('pool_entry_id', poolData.map(entry => entry.id));
 
-            if (assignmentsError) throw assignmentsError;
+            const { data: profiles } = await supabase
+                .from('profiles')
+                .select('*')
+                .in('id', poolData.map(entry => entry.volunteer_id));
 
-            setAssignments(assignmentsData);
+            const { data: signups } = await supabase
+                .from('volunteer_signups')
+                .select('*')
+                .in('user_id', poolData.map(entry => entry.volunteer_id));
 
-            // Get opportunities separately
-            const { data: opportunities, error: opportunitiesError } = await supabase
-                .from('volunteer_opportunities')
-                .select('id, title, status')
-                .eq('major_incident_id', majorIncidentId);
+            const orgIds = assignments?.map(a => a.organization_id) || [];
+            const { data: orgProfiles } = await supabase
+                .from('profiles')
+                .select('*')
+                .in('id', orgIds);
 
-            if (opportunitiesError) throw opportunitiesError;
+            const processedVolunteers = processVolunteerData(
+                poolData,
+                assignments,
+                profiles,
+                signups,
+                orgProfiles
+            );
 
-            // Create lookup maps
-            const profileMap = {};
-            profiles.forEach(profile => {
-                profileMap[profile.id] = profile;
-            });
+            const poolStats = calculatePoolStats(processedVolunteers);
+            setStats(poolStats);
 
-            const signupsMap = {};
-            signupsData.forEach(signup => {
-                signupsMap[signup.user_id] = signup;
-            });
+            const filteredVolunteers = filterVolunteers(processedVolunteers, filters);
+            const sortedVolunteers = sortVolunteers(filteredVolunteers, filters.sortBy);
 
-            // Calculate skill distribution
-            const skillCounts = {};
-            signupsData.forEach(signup => {
-                signup.skills?.forEach(skill => {
-                    skillCounts[skill] = (skillCounts[skill] || 0) + 1;
-                });
-            });
+            setVolunteers(sortedVolunteers);
 
-            // Create opportunities lookup map
-            const opportunitiesMap = {};
-            opportunities?.forEach(opp => {
-                opportunitiesMap[opp.id] = opp;
-            });
-
-            // Process and combine all data
-            const processedVolunteers = poolData.map(entry => {
-                const profile = profileMap[entry.volunteer_id] || {};
-                const signup = signupsMap[entry.volunteer_id] || {};
-                const assignment = assignmentsData.find(a => a.pool_entry_id === entry.id);
-
-                // A volunteer is only considered assigned if they have an active assignment
-                const isEffectivelyAssigned = !!assignment && assignment.status === 'active';
-
-                return {
-                    id: entry.volunteer_id,
-                    poolEntryId: entry.id,
-                    name: profile.full_name || 'Unknown',
-                    location: `${profile.city || 'Unknown'}, ${profile.state || 'Unknown'}`,
-                    skills: signup.skills || [],
-                    availability: signup.availability || [],
-                    isAssigned: isEffectivelyAssigned,
-                    assignment: isEffectivelyAssigned ? {
-                        id: assignment.id,
-                        organizationId: assignment.organization_id,
-                        organizationName: assignment.organization?.organization_name,
-                        opportunityTitle: `Assigned to ${assignment.organization?.organization_name} (Status: ${assignment.status}, Assigned: ${new Date(assignment.assigned_at).toLocaleString()})`
-                    } : null
-                };
-            });
-
-            // Update stats
-            const assignedCount = processedVolunteers.filter(v => v.isAssigned).length;
-            setStats({
-                totalVolunteers: processedVolunteers.length,
-                assignedVolunteers: assignedCount,
-                availableVolunteers: processedVolunteers.length - assignedCount,
-                skillDistribution: skillCounts
-            });
-
-            setVolunteers(processedVolunteers);
-            setLoading(false);
         } catch (error) {
             console.error('Error fetching volunteers:', error);
             toast({
-                title: "Error fetching volunteers",
+                title: "Error fetching volunteer data",
                 description: error.message,
                 status: "error",
                 duration: 5000
             });
+        } finally {
             setLoading(false);
         }
     };
+
+    const handleFilterChange = (newFilters) => {
+        setFilters(prev => ({
+            ...prev,
+            ...newFilters
+        }));
+
+        const filteredVolunteers = filterVolunteers(volunteers, {
+            ...filters,
+            ...newFilters
+        });
+        const sortedVolunteers = sortVolunteers(filteredVolunteers, filters.sortBy);
+        setVolunteers(sortedVolunteers);
+    };
+
+    const getFilteredVolunteers = () => {
+        let filtered = [...volunteers];
+
+        filtered = filterVolunteers(filtered, filters);
+
+        if (filters.searchQuery) {
+            const query = filters.searchQuery.toLowerCase();
+            filtered = filtered.filter(volunteer =>
+                volunteer.name.toLowerCase().includes(query) ||
+                volunteer.location.toLowerCase().includes(query) ||
+                volunteer.skills.some(skill =>
+                    skill.toLowerCase().includes(query)
+                )
+            );
+        }
+
+        return sortVolunteers(filtered, filters.sortBy);
+    };
+
+    const filteredVolunteers = getFilteredVolunteers();
 
     const handleUnassignVolunteer = async (assignmentId) => {
         try {
@@ -174,53 +153,18 @@ const VolunteerStatusBoard = ({ majorIncidentId, refreshTrigger }) => {
         }
     };
 
-    useEffect(() => {
-        if (majorIncidentId) {
-            fetchVolunteers();
-        }
-    }, [majorIncidentId, refreshTrigger]);
-
-    // Filter volunteers based on selected filters
-    const filteredVolunteers = volunteers.filter(volunteer => {
-        const matchesSkill = !skillFilter || volunteer.skills.includes(skillFilter);
-        const matchesAssignment = !assignmentFilter ||
-            (assignmentFilter === 'assigned' && volunteer.isAssigned) ||
-            (assignmentFilter === 'available' && !volunteer.isAssigned);
-        return matchesSkill && matchesAssignment;
-    });
-
     if (loading) {
         return <Text>Loading volunteer data...</Text>;
     }
 
     return (
-        <VStack spacing={6} align="stretch" width="100%">
-            {/* Filters */}
-            <HStack spacing={4}>
-                <Select
-                    placeholder="Filter by skill"
-                    value={skillFilter}
-                    onChange={(e) => setSkillFilter(e.target.value)}
-                    maxW="200px"
-                >
-                    {Object.entries(stats.skillDistribution).map(([skill, count]) => (
-                        <option key={skill} value={skill}>
-                            {skill} ({count})
-                        </option>
-                    ))}
-                </Select>
-                <Select
-                    placeholder="Filter by assignment"
-                    value={assignmentFilter}
-                    onChange={(e) => setAssignmentFilter(e.target.value)}
-                    maxW="200px"
-                >
-                    <option value="assigned">Currently Assigned</option>
-                    <option value="available">Available</option>
-                </Select>
-            </HStack>
+        <VStack spacing={6} align="stretch">
+            <VolunteerFilterBar
+                filters={filters}
+                onFilterChange={handleFilterChange}
+                stats={stats}
+            />
 
-            {/* Volunteer Table */}
             <Box overflowX="auto">
                 <Table variant="simple" bg="white" shadow="sm" borderRadius="lg">
                     <Thead>
@@ -277,7 +221,7 @@ const VolunteerStatusBoard = ({ majorIncidentId, refreshTrigger }) => {
                                                         size="sm"
                                                     />
                                                     <MenuList>
-                                                        <MenuItem 
+                                                        <MenuItem
                                                             onClick={() => handleUnassignVolunteer(volunteer.assignment.id)}
                                                         >
                                                             Unassign Volunteer
@@ -311,22 +255,6 @@ const VolunteerStatusBoard = ({ majorIncidentId, refreshTrigger }) => {
                     </Tbody>
                 </Table>
             </Box>
-
-            {/* Stats */}
-            <StatGroup bg="white" p={4} borderRadius="lg" shadow="sm">
-                <Stat>
-                    <StatLabel>Total Volunteers</StatLabel>
-                    <StatNumber>{stats.totalVolunteers}</StatNumber>
-                </Stat>
-                <Stat>
-                    <StatLabel>Currently Assigned</StatLabel>
-                    <StatNumber>{stats.assignedVolunteers}</StatNumber>
-                </Stat>
-                <Stat>
-                    <StatLabel>Available</StatLabel>
-                    <StatNumber>{stats.availableVolunteers}</StatNumber>
-                </Stat>
-            </StatGroup>
         </VStack>
     );
 };

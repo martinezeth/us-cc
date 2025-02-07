@@ -16,6 +16,5 @@ async function fetchIncidents() {
     }
 }
 
-// Update other functions similarly...
 
-module.exports = { fetchIncidents, /* other functions */ };
+module.exports = { fetchIncidents, };

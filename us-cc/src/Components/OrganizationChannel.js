@@ -54,8 +54,8 @@ const MessageDisplay = ({ message, currentOrganization }) => {
                 />
                 <VStack align="start" spacing={0}>
                     <HStack>
-                        <Text 
-                            fontWeight="bold" 
+                        <Text
+                            fontWeight="bold"
                             fontSize="sm"
                             cursor="pointer"
                             color="blue.500"
@@ -124,7 +124,7 @@ const OrganizationChannel = ({ majorIncidentId, channelId }) => {
             },
         });
 
-        // Handle broadcast messages
+        // Handle broadcast messages with Supabase Realtime
         channel
             .on('broadcast', { event: 'new_message' }, ({ payload }) => {
                 console.log('Received broadcast message:', payload);
@@ -176,7 +176,7 @@ const OrganizationChannel = ({ majorIncidentId, channelId }) => {
         };
     }, [currentChannel, currentUser]);
 
-    // Add this useEffect to handle channel changes
+    //  useEffect to handle channel changes
     useEffect(() => {
         if (channelId && !currentChannel) {
             setCurrentChannel(channelId);
@@ -248,7 +248,7 @@ const OrganizationChannel = ({ majorIncidentId, channelId }) => {
     const sendMessage = async (messageContent) => {
         try {
             const { data: { user } } = await supabase.auth.getUser();
-            
+
             const newMessage = {
                 channel_id: currentChannel,
                 organization_id: user.id,
@@ -277,7 +277,7 @@ const OrganizationChannel = ({ majorIncidentId, channelId }) => {
             });
 
             setNewMessage(''); // Clear input field
-            
+
         } catch (error) {
             toast({
                 title: "Error sending message",
@@ -328,6 +328,7 @@ const OrganizationChannel = ({ majorIncidentId, channelId }) => {
                     value={currentChannel || ''}
                     onChange={(e) => setCurrentChannel(e.target.value)}
                     maxW="200px"
+                    size="sm"
                 >
                     {channels.map(channel => (
                         <option key={channel.id} value={channel.id}>
@@ -339,6 +340,8 @@ const OrganizationChannel = ({ majorIncidentId, channelId }) => {
                     leftIcon={<AddIcon />}
                     size="sm"
                     onClick={() => setIsCreatingChannel(true)}
+                    minW="120px"
+                    whiteSpace="nowrap"
                 >
                     New Channel
                 </Button>
@@ -360,11 +363,13 @@ const OrganizationChannel = ({ majorIncidentId, channelId }) => {
 
             {/* Message Input */}
             <Box p={4} borderTop="1px" borderColor="gray.200">
-                <HStack spacing={2}>
+                <HStack spacing={4}>
                     <Input
                         value={newMessage}
                         onChange={(e) => setNewMessage(e.target.value)}
                         placeholder="Type your message..."
+                        size="md"
+                        flex="1"
                         onKeyPress={(e) => {
                             if (e.key === 'Enter' && !e.shiftKey) {
                                 e.preventDefault();
@@ -376,13 +381,15 @@ const OrganizationChannel = ({ majorIncidentId, channelId }) => {
                         colorScheme="blue"
                         onClick={() => sendMessage(newMessage)}
                         isDisabled={!newMessage.trim()}
+                        minW="80px"
+                        size="md"
                     >
                         Send
                     </Button>
                 </HStack>
             </Box>
 
-            {/* Create Channel Modal - Reuse Modal pattern from VolunteerMessages */}
+            {/* Create Channel Modal - Reusing Modal pattern from VolunteerMessages */}
             <Portal>
                 <Menu
                     isOpen={isCreatingChannel}

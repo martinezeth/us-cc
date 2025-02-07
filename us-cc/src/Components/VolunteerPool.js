@@ -1,18 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import {
     Box,
-    VStack,
-    Tabs,
-    TabList,
-    TabPanels,
-    Tab,
-    TabPanel,
     Alert,
     AlertIcon,
     Badge,
     Text,
     Heading,
-    HStack,
     Tag,
     TagLabel,
     Wrap,
@@ -26,15 +19,13 @@ import {
     MenuButton,
     MenuList,
     MenuItem,
-    IconButton,
-    useToast,
     Button,
-    Select
+    useToast,
 } from '@chakra-ui/react';
 import { ChevronDownIcon } from '@chakra-ui/icons';
 import { supabase } from '../supabaseClient';
-import VolunteerStatusBoard from './VolunteerStatusBoard';
 import VolunteerPoolHeader from './VolunteerPoolHeader';
+import VolunteerFilterBar from './VolunteerFilterBar';
 
 const VolunteerPool = ({ majorIncidentId, refreshTrigger }) => {
     const [isOrganization, setIsOrganization] = useState(false);
@@ -44,21 +35,31 @@ const VolunteerPool = ({ majorIncidentId, refreshTrigger }) => {
     const [user, setUser] = useState(null);
     const toast = useToast();
     const [localRefreshTrigger, setLocalRefreshTrigger] = useState(0);
+    const [filters, setFilters] = useState({
+        status: 'available',
+        skill: '',
+        searchQuery: '',
+    });
+    const [stats, setStats] = useState({
+        skillDistribution: {}
+    });
+
+    const handleFilterChange = (newFilters) => {
+        setFilters(prev => ({
+            ...prev,
+            ...newFilters
+        }));
+    };
 
     useEffect(() => {
         const checkUserRole = async () => {
             const { data: { user } } = await supabase.auth.getUser();
-            console.log('checkUserRole - got user:', user);
             setUser(user);
             setIsOrganization(user?.user_metadata?.is_organization || false);
 
-            // Only fetch data if we have both majorIncidentId and user
             if (majorIncidentId && user) {
-                console.log('Calling fetchOpportunities with majorIncidentId:', majorIncidentId);
                 await fetchOpportunities(user);
                 await fetchVolunteers();
-            } else {
-                console.log('Not fetching data because:', { majorIncidentId, user });
             }
         };
         checkUserRole();
@@ -69,10 +70,10 @@ const VolunteerPool = ({ majorIncidentId, refreshTrigger }) => {
             console.log('No user provided to fetchOpportunities');
             return;
         }
-        
+
         try {
             console.log('Fetching opportunities for major incident:', majorIncidentId, 'with user:', currentUser.id);
-            
+
             // First get opportunities
             const { data: opps, error: oppsError } = await supabase
                 .from('volunteer_opportunities')
@@ -207,7 +208,7 @@ const VolunteerPool = ({ majorIncidentId, refreshTrigger }) => {
                 const profile = profileMap[entry.volunteer_id] || {};
                 const signup = signupsMap[entry.volunteer_id] || {};
                 const assignment = assignments.find(a => a.pool_entry_id === entry.id);
-                
+
                 const isEffectivelyAssigned = !!assignment && assignment.status === 'active';
 
                 return {
@@ -241,7 +242,7 @@ const VolunteerPool = ({ majorIncidentId, refreshTrigger }) => {
 
     const handleAssignVolunteer = async (volunteerId, poolEntryId, opportunityId) => {
         if (!user) return;
-        
+
         try {
             // Check if any assignment exists (active or inactive)
             const { data: existingAssignment } = await supabase
@@ -321,113 +322,31 @@ const VolunteerPool = ({ majorIncidentId, refreshTrigger }) => {
         }
     };
 
-    const AssignmentManagement = ({ majorIncidentId, refreshTrigger, user }) => {
-        console.log('AssignmentManagement render with:', {
-            volunteers,
-            opportunities,
-            unassignedVolunteers: volunteers.filter(v => !v.isAssigned)
+    // Calculate stats and filter volunteers
+    useEffect(() => {
+        const skillCounts = {};
+        volunteers.forEach(volunteer => {
+            volunteer.skills.forEach(skill => {
+                skillCounts[skill] = (skillCounts[skill] || 0) + 1;
+            });
         });
+        setStats({ skillDistribution: skillCounts });
+    }, [volunteers]);
 
-        const unassignedVolunteers = volunteers.filter(v => !v.isAssigned);
-
-        return (
-            <Box>
-                <Heading size="md" mb={4}>Assign Available Volunteers</Heading>
-                {loading ? (
-                    <Text>Loading volunteers...</Text>
-                ) : (
-                    <Table variant="simple">
-                        <Thead>
-                            <Tr>
-                                <Th>Volunteer</Th>
-                                <Th>Skills</Th>
-                                <Th>Availability</Th>
-                                <Th>Actions</Th>
-                            </Tr>
-                        </Thead>
-                        <Tbody>
-                            {unassignedVolunteers.map(volunteer => (
-                                <Tr key={volunteer.id}>
-                                    <Td>
-                                        <VStack align="start" spacing={1}>
-                                            <Text fontWeight="medium">{volunteer.name}</Text>
-                                        </VStack>
-                                    </Td>
-                                    <Td>
-                                        <Wrap>
-                                            {volunteer.skills.map(skill => (
-                                                <Tag
-                                                    key={skill}
-                                                    size="sm"
-                                                    colorScheme="blue"
-                                                    borderRadius="full"
-                                                >
-                                                    <TagLabel>{skill}</TagLabel>
-                                                </Tag>
-                                            ))}
-                                        </Wrap>
-                                    </Td>
-                                    <Td>
-                                        <Wrap>
-                                            {volunteer.availability?.map(time => (
-                                                <Tag
-                                                    key={time}
-                                                    size="sm"
-                                                    colorScheme="green"
-                                                    borderRadius="full"
-                                                >
-                                                    <TagLabel>{time}</TagLabel>
-                                                </Tag>
-                                            ))}
-                                        </Wrap>
-                                    </Td>
-                                    <Td>
-                                        <Menu>
-                                            <MenuButton
-                                                as={Button}
-                                                size="sm"
-                                                colorScheme="blue"
-                                                rightIcon={<ChevronDownIcon />}
-                                            >
-                                                Assign to Opportunity
-                                            </MenuButton>
-                                            <MenuList>
-                                                {opportunities.length > 0 ? (
-                                                    opportunities.map(opp => (
-                                                        <MenuItem
-                                                            key={opp.id}
-                                                            onClick={() => handleAssignVolunteer(
-                                                                volunteer.id,
-                                                                volunteer.poolEntryId,
-                                                                opp.id
-                                                            )}
-                                                        >
-                                                            {opp.title} - {opp.organization?.organization_name}
-                                                        </MenuItem>
-                                                    ))
-                                                ) : (
-                                                    <MenuItem isDisabled>
-                                                        No open opportunities available
-                                                    </MenuItem>
-                                                )}
-                                            </MenuList>
-                                        </Menu>
-                                    </Td>
-                                </Tr>
-                            ))}
-                            {unassignedVolunteers.length === 0 && (
-                                <Tr>
-                                    <Td colSpan={4} textAlign="center">
-                                        No unassigned volunteers available
-                                    </Td>
-                                </Tr>
-                            )}
-                        </Tbody>
-                    </Table>
-                )}
-            </Box>
-        );
-    };
+    const filteredVolunteers = volunteers.filter(volunteer => {
+        if (filters.status === 'available' && volunteer.isAssigned) return false;
+        if (filters.status === 'assigned' && !volunteer.isAssigned) return false;
+        if (filters.skill && !volunteer.skills.includes(filters.skill)) return false;
+        if (filters.searchQuery) {
+            const searchLower = filters.searchQuery.toLowerCase();
+            const matchesName = volunteer.name.toLowerCase().includes(searchLower);
+            const matchesSkills = volunteer.skills.some(skill =>
+                skill.toLowerCase().includes(searchLower)
+            );
+            if (!matchesName && !matchesSkills) return false;
+        }
+        return true;
+    });
 
     if (!isOrganization) {
         return (
@@ -441,34 +360,125 @@ const VolunteerPool = ({ majorIncidentId, refreshTrigger }) => {
     }
 
     return (
-        <Box>
-            <VolunteerPoolHeader 
-                majorIncidentId={majorIncidentId} 
+        <Box mb={8} width="100%">
+            <VolunteerPoolHeader
+                majorIncidentId={majorIncidentId}
                 onVolunteerJoin={() => setLocalRefreshTrigger(prev => prev + 1)}
                 refreshTrigger={localRefreshTrigger}
+                hideStats={true}
             />
-            <Tabs colorScheme="blue" variant="enclosed">
-                <TabList>
-                    <Tab>Status Board</Tab>
-                    <Tab>Assignment Management</Tab>
-                </TabList>
 
-                <TabPanels>
-                    <TabPanel>
-                        <VolunteerStatusBoard 
-                            majorIncidentId={majorIncidentId}
-                            refreshTrigger={refreshTrigger}
-                        />
-                    </TabPanel>
-                    <TabPanel>
-                        <AssignmentManagement 
-                            majorIncidentId={majorIncidentId}
-                            refreshTrigger={refreshTrigger}
-                            user={user}
-                        />
-                    </TabPanel>
-                </TabPanels>
-            </Tabs>
+            <Box>
+                <VolunteerFilterBar
+                    filters={filters}
+                    onFilterChange={handleFilterChange}
+                    stats={stats}
+                />
+                {loading ? (
+                    <Text>Loading volunteers...</Text>
+                ) : (
+                    <Box width="100%">
+                        <Table variant="simple" bg="white" shadow="sm" borderRadius="lg" size="sm">
+                            <Thead>
+                                <Tr>
+                                    <Th>Volunteer</Th>
+                                    <Th>Skills</Th>
+                                    <Th>Availability</Th>
+                                    <Th>Assignment</Th>
+                                    <Th>Organization</Th>
+                                    <Th>Actions</Th>
+                                </Tr>
+                            </Thead>
+                            <Tbody>
+                                {filteredVolunteers.map(volunteer => (
+                                    <Tr key={volunteer.id}>
+                                        <Td>{volunteer.name}</Td>
+                                        <Td>
+                                            <Wrap>
+                                                {volunteer.skills.map(skill => (
+                                                    <Tag
+                                                        key={skill}
+                                                        size="sm"
+                                                        colorScheme="blue"
+                                                        borderRadius="full"
+                                                    >
+                                                        <TagLabel>{skill}</TagLabel>
+                                                    </Tag>
+                                                ))}
+                                            </Wrap>
+                                        </Td>
+                                        <Td>
+                                            <Wrap>
+                                                {volunteer.availability?.map(time => (
+                                                    <Tag
+                                                        key={time}
+                                                        size="sm"
+                                                        colorScheme="green"
+                                                        borderRadius="full"
+                                                    >
+                                                        <TagLabel>{time}</TagLabel>
+                                                    </Tag>
+                                                ))}
+                                            </Wrap>
+                                        </Td>
+                                        <Td>
+                                            {volunteer.isAssigned ? (
+                                                <Badge colorScheme="green">Assigned</Badge>
+                                            ) : (
+                                                <Badge colorScheme="gray">Available</Badge>
+                                            )}
+                                        </Td>
+                                        <Td>
+                                            {volunteer.assignment?.organizationName || '-'}
+                                        </Td>
+                                        <Td>
+                                            {!volunteer.isAssigned && (
+                                                <Menu>
+                                                    <MenuButton
+                                                        as={Button}
+                                                        size="sm"
+                                                        colorScheme="blue"
+                                                        rightIcon={<ChevronDownIcon />}
+                                                    >
+                                                        Assign to Opportunity
+                                                    </MenuButton>
+                                                    <MenuList>
+                                                        {opportunities.length > 0 ? (
+                                                            opportunities.map(opp => (
+                                                                <MenuItem
+                                                                    key={opp.id}
+                                                                    onClick={() => handleAssignVolunteer(
+                                                                        volunteer.id,
+                                                                        volunteer.poolEntryId,
+                                                                        opp.id
+                                                                    )}
+                                                                >
+                                                                    {opp.title} - {opp.organization?.organization_name}
+                                                                </MenuItem>
+                                                            ))
+                                                        ) : (
+                                                            <MenuItem isDisabled>
+                                                                No open opportunities available
+                                                            </MenuItem>
+                                                        )}
+                                                    </MenuList>
+                                                </Menu>
+                                            )}
+                                        </Td>
+                                    </Tr>
+                                ))}
+                                {filteredVolunteers.length === 0 && (
+                                    <Tr>
+                                        <Td colSpan={6} textAlign="center">
+                                            No volunteers match the current filters
+                                        </Td>
+                                    </Tr>
+                                )}
+                            </Tbody>
+                        </Table>
+                    </Box>
+                )}
+            </Box>
         </Box>
     );
 };

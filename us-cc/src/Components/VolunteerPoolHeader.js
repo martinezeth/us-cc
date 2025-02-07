@@ -26,7 +26,7 @@ import { AddIcon } from '@chakra-ui/icons';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../supabaseClient';
 
-const VolunteerPoolHeader = ({ majorIncidentId, onVolunteerJoin, refreshTrigger }) => {
+const VolunteerPoolHeader = ({ majorIncidentId, onVolunteerJoin, refreshTrigger, hideStats  = false }) => {
     const [stats, setStats] = useState({
         totalVolunteers: 0,
         availableVolunteers: 0,

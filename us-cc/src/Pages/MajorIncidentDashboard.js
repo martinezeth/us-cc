@@ -57,7 +57,7 @@ const getZoomLevel = (radiusMiles) => {
 
 const RecenterButton = ({ position, radius }) => {
     const map = useMap();
-    
+
     const handleRecenter = () => {
         const zoom = getZoomLevel(radius);
         map.setView(position, zoom);
@@ -227,7 +227,7 @@ const MajorIncidentDashboard = () => {
     const handleUnregister = async () => {
         try {
             const { data: { user } } = await supabase.auth.getUser();
-            
+
             const { error } = await supabase
                 .from('major_incident_organizations')
                 .delete()
@@ -260,7 +260,7 @@ const MajorIncidentDashboard = () => {
         try {
             const { data: { user } } = await supabase.auth.getUser();
             setUser(user);
-            
+
             if (user) {
                 // Check if organization
                 const isOrg = user?.user_metadata?.is_organization || false;
@@ -273,7 +273,7 @@ const MajorIncidentDashboard = () => {
                         .select('id')
                         .eq('user_id', user.id)
                         .single();
-                    
+
                     setIsVolunteer(!!volunteerData);
 
                     if (volunteerData) {
@@ -284,7 +284,7 @@ const MajorIncidentDashboard = () => {
                             .eq('major_incident_id', id)
                             .eq('volunteer_id', user.id)
                             .single();
-                        
+
                         setIsInPool(!!poolData);
                     }
                 }
@@ -440,7 +440,7 @@ const MajorIncidentDashboard = () => {
                                 <Button
                                     colorScheme="blue"
                                     leftIcon={<AddIcon />}
-                                    onClick={() => {/* Handle post update */}}
+                                    onClick={() => {/* Handle post update */ }}
                                 >
                                     Post Update
                                 </Button>
@@ -465,9 +465,16 @@ const MajorIncidentDashboard = () => {
                     </StatGroup>
 
                     {/* Main Content */}
-                    <Grid templateColumns="repeat(12, 1fr)" gap={6}>
-                        {/* Left Column - Always show but adjust width based on participation */}
-                        <Box gridColumn={isParticipating ? "span 8" : "span 12"}>
+                    <Grid
+                        templateColumns={{
+                            base: "1fr",
+                            lg: "1fr 400px"
+                        }}
+                        gap={6}
+                        p={4}
+                    >
+                        {/* Main Content */}
+                        <Box>
                             <Tabs>
                                 <TabList>
                                     <Tab>Overview</Tab>
@@ -502,7 +509,7 @@ const MajorIncidentDashboard = () => {
                                                             Impact Zone
                                                         </Popup>
                                                     </Circle>
-                                                    <RecenterButton 
+                                                    <RecenterButton
                                                         position={[activeIncident.location_lat, activeIncident.location_lng]}
                                                         radius={activeIncident.radius_miles}
                                                     />
@@ -536,7 +543,7 @@ const MajorIncidentDashboard = () => {
                                                             onClick={(e) => handleProfileClick(e, org.organization, navigate)}
                                                         />
                                                         <VStack align="start" spacing={1}>
-                                                            <Text 
+                                                            <Text
                                                                 fontWeight="bold"
                                                                 cursor="pointer"
                                                                 color="blue.500"
@@ -571,8 +578,8 @@ const MajorIncidentDashboard = () => {
                                                         <Badge
                                                             colorScheme={
                                                                 update.priority_level === 'emergency' ? 'red' :
-                                                                update.priority_level === 'urgent' ? 'orange' :
-                                                                'blue'
+                                                                    update.priority_level === 'urgent' ? 'orange' :
+                                                                        'blue'
                                                             }
                                                         >
                                                             {update.priority_level}
@@ -604,7 +611,7 @@ const MajorIncidentDashboard = () => {
                                     </TabPanel>
 
                                     <TabPanel>
-                                        <MajorIncidentOpportunities 
+                                        <MajorIncidentOpportunities
                                             majorIncidentId={id}
                                             majorIncidentData={activeIncident}
                                             onOpportunityStatusChange={handleOpportunityStatusChange}
@@ -613,10 +620,6 @@ const MajorIncidentDashboard = () => {
 
                                     {isParticipating && (
                                         <TabPanel>
-                                            <VolunteerPoolHeader
-                                                majorIncidentId={id}
-                                                onVolunteerJoin={fetchIncidentData}
-                                            />
                                             <VolunteerPool
                                                 majorIncidentId={id}
                                                 refreshTrigger={volunteerPoolRefresh}
@@ -627,10 +630,19 @@ const MajorIncidentDashboard = () => {
                             </Tabs>
                         </Box>
 
-                        {/* Right Column - Only show when participating */}
+                        {/* Channels */}
                         {isParticipating && (
-                            <Box gridColumn="span 4">
-                                <Box bg="white" p={4} borderRadius="lg" shadow="sm" height="100%">
+                            <Box width="400px">  {/* Increased fixed width */}
+                                <Box
+                                    bg="white"
+                                    p={6}  // Increased padding
+                                    borderRadius="lg"
+                                    shadow="sm"
+                                    height="100%"
+                                    maxH="calc(100vh - 200px)"
+                                    overflowY="auto"
+                                    width="100%"
+                                >
                                     <OrganizationChannel
                                         majorIncidentId={id}
                                     />

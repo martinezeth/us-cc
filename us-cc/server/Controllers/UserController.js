@@ -18,4 +18,4 @@ async function getUserData(userId) {
     }
 }
 
-module.exports = { getUserData, /* other functions */ };
+module.exports = { getUserData, };
