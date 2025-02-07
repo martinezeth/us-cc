@@ -25,6 +25,7 @@ import {
 import { AddIcon, ChevronDownIcon } from '@chakra-ui/icons';
 import { supabase } from '../supabaseClient';
 import CreateVolunteerOpportunityModal from './CreateVolunteerOpportunityModal';
+import VolunteerResponsesDrawer from './VolunteerResponsesDrawer';
 
 const MajorIncidentOpportunities = ({ majorIncidentId, majorIncidentData, onOpportunityStatusChange }) => {
     const [opportunities, setOpportunities] = useState([]);
@@ -37,6 +38,8 @@ const MajorIncidentOpportunities = ({ majorIncidentId, majorIncidentData, onOppo
     const [loading, setLoading] = useState(true);
     const { isOpen, onOpen, onClose } = useDisclosure();
     const toast = useToast();
+    const [selectedOpportunity, setSelectedOpportunity] = useState(null);
+    const [isResponsesDrawerOpen, setIsResponsesDrawerOpen] = useState(false);
 
     useEffect(() => {
         fetchOpportunities();
@@ -47,12 +50,18 @@ const MajorIncidentOpportunities = ({ majorIncidentId, majorIncidentData, onOppo
             setLoading(true);
             const { data: { user } } = await supabase.auth.getUser();
 
-            // First fetch opportunities with response counts
+            // First fetch opportunities with response counts and actual responses
             const { data: opportunitiesData, error: opportunitiesError } = await supabase
                 .from('volunteer_opportunities')
                 .select(`
                     *,
-                    responses:opportunity_responses(count)
+                    responses:opportunity_responses!left(
+                        id,
+                        volunteer_id,
+                        status,
+                        response_date
+                    ),
+                    response_count:opportunity_responses!left(count)
                 `)
                 .eq('major_incident_id', majorIncidentId)
                 .order('created_at', { ascending: false });
@@ -87,9 +96,12 @@ const MajorIncidentOpportunities = ({ majorIncidentId, majorIncidentData, onOppo
                 }
             }));
 
-            // Calculate stats using the enriched opportunities
+            // Calculate stats
             const active = enrichedOpportunities?.filter(opp => opp.status === 'open').length || 0;
-            const totalResponses = enrichedOpportunities?.reduce((sum, opp) => sum + opp.responses[0].count, 0) || 0;
+            const totalResponses = enrichedOpportunities?.reduce((sum, opp) => {
+                const count = opp.response_count?.[0]?.count || 0;
+                return sum + count;
+            }, 0) || 0;
             const responseRate = enrichedOpportunities?.length ?
                 (totalResponses / enrichedOpportunities.length).toFixed(1) : 0;
 
@@ -196,6 +208,56 @@ const MajorIncidentOpportunities = ({ majorIncidentId, majorIncidentData, onOppo
         }
     };
 
+    const handleViewResponses = async (opportunity) => {
+        try {
+            console.log("Viewing responses for opportunity:", opportunity);
+            
+            // Process responses before showing drawer
+            const processedResponses = await Promise.all(opportunity.responses.map(async (response) => {
+                // Get volunteer details from volunteer_signups
+                const { data: signupData } = await supabase
+                    .from('volunteer_signups')
+                    .select('skills, region')
+                    .eq('user_id', response.volunteer_id)
+                    .single();
+
+                // Get profile details
+                const { data: profileData } = await supabase
+                    .from('profiles')
+                    .select('full_name, city, state')
+                    .eq('id', response.volunteer_id)
+                    .single();
+
+                return {
+                    id: response.id,
+                    volunteer_id: response.volunteer_id,
+                    volunteer_name: profileData?.full_name || 'Anonymous Volunteer',
+                    city: profileData?.city || 'Unknown City',
+                    state: profileData?.state || 'Unknown State',
+                    skills: signupData?.skills || [],
+                    status: response.status,
+                    response_date: response.response_date
+                };
+            }));
+
+            // Update the opportunity with processed responses
+            setSelectedOpportunity({
+                ...opportunity,
+                responses: processedResponses
+            });
+            setIsResponsesDrawerOpen(true);
+
+        } catch (error) {
+            console.error('Error processing responses:', error);
+            toast({
+                title: "Error loading responses",
+                description: error.message,
+                status: "error",
+                duration: 5000
+            });
+        }
+    };
+
     return (
         <Box>
             <VStack spacing={6} align="stretch">
@@ -262,7 +324,7 @@ const MajorIncidentOpportunities = ({ majorIncidentId, majorIncidentData, onOppo
                                             >
                                                 Archive Opportunity
                                             </MenuItem>
-                                            <MenuItem>
+                                            <MenuItem onClick={() => handleViewResponses(opportunity)}>
                                                 View Responses
                                             </MenuItem>
                                         </MenuList>
@@ -299,7 +361,7 @@ const MajorIncidentOpportunities = ({ majorIncidentId, majorIncidentData, onOppo
                                         📍 {opportunity.location}
                                     </Text>
                                     <Badge colorScheme="purple">
-                                        {opportunity.responses[0].count} responses
+                                        {opportunity.response_count?.[0]?.count || 0} responses
                                     </Badge>
                                 </HStack>
 
@@ -329,6 +391,15 @@ const MajorIncidentOpportunities = ({ majorIncidentId, majorIncidentData, onOppo
                     onCreateSuccess={handleCreateSuccess}
                     majorIncidentId={majorIncidentId}
                     majorIncidentData={majorIncidentData}
+                />
+
+                <VolunteerResponsesDrawer
+                    isOpen={isResponsesDrawerOpen}
+                    onClose={() => {
+                        setIsResponsesDrawerOpen(false);
+                        setSelectedOpportunity(null);
+                    }}
+                    opportunity={selectedOpportunity}
                 />
             </VStack>
         </Box>
