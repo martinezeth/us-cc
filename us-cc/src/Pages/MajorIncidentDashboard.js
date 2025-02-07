@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, Link as RouterLink } from 'react-router-dom';
 import {
     Box,
     Grid,
@@ -55,17 +55,36 @@ const MajorIncidentDashboard = () => {
     const toast = useToast();
     const [isOrganization, setIsOrganization] = useState(false);
     const [isParticipating, setIsParticipating] = useState(false);
+    const [isVolunteer, setIsVolunteer] = useState(false);
+    const [isInPool, setIsInPool] = useState(false);
+    const [user, setUser] = useState(null);
 
     useEffect(() => {
         if (id) {
             fetchIncidentData();
+            checkParticipationStatus();
         }
-        const checkUserRole = async () => {
-            const { data: { user } } = await supabase.auth.getUser();
-            setIsOrganization(user?.user_metadata?.is_organization || false);
+        checkUserStatus();
+    }, [id]);
+
+    useEffect(() => {
+        if (!id) return;
+
+        const channel = supabase
+            .channel(`major-incident-stats-${id}`)
+            .on('postgres_changes', {
+                event: '*',
+                schema: 'public',
+                table: 'major_incident_volunteer_pool',
+                filter: `major_incident_id=eq.${id}`
+            }, () => {
+                fetchIncidentData();
+            })
+            .subscribe();
+
+        return () => {
+            supabase.removeChannel(channel);
         };
-        checkUserRole();
-        checkParticipationStatus();
     }, [id]);
 
     const fetchIncidentData = async () => {
@@ -119,9 +138,15 @@ const MajorIncidentDashboard = () => {
 
             setUpdates(updatesData || []);
 
-            // Update stats
+            // Fetch volunteer count
+            const { count: volunteerCount } = await supabase
+                .from('major_incident_volunteer_pool')
+                .select('*', { count: 'exact' })
+                .eq('major_incident_id', id);
+
+            // Update stats with actual volunteer count
             setStats({
-                totalVolunteers: volunteers.length,
+                totalVolunteers: volunteerCount || 0,
                 activeOrganizations: orgsData?.length || 0,
                 totalUpdates: updatesData?.length || 0
             });
@@ -188,6 +213,133 @@ const MajorIncidentDashboard = () => {
         }
     };
 
+    const checkUserStatus = async () => {
+        try {
+            const { data: { user } } = await supabase.auth.getUser();
+            setUser(user);
+            
+            if (user) {
+                // Check if organization
+                const isOrg = user?.user_metadata?.is_organization || false;
+                setIsOrganization(isOrg);
+
+                if (!isOrg) {
+                    // Check if volunteer
+                    const { data: volunteerData } = await supabase
+                        .from('volunteer_signups')
+                        .select('id')
+                        .eq('user_id', user.id)
+                        .single();
+                    
+                    setIsVolunteer(!!volunteerData);
+
+                    if (volunteerData) {
+                        // Check if already in pool
+                        const { data: poolData } = await supabase
+                            .from('major_incident_volunteer_pool')
+                            .select('id')
+                            .eq('major_incident_id', id)
+                            .eq('volunteer_id', user.id)
+                            .single();
+                        
+                        setIsInPool(!!poolData);
+                    }
+                }
+            }
+        } catch (error) {
+            console.error('Error checking user status:', error);
+        }
+    };
+
+    const handleJoinPool = async () => {
+        try {
+            const { error } = await supabase
+                .from('major_incident_volunteer_pool')
+                .insert([{
+                    major_incident_id: id,
+                    volunteer_id: user.id
+                }]);
+
+            if (error) throw error;
+
+            toast({
+                title: "Success!",
+                description: "You've joined the volunteer pool for this incident",
+                status: "success",
+                duration: 3000
+            });
+
+            setIsInPool(true);
+            fetchIncidentData();
+        } catch (error) {
+            toast({
+                title: "Error joining pool",
+                description: error.message,
+                status: "error",
+                duration: 5000
+            });
+        }
+    };
+
+    const renderActionButton = () => {
+        if (!user) {
+            return (
+                <Button
+                    as={RouterLink}
+                    to="/login"
+                    colorScheme="blue"
+                >
+                    Login to Join Response
+                </Button>
+            );
+        }
+
+        if (isOrganization) {
+            return isParticipating ? (
+                <Button
+                    colorScheme="red"
+                    onClick={handleUnregister}
+                >
+                    Unregister from Effort
+                </Button>
+            ) : (
+                <JoinResponseButton
+                    majorIncidentId={id}
+                    onJoinSuccess={fetchIncidentData}
+                />
+            );
+        }
+
+        if (!isVolunteer) {
+            return (
+                <Button
+                    as={RouterLink}
+                    to="/volunteer-signup"
+                    colorScheme="blue"
+                >
+                    Register as Volunteer
+                </Button>
+            );
+        }
+
+        if (isInPool) {
+            return (
+                <Badge colorScheme="green" p={2} borderRadius="md">
+                    Already in Volunteer Pool
+                </Badge>
+            );
+        }
+
+        return (
+            <Button
+                colorScheme="blue"
+                onClick={handleJoinPool}
+            >
+                Join Volunteer Pool
+            </Button>
+        );
+    };
+
     if (loading) {
         return (
             <Box p={8} textAlign="center">
@@ -236,26 +388,16 @@ const MajorIncidentDashboard = () => {
                             </Text>
                         </VStack>
                         <HStack>
-                            {isParticipating ? (
+                            {renderActionButton()}
+                            {isOrganization && isParticipating && (
                                 <Button
-                                    colorScheme="red"
-                                    onClick={handleUnregister}
+                                    colorScheme="blue"
+                                    leftIcon={<AddIcon />}
+                                    onClick={() => {/* Handle post update */}}
                                 >
-                                    [TEMP] Unregister from Effort
+                                    Post Update
                                 </Button>
-                            ) : (
-                                <JoinResponseButton
-                                    majorIncidentId={id}
-                                    onJoinSuccess={fetchIncidentData}
-                                />
                             )}
-                            <Button
-                                colorScheme="blue"
-                                leftIcon={<AddIcon />}
-                                onClick={() => {/* Handle post update */}}
-                            >
-                                Post Update
-                            </Button>
                         </HStack>
                     </HStack>
 
@@ -286,7 +428,6 @@ const MajorIncidentDashboard = () => {
                                     <Tab>Updates</Tab>
                                     <Tab>Opportunities</Tab>
                                     {isParticipating && <Tab>Volunteer Pool</Tab>}
-                                    {isParticipating && <Tab>Channels</Tab>}
                                 </TabList>
 
                                 <TabPanels>
@@ -325,37 +466,6 @@ const MajorIncidentDashboard = () => {
                                         </VStack>
                                     </TabPanel>
 
-                                    {/* Updates Tab */}
-                                    <TabPanel>
-                                        <VStack spacing={4} align="stretch">
-                                            {updates.map(update => (
-                                                <Box
-                                                    key={update.id}
-                                                    p={6}
-                                                    bg="white"
-                                                    borderRadius="lg"
-                                                    shadow="sm"
-                                                >
-                                                    <HStack justify="space-between" mb={2}>
-                                                        <Badge
-                                                            colorScheme={
-                                                                update.priority_level === 'emergency' ? 'red' :
-                                                                    update.priority_level === 'urgent' ? 'orange' :
-                                                                        'blue'
-                                                            }
-                                                        >
-                                                            {update.priority_level}
-                                                        </Badge>
-                                                        <Text fontSize="sm" color="gray.500">
-                                                            {new Date(update.created_at).toLocaleString()}
-                                                        </Text>
-                                                    </HStack>
-                                                    <Text>{update.content}</Text>
-                                                </Box>
-                                            ))}
-                                        </VStack>
-                                    </TabPanel>
-
                                     {/* Organizations Tab */}
                                     <TabPanel>
                                         <VStack spacing={4} align="stretch">
@@ -382,6 +492,37 @@ const MajorIncidentDashboard = () => {
                                                             </Text>
                                                         </VStack>
                                                     </HStack>
+                                                </Box>
+                                            ))}
+                                        </VStack>
+                                    </TabPanel>
+
+                                    {/* Updates Tab */}
+                                    <TabPanel>
+                                        <VStack spacing={4} align="stretch">
+                                            {updates.map(update => (
+                                                <Box
+                                                    key={update.id}
+                                                    p={6}
+                                                    bg="white"
+                                                    borderRadius="lg"
+                                                    shadow="sm"
+                                                >
+                                                    <HStack justify="space-between" mb={2}>
+                                                        <Badge
+                                                            colorScheme={
+                                                                update.priority_level === 'emergency' ? 'red' :
+                                                                    update.priority_level === 'urgent' ? 'orange' :
+                                                                        'blue'
+                                                            }
+                                                        >
+                                                            {update.priority_level}
+                                                        </Badge>
+                                                        <Text fontSize="sm" color="gray.500">
+                                                            {new Date(update.created_at).toLocaleString()}
+                                                        </Text>
+                                                    </HStack>
+                                                    <Text>{update.content}</Text>
                                                 </Box>
                                             ))}
                                         </VStack>

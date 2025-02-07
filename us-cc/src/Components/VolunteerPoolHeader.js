@@ -47,7 +47,34 @@ const VolunteerPoolHeader = ({ majorIncidentId, onVolunteerJoin }) => {
             setIsOrganization(user?.user_metadata?.is_organization || false);
         };
         checkUserRole();
+        fetchStats();
     }, []);
+
+    useEffect(() => {
+        if (majorIncidentId) {
+            fetchStats();
+        }
+    }, [majorIncidentId]);
+
+    useEffect(() => {
+        if (!majorIncidentId) return;
+
+        const channel = supabase
+            .channel(`volunteer-pool-${majorIncidentId}`)
+            .on('postgres_changes', {
+                event: '*',
+                schema: 'public',
+                table: 'major_incident_volunteer_pool',
+                filter: `major_incident_id=eq.${majorIncidentId}`
+            }, () => {
+                fetchStats();
+            })
+            .subscribe();
+
+        return () => {
+            supabase.removeChannel(channel);
+        };
+    }, [majorIncidentId]);
 
     const checkVolunteerStatus = async () => {
         try {
@@ -202,26 +229,6 @@ const VolunteerPoolHeader = ({ majorIncidentId, onVolunteerJoin }) => {
                     <VStack spacing={6} align="stretch">
                         <HStack justify="space-between">
                             <Text fontSize="2xl" fontWeight="bold">Volunteer Pool</Text>
-                            {!isVolunteer ? (
-                                <Button
-                                    colorScheme="blue"
-                                    onClick={() => navigate('/volunteer-signup')}
-                                    leftIcon={<AddIcon />}
-                                >
-                                    Register as Volunteer
-                                </Button>
-                            ) : !isAlreadyInPool ? (
-                                <Button
-                                    colorScheme="blue"
-                                    onClick={onOpen}
-                                >
-                                    Join Volunteer Pool
-                                </Button>
-                            ) : (
-                                <Badge colorScheme="green" p={2} borderRadius="md">
-                                    Already in Volunteer Pool
-                                </Badge>
-                            )}
                         </HStack>
 
                         <StatGroup>

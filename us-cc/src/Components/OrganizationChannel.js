@@ -25,7 +25,7 @@ import {
     Textarea,
     Portal
 } from '@chakra-ui/react';
-import { AttachmentIcon, AddIcon, ChatIcon } from '@chakra-ui/icons';
+import { AddIcon, AttachmentIcon } from '@chakra-ui/icons';
 import { supabase } from '../supabaseClient';
 import VerifiedBadge from './VerifiedBadge';
 
@@ -358,10 +358,6 @@ const OrganizationChannel = ({ majorIncidentId, channelId }) => {
                                 sendMessage(newMessage);
                             }
                         }}
-                    />
-                    <IconButton
-                        icon={<AttachmentIcon />}
-                        aria-label="Add attachment"
                     />
                     <Button
                         colorScheme="blue"
