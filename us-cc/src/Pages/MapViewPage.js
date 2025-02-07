@@ -16,6 +16,7 @@ import { INCIDENT_TYPES } from '../constants/incidentTypes';
 import VerifiedBadge from '../Components/VerifiedBadge';
 import { useNavigate } from 'react-router-dom';
 import { getProfileUsername } from '../Components/ProfileHelpers';
+import { handleProfileClick } from '../utils/navigationHelpers';
 
 const baseIcon = L.Icon.extend({
   options: {
@@ -76,12 +77,7 @@ const ListView = ({ incidents }) => {
                     fontSize="sm"
                     color="blue.500"
                     cursor="pointer"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      if (incident.created_by_user) {
-                        navigate(`/profile/${getProfileUsername(incident.created_by_user)}`);
-                      }
-                    }}
+                    onClick={(e) => handleProfileClick(e, incident.created_by_user, navigate)}
                     _hover={{ textDecoration: 'underline' }}
                   >
                     {incident.created_by_user.display_name}
@@ -408,12 +404,7 @@ function MapPage() {
                             fontSize="sm"
                             color="blue.500"
                             cursor="pointer"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              if (incident.created_by_user) {
-                                navigate(`/profile/${getProfileUsername(incident.created_by_user)}`);
-                              }
-                            }}
+                            onClick={(e) => handleProfileClick(e, incident.created_by_user, navigate)}
                             _hover={{ textDecoration: 'underline' }}
                           >
                             {incident.created_by_user.display_name}

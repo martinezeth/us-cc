@@ -40,6 +40,7 @@ import VolunteerPoolHeader from '../Components/VolunteerPoolHeader';
 import MajorIncidentOpportunities from '../Components/MajorIncidentOpportunities';
 import { handleProfileClick } from '../utils/navigationHelpers';
 import { MdCenterFocusWeak } from 'react-icons/md';
+import VolunteerStatusBoard from '../Components/VolunteerStatusBoard';
 
 const capitalizeFirstLetter = (string) => {
     return string.charAt(0).toUpperCase() + string.slice(1);
@@ -96,6 +97,7 @@ const MajorIncidentDashboard = () => {
     const [isVolunteer, setIsVolunteer] = useState(false);
     const [isInPool, setIsInPool] = useState(false);
     const [user, setUser] = useState(null);
+    const [volunteerPoolRefresh, setVolunteerPoolRefresh] = useState(0);
 
     useEffect(() => {
         if (id) {
@@ -320,6 +322,10 @@ const MajorIncidentDashboard = () => {
                 duration: 5000
             });
         }
+    };
+
+    const handleOpportunityStatusChange = () => {
+        setVolunteerPoolRefresh(prev => prev + 1);
     };
 
     const renderActionButton = () => {
@@ -598,9 +604,10 @@ const MajorIncidentDashboard = () => {
                                     </TabPanel>
 
                                     <TabPanel>
-                                        <MajorIncidentOpportunities
+                                        <MajorIncidentOpportunities 
                                             majorIncidentId={id}
                                             majorIncidentData={activeIncident}
+                                            onOpportunityStatusChange={handleOpportunityStatusChange}
                                         />
                                     </TabPanel>
 
@@ -612,6 +619,7 @@ const MajorIncidentDashboard = () => {
                                             />
                                             <VolunteerPool
                                                 majorIncidentId={id}
+                                                refreshTrigger={volunteerPoolRefresh}
                                             />
                                         </TabPanel>
                                     )}

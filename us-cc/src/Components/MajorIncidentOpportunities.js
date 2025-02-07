@@ -26,7 +26,7 @@ import { AddIcon, ChevronDownIcon } from '@chakra-ui/icons';
 import { supabase } from '../supabaseClient';
 import CreateVolunteerOpportunityModal from './CreateVolunteerOpportunityModal';
 
-const MajorIncidentOpportunities = ({ majorIncidentId, majorIncidentData }) => {
+const MajorIncidentOpportunities = ({ majorIncidentId, majorIncidentData, onOpportunityStatusChange }) => {
     const [opportunities, setOpportunities] = useState([]);
     const [stats, setStats] = useState({
         totalOpportunities: 0,
@@ -121,27 +121,74 @@ const MajorIncidentOpportunities = ({ majorIncidentId, majorIncidentData }) => {
 
     const handleArchiveOpportunity = async (opportunityId) => {
         try {
-            const { error } = await supabase
+            const { data: { user } } = await supabase.auth.getUser();
+
+            // First check if opportunity is already archived
+            const { data: opportunity } = await supabase
                 .from('volunteer_opportunities')
-                .update({
-                    status: 'archived',
-                    archived_at: new Date().toISOString()
-                })
+                .select('status')
+                .eq('id', opportunityId)
+                .single();
+
+            if (opportunity?.status === 'archived') {
+                toast({
+                    title: "Already Archived",
+                    description: "This opportunity is already archived",
+                    status: "info",
+                    duration: 3000
+                });
+                return;
+            }
+
+            // Get all active assignments for this organization's opportunity
+            const { data: assignments, error: findError } = await supabase
+                .from('major_incident_volunteer_assignments')
+                .select('id, status')
+                .eq('organization_id', user.id)
+                .eq('status', 'active');
+
+            if (findError) {
+                console.error('Error finding assignments:', findError);
+                throw findError;
+            }
+
+            // Update opportunity status to archived
+            const { error: updateError } = await supabase
+                .from('volunteer_opportunities')
+                .update({ status: 'archived' })
                 .eq('id', opportunityId);
 
-            if (error) throw error;
+            if (updateError) throw updateError;
 
+            // Update all active assignments to inactive
+            if (assignments?.length > 0) {
+                const { error: assignmentError } = await supabase
+                    .from('major_incident_volunteer_assignments')
+                    .update({ status: 'inactive' })
+                    .in('id', assignments.map(a => a.id));
+
+                if (assignmentError) {
+                    console.error('Error updating assignments:', assignmentError);
+                    throw assignmentError;
+                }
+            }
+
+            // Call the refresh handler after successful archive
+            onOpportunityStatusChange?.();
+            
             toast({
                 title: "Success",
-                description: "Opportunity archived",
+                description: "Opportunity archived and volunteers released",
                 status: "success",
                 duration: 3000
             });
 
+            // Refresh the opportunities list
             fetchOpportunities();
         } catch (error) {
+            console.error('Error archiving opportunity:', error);
             toast({
-                title: "Error",
+                title: "Error archiving opportunity",
                 description: error.message,
                 status: "error",
                 duration: 5000
@@ -209,8 +256,9 @@ const MajorIncidentOpportunities = ({ majorIncidentId, majorIncidentData }) => {
                                             size="sm"
                                         />
                                         <MenuList>
-                                            <MenuItem
+                                            <MenuItem 
                                                 onClick={() => handleArchiveOpportunity(opportunity.id)}
+                                                isDisabled={opportunity.status === 'archived'}
                                             >
                                                 Archive Opportunity
                                             </MenuItem>

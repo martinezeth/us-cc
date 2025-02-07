@@ -39,6 +39,7 @@ import { ChevronUpIcon, ChevronDownIcon, AddIcon } from '@chakra-ui/icons';
 import VerifiedBadge from '../Components/VerifiedBadge';
 import CreatePostModal from '../Components/CreatePostModal';
 import '../Styles/styles.css';
+import { handleProfileClick } from '../utils/navigationHelpers';
 
 const Comment = ({ comment, onReply, depth = 0, isMobile }) => {
     const navigate = useNavigate();
@@ -386,10 +387,10 @@ const Post = ({ postData, isMobile = false }) => {
                     fontSize={isMobile ? "xs" : "sm"}
                     color="blue.500"
                     cursor="pointer"
-                    onClick={(e) => {
-                        e.stopPropagation();
-                        navigate(`/profile/${postData.user_username}`);
-                    }}
+                    onClick={(e) => handleProfileClick(e, { 
+                        email: postData.user_username, 
+                        display_name: postData.user_name 
+                    }, navigate)}
                     _hover={{ textDecoration: 'underline' }}
                 >
                     {postData.user_name}
