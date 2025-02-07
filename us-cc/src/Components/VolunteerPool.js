@@ -46,33 +46,89 @@ const VolunteerPool = ({ majorIncidentId, refreshTrigger }) => {
     useEffect(() => {
         const checkUserRole = async () => {
             const { data: { user } } = await supabase.auth.getUser();
+            console.log('checkUserRole - got user:', user);
             setUser(user);
             setIsOrganization(user?.user_metadata?.is_organization || false);
 
             // Only fetch data if we have both majorIncidentId and user
             if (majorIncidentId && user) {
-                await fetchOpportunities();
+                console.log('Calling fetchOpportunities with majorIncidentId:', majorIncidentId);
+                await fetchOpportunities(user);
                 await fetchVolunteers();
+            } else {
+                console.log('Not fetching data because:', { majorIncidentId, user });
             }
         };
         checkUserRole();
-    }, [majorIncidentId]);
+    }, [majorIncidentId, refreshTrigger]);
 
-    const fetchOpportunities = async () => {
-        if (!user) return; // Add guard clause
+    const fetchOpportunities = async (currentUser) => {
+        if (!currentUser) {
+            console.log('No user provided to fetchOpportunities');
+            return;
+        }
         
         try {
-            const { data, error } = await supabase
+            console.log('Fetching opportunities for major incident:', majorIncidentId, 'with user:', currentUser.id);
+            
+            // First get opportunities
+            const { data: opps, error: oppsError } = await supabase
                 .from('volunteer_opportunities')
                 .select('*')
                 .eq('major_incident_id', majorIncidentId)
-                .eq('organization_id', user.id)
                 .eq('status', 'open');
 
-            if (error) throw error;
+            console.log('Raw opportunities query:', {
+                majorIncidentId,
+                status: 'open',
+                result: opps,
+                error: oppsError
+            });
+
+            if (oppsError) {
+                console.error('Error fetching opportunities:', oppsError);
+                throw oppsError;
+            }
+
+            if (!opps?.length) {
+                console.log('No opportunities found');
+                setOpportunities([]);
+                return;
+            }
+
+            // Then get organization names in a separate query
+            console.log('Fetching organizations for IDs:', opps.map(opp => opp.organization_id));
+            const { data: orgs, error: orgsError } = await supabase
+                .from('profiles')
+                .select('id, organization_name')
+                .in('id', opps.map(opp => opp.organization_id));
+
+            console.log('Organizations data:', orgs);
+            if (orgsError) {
+                console.error('Error fetching organizations:', orgsError);
+                throw orgsError;
+            }
+
+            // Combine the data
+            const data = opps.map(opp => {
+                const org = orgs.find(org => org.id === opp.organization_id);
+                console.log(`Matching opp ${opp.id} with org:`, org);
+                return {
+                    ...opp,
+                    organization: org
+                };
+            });
+
+            console.log('Final processed opportunities:', data);
             setOpportunities(data || []);
         } catch (error) {
-            console.error('Error fetching opportunities:', error);
+            console.error('Error in fetchOpportunities:', error);
+            toast({
+                title: "Error fetching opportunities",
+                description: error.message,
+                status: "error",
+                duration: 5000
+            });
         }
     };
 
@@ -182,34 +238,50 @@ const VolunteerPool = ({ majorIncidentId, refreshTrigger }) => {
     };
 
     const handleAssignVolunteer = async (volunteerId, poolEntryId, opportunityId) => {
-        if (!user) return; // Add guard clause
+        if (!user) return;
         
         try {
-            // Check if already assigned
+            // Check if any assignment exists (active or inactive)
             const { data: existingAssignment } = await supabase
                 .from('major_incident_volunteer_assignments')
                 .select('*')
                 .eq('pool_entry_id', poolEntryId)
+                .eq('organization_id', user.id)
                 .single();
 
-            if (existingAssignment) {
+            if (existingAssignment?.status === 'active') {
                 toast({
                     title: "Already assigned",
-                    description: "This volunteer is already assigned to an opportunity",
+                    description: "This volunteer is already assigned to an active opportunity",
                     status: "warning",
                     duration: 3000
                 });
                 return;
             }
 
-            // Create new assignment
-            const { error } = await supabase
-                .from('major_incident_volunteer_assignments')
-                .insert([{
-                    pool_entry_id: poolEntryId,
-                    organization_id: user.id,
-                    volunteer_opportunity_id: opportunityId
-                }]);
+            let error;
+            if (existingAssignment) {
+                // Update existing assignment
+                const { error: updateError } = await supabase
+                    .from('major_incident_volunteer_assignments')
+                    .update({
+                        status: 'active',
+                        assigned_at: new Date().toISOString()
+                    })
+                    .eq('id', existingAssignment.id);
+                error = updateError;
+            } else {
+                // Create new assignment
+                const { error: insertError } = await supabase
+                    .from('major_incident_volunteer_assignments')
+                    .insert({
+                        pool_entry_id: poolEntryId,
+                        organization_id: user.id,
+                        status: 'active',
+                        assigned_at: new Date().toISOString()
+                    });
+                error = insertError;
+            }
 
             if (error) throw error;
 
@@ -235,6 +307,7 @@ const VolunteerPool = ({ majorIncidentId, refreshTrigger }) => {
 
             fetchVolunteers();
         } catch (error) {
+            console.error('Error assigning volunteer:', error);
             toast({
                 title: "Error",
                 description: error.message,
@@ -245,6 +318,12 @@ const VolunteerPool = ({ majorIncidentId, refreshTrigger }) => {
     };
 
     const AssignmentManagement = ({ majorIncidentId, refreshTrigger, user }) => {
+        console.log('AssignmentManagement render with:', {
+            volunteers,
+            opportunities,
+            unassignedVolunteers: volunteers.filter(v => !v.isAssigned)
+        });
+
         const unassignedVolunteers = volunteers.filter(v => !v.isAssigned);
 
         return (
@@ -306,7 +385,7 @@ const VolunteerPool = ({ majorIncidentId, refreshTrigger }) => {
                                                                 opp.id
                                                             )}
                                                         >
-                                                            {opp.title}
+                                                            {opp.title} - {opp.organization?.organization_name}
                                                         </MenuItem>
                                                     ))
                                                 ) : (
