@@ -351,6 +351,61 @@ const OpportunityCard = ({ opportunity, userSkills, isDemoMode, isResponseTab, o
         }
     };
 
+    const handleUnregister = async () => {
+        try {
+            const { data: { user } } = await supabase.auth.getUser();
+            
+            // Get the current response to check its status
+            const { data: currentResponse } = await supabase
+                .from('opportunity_responses')
+                .select('status')
+                .eq('volunteer_id', user.id)
+                .eq('opportunity_id', opportunity.id)
+                .single();
+
+            // Only decrement if the response was 'accepted'
+            const wasAccepted = currentResponse?.status === 'accepted';
+            
+            // Update response status to cancelled
+            const { error: responseError } = await supabase
+                .from('opportunity_responses')
+                .update({ status: 'cancelled' })
+                .eq('volunteer_id', user.id)
+                .eq('opportunity_id', opportunity.id);
+
+            if (responseError) throw responseError;
+
+            // If it was accepted, update the opportunity's registered_volunteers count
+            if (wasAccepted) {
+                const { error: opportunityError } = await supabase
+                    .from('volunteer_opportunities')
+                    .update({ 
+                        registered_volunteers: supabase.raw('GREATEST(COALESCE(registered_volunteers, 0) - 1, 0)')
+                    })
+                    .eq('id', opportunity.id);
+
+                if (opportunityError) throw opportunityError;
+            }
+
+            toast({
+                title: "Successfully unregistered",
+                description: "You have been removed from this opportunity",
+                status: "success",
+                duration: 3000,
+            });
+
+            if (onRefresh) onRefresh();
+        } catch (error) {
+            console.error('Error unregistering:', error);
+            toast({
+                title: "Error",
+                description: error.message,
+                status: "error",
+                duration: 5000,
+            });
+        }
+    };
+
     const matchedSkills = userSkills.filter(skill =>
         opportunity.required_skills.includes(skill)
     );
@@ -406,32 +461,47 @@ const OpportunityCard = ({ opportunity, userSkills, isDemoMode, isResponseTab, o
                 </Flex>
             </Box>
 
-            <Flex justify="space-between" align="center" mt={4}>
-                <Text color="gray.500">
+            <Flex 
+                justify="space-between" 
+                align="center" 
+                mt={4}
+                gap={4}
+            >
+                <Text 
+                    color="gray.500"
+                    flex="1"
+                    noOfLines={2}
+                >
                     {opportunity.major_incident_id ? 
-                        `Part of ${opportunity.major_incident.title} Response` : 
+                        `Part of Major Incident Response` : 
                         `Location: ${opportunity.location}`
                     }
                 </Text>
                 <Button
-                    colorScheme="blue"
+                    colorScheme={isResponseTab ? "red" : "blue"}
                     size="sm"
-                    onClick={handleOpportunityAction}
-                    isDisabled={isResponseTab || opportunity.status !== 'open' || 
-                        (opportunity.responses && opportunity.responses.some(r => r.volunteer_id === user?.id))}
+                    onClick={isResponseTab ? handleUnregister : handleOpportunityAction}
+                    isDisabled={!isResponseTab && (
+                        opportunity.status !== 'open' || 
+                        (opportunity.responses && opportunity.responses.some(r => r.volunteer_id === user?.id)) ||
+                        !hasRequiredSkills
+                    )}
                     whiteSpace="normal"
                     height="auto"
                     minH="32px"
                     py={2}
                     px={4}
+                    flexShrink={0}
                 >
-                    {opportunity.major_incident_id && !isInVolunteerPool ? 
-                        'Join Effort' : 
-                        opportunity.status !== 'open' ? 
-                            'Opportunity Closed' :
-                            opportunity.responses?.some(r => r.volunteer_id === user?.id) ? 
-                                'Already Responded' : 
-                                'Volunteer'}
+                    {isResponseTab ? 
+                        'Unregister' : 
+                        opportunity.major_incident_id && !isInVolunteerPool ? 
+                            'Join Effort' : 
+                            opportunity.status !== 'open' ? 
+                                'Opportunity Closed' :
+                                opportunity.responses?.some(r => r.volunteer_id === user?.id) ? 
+                                    'Already Responded' : 
+                                    'Volunteer'}
                 </Button>
             </Flex>
         </Box>
@@ -480,17 +550,15 @@ export default function VolunteerDashPage() {
                 .from('volunteer_opportunities')
                 .select(`
                     *,
-                    responses:opportunity_responses(
+                    responses:opportunity_responses!inner(
                         id,
                         volunteer_id,
                         status
                     ),
-                    major_incident:major_incidents(
-                        id,
-                        title
-                    )
+                    major_incident:major_incidents(id)
                 `)
                 .eq('status', 'open')
+                .neq('opportunity_responses.status', 'cancelled')  // Only consider non-cancelled responses
                 .order('created_at', { ascending: false });
 
             if (opportunitiesError) throw opportunitiesError;

@@ -41,6 +41,7 @@ import MajorIncidentOpportunities from '../Components/MajorIncidentOpportunities
 import { handleProfileClick } from '../utils/navigationHelpers';
 import { MdCenterFocusWeak } from 'react-icons/md';
 import VolunteerStatusBoard from '../Components/VolunteerStatusBoard';
+import CreateUpdateModal from '../Components/CreateUpdateModal';
 
 const capitalizeFirstLetter = (string) => {
     return string.charAt(0).toUpperCase() + string.slice(1);
@@ -98,6 +99,7 @@ const MajorIncidentDashboard = () => {
     const [isInPool, setIsInPool] = useState(false);
     const [user, setUser] = useState(null);
     const [volunteerPoolRefresh, setVolunteerPoolRefresh] = useState(0);
+    const [isUpdateModalOpen, setIsUpdateModalOpen] = useState(false);
 
     useEffect(() => {
         if (id) {
@@ -328,6 +330,42 @@ const MajorIncidentDashboard = () => {
         setVolunteerPoolRefresh(prev => prev + 1);
     };
 
+    const handleCreateUpdate = async (updateData) => {
+        try {
+            const { data: { user } } = await supabase.auth.getUser();
+            
+            const { error } = await supabase
+                .from('major_incident_updates')
+                .insert([{
+                    major_incident_id: id,
+                    organization_id: user.id,
+                    content: updateData.content,
+                    priority_level: updateData.priority_level,
+                    update_type: updateData.update_type
+                }]);
+
+            if (error) throw error;
+
+            toast({
+                title: "Update Posted",
+                description: "Your update has been successfully posted",
+                status: "success",
+                duration: 3000,
+            });
+
+            // Refresh the updates list
+            fetchIncidentData();
+            setIsUpdateModalOpen(false);
+        } catch (error) {
+            toast({
+                title: "Error",
+                description: error.message,
+                status: "error",
+                duration: 5000,
+            });
+        }
+    };
+
     const renderActionButton = () => {
         if (!user) {
             return (
@@ -438,9 +476,10 @@ const MajorIncidentDashboard = () => {
                             {renderActionButton()}
                             {isOrganization && isParticipating && (
                                 <Button
-                                    colorScheme="blue"
                                     leftIcon={<AddIcon />}
-                                    onClick={() => {/* Handle post update */ }}
+                                    colorScheme="blue"
+                                    size="sm"
+                                    onClick={() => setIsUpdateModalOpen(true)}
                                 >
                                     Post Update
                                 </Button>
@@ -468,18 +507,18 @@ const MajorIncidentDashboard = () => {
                     <Grid
                         templateColumns={{
                             base: "1fr",
-                            lg: "1fr 400px"
+                            lg: "1fr 400px"  // Back to original fixed layout
                         }}
                         gap={6}
                         p={4}
                     >
                         {/* Main Content */}
-                        <Box>
+                        <Box>  {/* Remove maxW and mx */}
                             <Tabs>
                                 <TabList>
                                     <Tab>Overview</Tab>
                                     <Tab>Organizations</Tab>
-                                    <Tab>Updates</Tab>
+                                    {isOrganization && <Tab>Updates</Tab>}
                                     <Tab>Opportunities</Tab>
                                     {isParticipating && <Tab>Volunteer Pool</Tab>}
                                 </TabList>
@@ -563,26 +602,112 @@ const MajorIncidentDashboard = () => {
                                         </VStack>
                                     </TabPanel>
 
-                                    {/* Updates Tab */}
+                                    {/* Only show Updates TabPanel for organizations */}
+                                    {isOrganization && (
+                                        <TabPanel>
+                                            <VStack spacing={4} align="stretch">
+                                                {updates.map((update, index) => (
+                                                    <Box
+                                                        key={update.id}
+                                                        p={4}
+                                                        bg={update.priority_level === 'emergency' ? 'red.50' : 
+                                                           update.priority_level === 'urgent' ? 'orange.50' : 'gray.50'}
+                                                        borderRadius="md"
+                                                        borderLeft="4px solid"
+                                                        borderLeftColor={update.priority_level === 'emergency' ? 'red.500' : 
+                                                                      update.priority_level === 'urgent' ? 'orange.500' : 'gray.500'}
+                                                    >
+                                                        <HStack justify="space-between" mb={2}>
+                                                            <Badge
+                                                                colorScheme={update.priority_level === 'emergency' ? 'red' : 
+                                                                           update.priority_level === 'urgent' ? 'orange' : 'gray'}
+                                                            >
+                                                                {capitalizeFirstLetter(update.priority_level)}
+                                                            </Badge>
+                                                            <Text fontSize="sm" color="gray.500">
+                                                                {new Date(update.created_at).toLocaleString()}
+                                                            </Text>
+                                                        </HStack>
+                                                        <Text>{update.content}</Text>
+                                                        <HStack justify="space-between" mt={4}>
+                                                            <HStack spacing={1}>
+                                                                <Text fontSize="sm" color="gray.500">
+                                                                    Posted by
+                                                                </Text>
+                                                                <Text
+                                                                    fontSize="sm"
+                                                                    color="gray.500"
+                                                                    cursor="pointer"
+                                                                    _hover={{ color: "blue.500", textDecoration: "underline" }}
+                                                                    onClick={(e) => handleProfileClick(e, update.organization, navigate)}
+                                                                >
+                                                                    {update.organization?.organization_name}
+                                                                </Text>
+                                                            </HStack>
+                                                        </HStack>
+                                                    </Box>
+                                                ))}
+                                            </VStack>
+                                        </TabPanel>
+                                    )}
+
                                     <TabPanel>
+                                        <MajorIncidentOpportunities
+                                            majorIncidentId={id}
+                                            majorIncidentData={activeIncident}
+                                            onOpportunityStatusChange={handleOpportunityStatusChange}
+                                        />
+                                    </TabPanel>
+
+                                    {isParticipating && (
+                                        <TabPanel>
+                                            <VolunteerPool
+                                                majorIncidentId={id}
+                                                refreshTrigger={volunteerPoolRefresh}
+                                            />
+                                        </TabPanel>
+                                    )}
+                                </TabPanels>
+                            </Tabs>
+                        </Box>
+
+                        {/* Modify the right panel section */}
+                        {(isParticipating || !isOrganization) && (
+                            <Box width="400px">
+                                <Box
+                                    bg="white"
+                                    p={6}
+                                    borderRadius="lg"
+                                    shadow="sm"
+                                    height="100%"
+                                    maxH="calc(100vh - 200px)"
+                                    overflowY="auto"
+                                    width="100%"
+                                >
+                                    {isParticipating ? (
+                                        <OrganizationChannel
+                                            majorIncidentId={id}
+                                        />
+                                    ) : !isOrganization && (
                                         <VStack spacing={4} align="stretch">
-                                            {updates.map(update => (
+                                            <Heading size="md">Updates</Heading>
+                                            {updates.map((update, index) => (
                                                 <Box
                                                     key={update.id}
-                                                    p={6}
-                                                    bg="white"
-                                                    borderRadius="lg"
-                                                    shadow="sm"
+                                                    p={4}
+                                                    bg={update.priority_level === 'emergency' ? 'red.50' : 
+                                                       update.priority_level === 'urgent' ? 'orange.50' : 'gray.50'}
+                                                    borderRadius="md"
+                                                    borderLeft="4px solid"
+                                                    borderLeftColor={update.priority_level === 'emergency' ? 'red.500' : 
+                                                                  update.priority_level === 'urgent' ? 'orange.500' : 'gray.500'}
                                                 >
                                                     <HStack justify="space-between" mb={2}>
                                                         <Badge
-                                                            colorScheme={
-                                                                update.priority_level === 'emergency' ? 'red' :
-                                                                    update.priority_level === 'urgent' ? 'orange' :
-                                                                        'blue'
-                                                            }
+                                                            colorScheme={update.priority_level === 'emergency' ? 'red' : 
+                                                                       update.priority_level === 'urgent' ? 'orange' : 'gray'}
                                                         >
-                                                            {update.priority_level}
+                                                            {capitalizeFirstLetter(update.priority_level)}
                                                         </Badge>
                                                         <Text fontSize="sm" color="gray.500">
                                                             {new Date(update.created_at).toLocaleString()}
@@ -608,44 +733,7 @@ const MajorIncidentDashboard = () => {
                                                 </Box>
                                             ))}
                                         </VStack>
-                                    </TabPanel>
-
-                                    <TabPanel>
-                                        <MajorIncidentOpportunities
-                                            majorIncidentId={id}
-                                            majorIncidentData={activeIncident}
-                                            onOpportunityStatusChange={handleOpportunityStatusChange}
-                                        />
-                                    </TabPanel>
-
-                                    {isParticipating && (
-                                        <TabPanel>
-                                            <VolunteerPool
-                                                majorIncidentId={id}
-                                                refreshTrigger={volunteerPoolRefresh}
-                                            />
-                                        </TabPanel>
                                     )}
-                                </TabPanels>
-                            </Tabs>
-                        </Box>
-
-                        {/* Channels */}
-                        {isParticipating && (
-                            <Box width="400px">  {/* Increased fixed width */}
-                                <Box
-                                    bg="white"
-                                    p={6}  // Increased padding
-                                    borderRadius="lg"
-                                    shadow="sm"
-                                    height="100%"
-                                    maxH="calc(100vh - 200px)"
-                                    overflowY="auto"
-                                    width="100%"
-                                >
-                                    <OrganizationChannel
-                                        majorIncidentId={id}
-                                    />
                                 </Box>
                             </Box>
                         )}
@@ -665,6 +753,11 @@ const MajorIncidentDashboard = () => {
                     )}
                 </VStack>
             </Container>
+            <CreateUpdateModal
+                isOpen={isUpdateModalOpen}
+                onClose={() => setIsUpdateModalOpen(false)}
+                onSubmit={handleCreateUpdate}
+            />
         </Box>
     );
 };

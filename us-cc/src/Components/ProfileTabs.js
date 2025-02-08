@@ -243,7 +243,18 @@ const ProfileTabs = ({ profileData, volunteerData, isOwnProfile }) => {
 
     const handleUnregister = async (opportunityId) => {
         try {
-            // Start a transaction to ensure both updates happen or neither does
+            // Get the current response to check its status
+            const { data: currentResponse } = await supabase
+                .from('opportunity_responses')
+                .select('status')
+                .eq('volunteer_id', profileData.id)
+                .eq('opportunity_id', opportunityId)
+                .single();
+
+            // Only decrement if the response was 'accepted'
+            const wasAccepted = currentResponse?.status === 'accepted';
+            
+            // Update response status to cancelled
             const { error: responseError } = await supabase
                 .from('opportunity_responses')
                 .update({ status: 'cancelled' })
@@ -252,12 +263,17 @@ const ProfileTabs = ({ profileData, volunteerData, isOwnProfile }) => {
 
             if (responseError) throw responseError;
 
-            // Update the volunteer_opportunities table to decrement registered_volunteers
-            const { error: opportunityError } = await supabase.rpc('decrement_registered_volunteers', {
-                opp_id: opportunityId
-            });
+            // If it was accepted, update the opportunity's registered_volunteers count
+            if (wasAccepted) {
+                const { error: opportunityError } = await supabase
+                    .from('volunteer_opportunities')
+                    .update({ 
+                        registered_volunteers: supabase.raw('GREATEST(COALESCE(registered_volunteers, 0) - 1, 0)')
+                    })
+                    .eq('id', opportunityId);
 
-            if (opportunityError) throw opportunityError;
+                if (opportunityError) throw opportunityError;
+            }
 
             // Refresh the activity data
             fetchActivityData();
@@ -272,9 +288,9 @@ const ProfileTabs = ({ profileData, volunteerData, isOwnProfile }) => {
             console.error('Error unregistering:', error);
             toast({
                 title: "Error",
-                description: "Failed to unregister from opportunity",
+                description: error.message,
                 status: "error",
-                duration: 5000,
+                duration: 5000
             });
         }
     };

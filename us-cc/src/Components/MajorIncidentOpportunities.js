@@ -463,13 +463,15 @@ const MajorIncidentOpportunities = ({ majorIncidentId, majorIncidentData, onOppo
             <VStack spacing={6} align="stretch">
                 <HStack justify="space-between">
                     <Text fontSize="2xl" fontWeight="bold">Volunteer Opportunities</Text>
-                    <Button
-                        leftIcon={<AddIcon />}
-                        colorScheme="blue"
-                        onClick={onOpen}
-                    >
-                        Create Opportunity
-                    </Button>
+                    {isOrganization && (
+                        <Button
+                            leftIcon={<AddIcon />}
+                            colorScheme="blue"
+                            onClick={onOpen}
+                        >
+                            Create Opportunity
+                        </Button>
+                    )}
                 </HStack>
 
                 <StatGroup>
@@ -484,10 +486,6 @@ const MajorIncidentOpportunities = ({ majorIncidentId, majorIncidentData, onOppo
                     <Stat>
                         <StatLabel>Total Responses</StatLabel>
                         <StatNumber>{stats.totalResponses}</StatNumber>
-                    </Stat>
-                    <Stat>
-                        <StatLabel>Avg. Responses per Opportunity</StatLabel>
-                        <StatNumber>{stats.responseRate}</StatNumber>
                     </Stat>
                 </StatGroup>
 
