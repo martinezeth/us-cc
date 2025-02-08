@@ -43,6 +43,7 @@ import { STANDARD_SKILLS, AVAILABILITY_OPTIONS } from '../constants/incidentType
 import VolunteerMessages from '../Components/VolunteerMessages';
 import LocationSearch from '../Components/LocationSearch';
 import VolunteerMajorIncidents from '../Components/VolunteerMajorIncidents';    
+import { useNavigate } from 'react-router-dom';
 
 const VolunteerRegistrationModal = ({ isOpen, onClose, onRegister }) => {
     const [formData, setFormData] = useState({
@@ -276,30 +277,77 @@ const VolunteerRegistrationModal = ({ isOpen, onClose, onRegister }) => {
     );
 };
 
-const OpportunityCard = ({ opportunity, userSkills, isDemoMode, isResponseTab = false, onRefresh }) => {
-    const [isResponding, setIsResponding] = useState(false);
-    const [hasResponded, setHasResponded] = useState(false);
+const OpportunityCard = ({ opportunity, userSkills, isDemoMode, isResponseTab, onRefresh }) => {
     const toast = useToast();
+    const navigate = useNavigate();
+    const [isInVolunteerPool, setIsInVolunteerPool] = useState(false);
+    const [user, setUser] = useState(null);
 
     useEffect(() => {
-        checkIfResponded();
-    }, [opportunity.id]);
+        const getUser = async () => {
+            const { data: { user } } = await supabase.auth.getUser();
+            setUser(user);
+        };
+        getUser();
+    }, []);
 
-    const checkIfResponded = async () => {
+    useEffect(() => {
+        const checkVolunteerPoolStatus = async () => {
+            if (!opportunity.major_incident_id || !user) return;
+
+            const { data } = await supabase
+                .from('major_incident_volunteer_pool')
+                .select('id')
+                .eq('major_incident_id', opportunity.major_incident_id)
+                .eq('volunteer_id', user.id)
+                .single();
+
+            setIsInVolunteerPool(!!data);
+        };
+
+        checkVolunteerPoolStatus();
+    }, [opportunity.major_incident_id, user]);
+
+    const handleOpportunityAction = async () => {
+        if (opportunity.major_incident_id && !isInVolunteerPool) {
+            navigate(`/major-incidents/${opportunity.major_incident_id}`);
+            toast({
+                title: "Join the Volunteer Pool",
+                description: "You need to join the volunteer pool for this major incident first",
+                status: "info",
+                duration: 5000,
+            });
+            return;
+        }
+
         try {
             const { data: { user } } = await supabase.auth.getUser();
-            // Change from .single() to regular select
-            const { data, error } = await supabase
+            
+            const { error } = await supabase
                 .from('opportunity_responses')
-                .select('*')
-                .eq('opportunity_id', opportunity.id)
-                .eq('volunteer_id', user.id);
+                .insert([{
+                    opportunity_id: opportunity.id,
+                    volunteer_id: user.id,
+                    status: 'pending'
+                }]);
 
             if (error) throw error;
-            // Check if we got any responses
-            setHasResponded(data && data.length > 0);
+
+            toast({
+                title: "Response Submitted",
+                description: "Your interest has been registered for this opportunity",
+                status: "success",
+                duration: 3000,
+            });
+
+            if (onRefresh) onRefresh();
         } catch (error) {
-            console.error('Error checking response status:', error);
+            toast({
+                title: "Error",
+                description: error.message,
+                status: "error",
+                duration: 5000,
+            });
         }
     };
 
@@ -307,48 +355,6 @@ const OpportunityCard = ({ opportunity, userSkills, isDemoMode, isResponseTab = 
         opportunity.required_skills.includes(skill)
     );
     const hasRequiredSkills = matchedSkills.length > 0;
-
-    const handleVolunteerClick = async () => {
-        if (hasResponded) return;
-
-        setIsResponding(true);
-        try {
-            const { data: { user } } = await supabase.auth.getUser();
-            const { error } = await supabase
-                .from('opportunity_responses')
-                .insert([{
-                    opportunity_id: opportunity.id,
-                    volunteer_id: user.id,
-                    status: 'accepted'
-                }]);
-
-            if (error) throw error;
-
-            setHasResponded(true);
-            toast({
-                title: isDemoMode ? "Demo: Response Sent!" : "Response Sent!",
-                description: isDemoMode ?
-                    "In demo mode, all responses are automatically accepted." :
-                    "The organization will review your application.",
-                status: "success",
-                duration: 5000
-            });
-
-            if (onRefresh) {
-                onRefresh();
-            }
-
-        } catch (error) {
-            toast({
-                title: "Error",
-                description: error.message,
-                status: "error",
-                duration: 5000
-            });
-        } finally {
-            setIsResponding(false);
-        }
-    };
 
     return (
         <Box
@@ -362,14 +368,14 @@ const OpportunityCard = ({ opportunity, userSkills, isDemoMode, isResponseTab = 
             transition="transform 0.2s"
             _hover={{ transform: 'translateY(-2px)', boxShadow: 'md' }}
         >
-            {(isResponseTab || hasResponded) && (
+            {(isResponseTab || opportunity.status !== 'open') && (
                 <Badge
                     position="absolute"
                     top={2}
                     right={2}
-                    colorScheme="green"
+                    colorScheme={opportunity.status === 'open' ? "green" : "red"}
                 >
-                    Responded
+                    {opportunity.status === 'open' ? 'Open' : 'Closed'}
                 </Badge>
             )}
 
@@ -402,22 +408,31 @@ const OpportunityCard = ({ opportunity, userSkills, isDemoMode, isResponseTab = 
 
             <Flex justify="space-between" align="center" mt={4}>
                 <Text color="gray.500">
-                    Location: {opportunity.location}
+                    {opportunity.major_incident_id ? 
+                        `Part of ${opportunity.major_incident.title} Response` : 
+                        `Location: ${opportunity.location}`
+                    }
                 </Text>
-                {!isResponseTab && (
-                    <Button
-                        colorScheme="blue"
-                        isLoading={isResponding}
-                        onClick={handleVolunteerClick}
-                        isDisabled={!hasRequiredSkills || hasResponded}
-                        minW="140px"
-                        whiteSpace="normal"
-                        h="auto"
-                        py={2}
-                    >
-                        {hasResponded ? 'Responded' : 'Volunteer'}
-                    </Button>
-                )}
+                <Button
+                    colorScheme="blue"
+                    size="sm"
+                    onClick={handleOpportunityAction}
+                    isDisabled={isResponseTab || opportunity.status !== 'open' || 
+                        (opportunity.responses && opportunity.responses.some(r => r.volunteer_id === user?.id))}
+                    whiteSpace="normal"
+                    height="auto"
+                    minH="32px"
+                    py={2}
+                    px={4}
+                >
+                    {opportunity.major_incident_id && !isInVolunteerPool ? 
+                        'Join Effort' : 
+                        opportunity.status !== 'open' ? 
+                            'Opportunity Closed' :
+                            opportunity.responses?.some(r => r.volunteer_id === user?.id) ? 
+                                'Already Responded' : 
+                                'Volunteer'}
+                </Button>
             </Flex>
         </Box>
     );
@@ -432,6 +447,7 @@ export default function VolunteerDashPage() {
     const toast = useToast();
     const { isOpen, onOpen, onClose } = useDisclosure();
     const [totalUnreadMessages, setTotalUnreadMessages] = useState(0);
+    const navigate = useNavigate();
 
     useEffect(() => {
         checkUserStatus();
@@ -462,7 +478,18 @@ export default function VolunteerDashPage() {
             // First get the opportunities
             const { data: opportunities, error: opportunitiesError } = await supabase
                 .from('volunteer_opportunities')
-                .select('*')
+                .select(`
+                    *,
+                    responses:opportunity_responses(
+                        id,
+                        volunteer_id,
+                        status
+                    ),
+                    major_incident:major_incidents(
+                        id,
+                        title
+                    )
+                `)
                 .eq('status', 'open')
                 .order('created_at', { ascending: false });
 
@@ -510,11 +537,16 @@ export default function VolunteerDashPage() {
                         status,
                         organization_id,
                         radius_miles,
-                        required_skills
+                        required_skills,
+                        major_incident_id,
+                        major_incident:major_incidents (
+                            id,
+                            title
+                        )
                     )
                 `)
                 .eq('volunteer_id', user.id)
-                .eq('status', 'accepted');
+                .in('status', ['pending', 'accepted']);  // Include both pending and accepted responses
 
             if (responsesError) throw responsesError;
 
@@ -667,6 +699,7 @@ export default function VolunteerDashPage() {
                                             opportunity={opportunity}
                                             userSkills={userSkills}
                                             isDemoMode={isDemoMode}
+                                            isResponseTab={false}
                                             onRefresh={refreshData}
                                         />
                                     ))}

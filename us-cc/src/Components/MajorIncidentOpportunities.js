@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
     Box,
     VStack,
@@ -21,8 +21,14 @@ import {
     IconButton,
     Wrap,
     useDisclosure,
+    AlertDialog,
+    AlertDialogBody,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogContent,
+    AlertDialogOverlay,
 } from '@chakra-ui/react';
-import { AddIcon, ChevronDownIcon } from '@chakra-ui/icons';
+import { AddIcon, ChevronDownIcon, DeleteIcon } from '@chakra-ui/icons';
 import { supabase } from '../supabaseClient';
 import CreateVolunteerOpportunityModal from './CreateVolunteerOpportunityModal';
 import VolunteerResponsesDrawer from './VolunteerResponsesDrawer';
@@ -40,17 +46,27 @@ const MajorIncidentOpportunities = ({ majorIncidentId, majorIncidentData, onOppo
     const toast = useToast();
     const [selectedOpportunity, setSelectedOpportunity] = useState(null);
     const [isResponsesDrawerOpen, setIsResponsesDrawerOpen] = useState(false);
+    const [isOrganization, setIsOrganization] = useState(false);
+    const [user, setUser] = useState(null);
+    const [isDeleteAlertOpen, setIsDeleteAlertOpen] = useState(false);
+    const [opportunityToDelete, setOpportunityToDelete] = useState(null);
+    const cancelRef = useRef();
 
     useEffect(() => {
+        const checkUserType = async () => {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (user) {
+                setIsOrganization(user.user_metadata?.is_organization || false);
+                setUser(user);
+            }
+        };
+        checkUserType();
         fetchOpportunities();
     }, [majorIncidentId]);
 
     const fetchOpportunities = async () => {
         try {
             setLoading(true);
-            const { data: { user } } = await supabase.auth.getUser();
-
-            // First fetch opportunities with response counts and actual responses
             const { data: opportunitiesData, error: opportunitiesError } = await supabase
                 .from('volunteer_opportunities')
                 .select(`
@@ -334,6 +350,114 @@ const MajorIncidentOpportunities = ({ majorIncidentId, majorIncidentData, onOppo
         }
     };
 
+    const handleVolunteerResponse = async (opportunity) => {
+        try {
+            const { data: { user } } = await supabase.auth.getUser();
+            
+            const { data: existingResponse, error: checkError } = await supabase
+                .from('opportunity_responses')
+                .select('*')
+                .eq('opportunity_id', opportunity.id)
+                .eq('volunteer_id', user.id)
+                .single();
+
+            if (checkError && checkError.code !== 'PGRST116') {
+                throw checkError;
+            }
+
+            if (existingResponse) {
+                toast({
+                    title: "Already Responded",
+                    description: "You have already responded to this opportunity",
+                    status: "info",
+                    duration: 3000
+                });
+                return;
+            }
+
+            const { error: responseError } = await supabase
+                .from('opportunity_responses')
+                .insert([{
+                    opportunity_id: opportunity.id,
+                    volunteer_id: user.id,
+                    status: 'pending'
+                }]);
+
+            if (responseError) throw responseError;
+
+            toast({
+                title: "Response Submitted",
+                description: "Your interest has been registered for this opportunity",
+                status: "success",
+                duration: 3000
+            });
+
+            fetchOpportunities();
+        } catch (error) {
+            console.error('Error responding to opportunity:', error);
+            toast({
+                title: "Error",
+                description: error.message,
+                status: "error",
+                duration: 5000
+            });
+        }
+    };
+
+    // First add a function to check if user has already responded
+    const hasUserResponded = (opportunity, userId) => {
+        return opportunity.responses?.some(response => 
+            response.volunteer_id === userId
+        );
+    };
+
+    const handleDelete = async () => {
+        if (!opportunityToDelete) return;
+
+        try {
+            // Use a single transaction to handle all the deletions
+            const { error } = await supabase.rpc('delete_opportunity_with_related', {
+                opportunity_id: opportunityToDelete.id
+            });
+
+            if (error) throw error;
+
+            // Remove from local state immediately
+            setOpportunities(prevOpportunities => 
+                prevOpportunities.filter(opp => opp.id !== opportunityToDelete.id)
+            );
+
+            toast({
+                title: "Opportunity deleted",
+                status: "success",
+                duration: 3000,
+            });
+
+            // Update stats
+            setStats(prev => ({
+                ...prev,
+                totalOpportunities: prev.totalOpportunities - 1,
+                activeOpportunities: opportunityToDelete.status === 'open' ? 
+                    prev.activeOpportunities - 1 : 
+                    prev.activeOpportunities
+            }));
+
+            // Refresh the opportunities list
+            fetchOpportunities();
+        } catch (error) {
+            console.error('Error deleting opportunity:', error);
+            toast({
+                title: "Error deleting opportunity",
+                description: error.message,
+                status: "error",
+                duration: 5000,
+            });
+        } finally {
+            setIsDeleteAlertOpen(false);
+            setOpportunityToDelete(null);
+        }
+    };
+
     return (
         <Box>
             <VStack spacing={6} align="stretch">
@@ -386,25 +510,37 @@ const MajorIncidentOpportunities = ({ majorIncidentId, majorIncidentData, onOppo
                                     >
                                         {opportunity.status.toUpperCase()}
                                     </Badge>
-                                    <Menu>
-                                        <MenuButton
-                                            as={IconButton}
-                                            icon={<ChevronDownIcon />}
-                                            variant="ghost"
-                                            size="sm"
-                                        />
-                                        <MenuList>
-                                            <MenuItem
-                                                onClick={() => handleArchiveOpportunity(opportunity.id)}
-                                                isDisabled={opportunity.status === 'archived'}
-                                            >
-                                                Archive Opportunity
-                                            </MenuItem>
-                                            <MenuItem onClick={() => handleViewResponses(opportunity)}>
-                                                View Responses
-                                            </MenuItem>
-                                        </MenuList>
-                                    </Menu>
+                                    {isOrganization && (
+                                        <Menu>
+                                            <MenuButton
+                                                as={IconButton}
+                                                icon={<ChevronDownIcon />}
+                                                variant="ghost"
+                                                size="sm"
+                                            />
+                                            <MenuList>
+                                                <MenuItem
+                                                    onClick={() => handleArchiveOpportunity(opportunity.id)}
+                                                    isDisabled={opportunity.status === 'archived'}
+                                                >
+                                                    Archive Opportunity
+                                                </MenuItem>
+                                                <MenuItem onClick={() => handleViewResponses(opportunity)}>
+                                                    View Responses
+                                                </MenuItem>
+                                                <MenuItem
+                                                    onClick={() => {
+                                                        setOpportunityToDelete(opportunity);
+                                                        setIsDeleteAlertOpen(true);
+                                                    }}
+                                                    icon={<DeleteIcon />}
+                                                    color="red.500"
+                                                >
+                                                    Delete Opportunity
+                                                </MenuItem>
+                                            </MenuList>
+                                        </Menu>
+                                    )}
                                 </HStack>
 
                                 <VStack align="start" spacing={2}>
@@ -432,13 +568,23 @@ const MajorIncidentOpportunities = ({ majorIncidentId, majorIncidentData, onOppo
                                     </Wrap>
                                 </Box>
 
-                                <HStack justify="space-between">
-                                    <Text fontSize="sm" color="gray.500">
-                                        📍 {opportunity.location}
-                                    </Text>
-                                    <Badge colorScheme="purple">
-                                        {opportunity.response_count?.[0]?.count || 0} responses
-                                    </Badge>
+                                <HStack justify="space-between" align="center">
+                                    {isOrganization ? (
+                                        <Badge colorScheme="purple">
+                                            {opportunity.response_count?.[0]?.count || 0} responses
+                                        </Badge>
+                                    ) : (
+                                        <Button
+                                            colorScheme="blue"
+                                            size="sm"
+                                            onClick={() => handleVolunteerResponse(opportunity)}
+                                            isDisabled={opportunity.status !== 'open' || hasUserResponded(opportunity, user?.id)}
+                                        >
+                                            {opportunity.status !== 'open' ? 'Opportunity Closed' :
+                                                hasUserResponded(opportunity, user?.id) ? 'Already Responded' :
+                                                'Respond to Opportunity'}
+                                        </Button>
+                                    )}
                                 </HStack>
 
                                 <Text fontSize="sm" color="gray.500">
@@ -477,6 +623,37 @@ const MajorIncidentOpportunities = ({ majorIncidentId, majorIncidentData, onOppo
                     }}
                     opportunity={selectedOpportunity}
                 />
+
+                <AlertDialog
+                    isOpen={isDeleteAlertOpen}
+                    leastDestructiveRef={cancelRef}
+                    onClose={() => {
+                        setIsDeleteAlertOpen(false);
+                        setOpportunityToDelete(null);
+                    }}
+                >
+                    <AlertDialogOverlay>
+                        <AlertDialogContent>
+                            <AlertDialogHeader fontSize="lg" fontWeight="bold">
+                                Delete Opportunity
+                            </AlertDialogHeader>
+
+                            <AlertDialogBody>
+                                Are you sure you want to delete this opportunity? This action cannot be undone.
+                                All volunteer responses will also be deleted.
+                            </AlertDialogBody>
+
+                            <AlertDialogFooter>
+                                <Button ref={cancelRef} onClick={() => setIsDeleteAlertOpen(false)}>
+                                    Cancel
+                                </Button>
+                                <Button colorScheme="red" onClick={handleDelete} ml={3}>
+                                    Delete
+                                </Button>
+                            </AlertDialogFooter>
+                        </AlertDialogContent>
+                    </AlertDialogOverlay>
+                </AlertDialog>
             </VStack>
         </Box>
     );
