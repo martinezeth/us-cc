@@ -2,11 +2,13 @@ import React, { useState, useEffect, useRef } from 'react';
 import {
     VStack, Box, Text, Accordion, AccordionItem, AccordionButton,
     AccordionPanel, AccordionIcon, Avatar, Flex, Tag, useToast,
-    Badge, Button, Input, IconButton, Divider, HStack
+    Badge, Button, Input, IconButton, Divider, HStack, Link
 } from '@chakra-ui/react';
 import { ChatIcon, CheckIcon, ArrowForwardIcon } from '@chakra-ui/icons';
 import { supabase } from '../supabaseClient';
 import { useRealtimeMessages } from '../hooks/useRealtimeMessages';
+import { getProfileUsername } from '../Components/ProfileHelpers';
+import { Link as RouterLink } from 'react-router-dom';
 
 const MessageBubble = ({ message, isOwn, sender }) => {
     const bubbleStyle = isOwn ? {
@@ -20,7 +22,6 @@ const MessageBubble = ({ message, isOwn, sender }) => {
     };
 
     return (
-
         <Box
             maxW="70%"
             p={3}
@@ -246,27 +247,17 @@ const VolunteerMessages = ({ onUnreadCountChange }) => {
 
         const processMessages = async () => {
             try {
-                const orgIds = [...new Set(messages.map(m => m.organization_id))];
-                const { data: orgs } = await supabase
-                    .from('profiles')
-                    .select('id, organization_name')
-                    .in('id', orgIds);
-
-                const orgNameMap = Object.fromEntries(
-                    orgs?.map(org => [org.id, org.organization_name]) || []
-                );
-
                 const grouped = messages.reduce((acc, message) => {
                     const oppId = message.opportunity_id;
-
+                    
                     if (!acc[oppId]) {
                         acc[oppId] = {
                             opportunity: {
                                 id: message.opportunity_id,
-                                title: message.opportunity_title,
-                                organization_id: message.opportunity_organization_id,
-                                status: message.opportunity_status,
-                                organization_name: orgNameMap[message.opportunity_organization_id] || 'Unknown Organization'
+                                title: message.opportunity?.title,
+                                organization_id: message.opportunity?.organization_id,
+                                status: message.opportunity?.status,
+                                organization_name: message.organization?.organization_name || 'Unknown Organization'
                             },
                             messages: []
                         };
@@ -274,7 +265,7 @@ const VolunteerMessages = ({ onUnreadCountChange }) => {
 
                     acc[oppId].messages.push({
                         ...message,
-                        organization_name: orgNameMap[message.organization_id]
+                        organization_name: message.organization?.organization_name
                     });
 
                     return acc;
@@ -417,9 +408,15 @@ const VolunteerMessages = ({ onUnreadCountChange }) => {
                     />
                     <Box flex={1}>
                         <Text fontWeight="bold">{selectedOpportunity.title}</Text>
-                        <Text fontSize="sm" color="gray.600">
+                        <Link
+                            as={RouterLink}
+                            to={`/profile/${getProfileUsername({ organization_name: selectedOpportunity.organization_name })}`}
+                            fontSize="sm"
+                            color="blue.600"
+                            _hover={{ textDecoration: 'underline' }}
+                        >
                             {selectedOpportunity.organization_name}
-                        </Text>
+                        </Link>
                     </Box>
                 </Flex>
                 <Box flex={1} h="0">
@@ -493,9 +490,15 @@ const VolunteerMessages = ({ onUnreadCountChange }) => {
                                                 </Badge>
                                             )}
                                         </Flex>
-                                        <Text fontSize="sm" color="gray.600">
+                                        <Link
+                                            as={RouterLink}
+                                            to={`/profile/${getProfileUsername({ organization_name: data.opportunity.organization_name })}`}
+                                            fontSize="sm"
+                                            color="blue.600"
+                                            _hover={{ textDecoration: 'underline' }}
+                                        >
                                             {data.opportunity.organization_name}
-                                        </Text>
+                                        </Link>
                                     </Box>
                                 </Flex>
                                 <Text
