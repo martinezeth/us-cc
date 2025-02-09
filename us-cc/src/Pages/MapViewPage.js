@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { MapContainer, TileLayer, Marker, Popup, useMapEvents, useMap } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Popup, useMapEvents, useMap, Circle } from 'react-leaflet';
 import L from 'leaflet';
 import { Box, ChakraProvider, VStack, Text, Button, Select, HStack, Badge } from '@chakra-ui/react';
 import { supabase } from '../supabaseClient';
@@ -44,9 +44,11 @@ const mapIcons = {
   lightning: new baseIcon({ iconUrl: lightningIconUrl }),
 };
 
+const MILES_TO_METERS = 1609.34;
+
 const ListView = ({ incidents }) => {
   const navigate = useNavigate();
-  
+
   return (
     <VStack spacing={4} align="stretch">
       {incidents.map(incident => (
@@ -61,9 +63,9 @@ const ListView = ({ incidents }) => {
         >
           <HStack spacing={3} align="flex-start">
             <Box>
-              <img 
-                src={mapIcons[incident.incident_type]?.options?.iconUrl || earthquakeIconUrl} 
-                alt={incident.incident_type} 
+              <img
+                src={mapIcons[incident.incident_type]?.options?.iconUrl || earthquakeIconUrl}
+                alt={incident.incident_type}
                 style={{ width: '30px', height: '30px' }}
               />
             </Box>
@@ -171,7 +173,7 @@ function MapEvents({ setIncidents, radius }) {
       };
 
       try {
-        // First, fetch incidents
+        // Fetch regular incidents
         const { data: incidentsData, error } = await supabase
           .from('incidents')
           .select('*')
@@ -182,8 +184,25 @@ function MapEvents({ setIncidents, radius }) {
 
         if (error) throw error;
 
-        // Get unique user IDs from incidents
-        const userIds = [...new Set(incidentsData.map(incident => incident.created_by))];
+        // Fetch major incidents
+        const { data: majorIncidentsData, error: majorError } = await supabase
+          .from('major_incidents')
+          .select('*')
+          .gte('location_lat', swLat)
+          .lte('location_lat', neLat)
+          .gte('location_lng', swLng)
+          .lte('location_lng', neLng)
+          .eq('status', 'active');
+
+        if (majorError) throw majorError;
+
+        // Get unique user IDs from both types of incidents
+        const userIds = [
+          ...new Set([
+            ...incidentsData.map(incident => incident.created_by),
+            ...majorIncidentsData.map(incident => incident.created_by)
+          ])
+        ];
 
         // Fetch profiles for these users
         const { data: profiles } = await supabase
@@ -202,13 +221,24 @@ function MapEvents({ setIncidents, radius }) {
           };
         });
 
-        // Combine incident data with user profiles
+        // Combine regular incidents with user profiles
         const enrichedIncidents = incidentsData.map(incident => ({
           ...incident,
-          created_by_user: userProfiles[incident.created_by] || null
+          created_by_user: userProfiles[incident.created_by] || null,
+          isMajorIncident: false
         }));
 
-        setIncidents(enrichedIncidents);
+        // Add major incidents with user profiles
+        const enrichedMajorIncidents = majorIncidentsData.map(incident => ({
+          ...incident,
+          created_by_user: userProfiles[incident.created_by] || null,
+          isMajorIncident: true,
+          incident_type: 'major_incident'
+        }));
+
+        // Combine both types of incidents
+        setIncidents([...enrichedIncidents, ...enrichedMajorIncidents]);
+
       } catch (error) {
         console.error("Error fetching incidents:", error);
       }
@@ -218,7 +248,43 @@ function MapEvents({ setIncidents, radius }) {
   return null;
 }
 
-function MapPage() {
+const MajorIncidentCircle = ({ incident }) => {
+  const map = useMap();
+
+  return (
+    <Circle
+      center={[incident.location_lat, incident.location_lng]}
+      radius={incident.radius_miles * MILES_TO_METERS}
+      color="red"
+      fillColor="red"
+      fillOpacity={0.2}
+      eventHandlers={{
+        click: () => {
+          const popup = L.popup()
+            .setLatLng([incident.location_lat, incident.location_lng])
+            .setContent(`
+              <div style="min-width: 200px;">
+                <h3 style="font-weight: bold; margin-bottom: 8px;">
+                  Major Incident: ${incident.title}
+                </h3>
+                <p style="margin-bottom: 8px;">${incident.description}</p>
+                <p style="color: #666; font-size: 0.9em; margin-bottom: 8px;">
+                  Impact Radius: ${incident.radius_miles} miles
+                </p>
+                <a href="#/major-incident/${incident.id}" 
+                   style="color: #3182CE; text-decoration: underline;">
+                  View Dashboard
+                </a>
+              </div>
+            `);
+          popup.openOn(map);
+        }
+      }}
+    />
+  );
+};
+
+function MapViewPage() {
   const [incidents, setIncidents] = useState([]);
   const [showList, setShowList] = useState(false);
   const [radius, setRadius] = useState('10');
@@ -374,53 +440,59 @@ function MapPage() {
         ) : (
           <Box flex="1" height="100%">
             <MapContainer
-              center={[37.819, -122.478]}
+              key={`map-container-${key}`}
+              center={position || [37.819, -122.478]}
               zoom={zoom}
               style={{ height: '100%', width: '100%' }}
               zoomControl={!window.matchMedia("(max-width: 768px)").matches}
             >
               <TileLayer
+                key={`tile-layer-${key}`}
                 url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                 attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
               />
-              <LocationMarker />
-              <MapEvents setIncidents={setIncidents} />
-              <ReturnToLocationButton />
-              {incidents.map(incident => (
-                <Marker
-                  key={incident.incident_id}
-                  position={[incident.location_lat, incident.location_lng]}
-                  icon={mapIcons[incident.incident_type] || new L.Icon.Default()}
-                >
-                  <Popup>
-                    <Box p={1}>
-                      <Text fontWeight="bold">
-                        {INCIDENT_TYPES[incident.incident_type] || incident.incident_type}
-                      </Text>
-                      <Text fontSize={{ base: "sm", md: "md" }}>{incident.description}</Text>
-                      {incident.created_by_user && (
-                        <HStack spacing={2} mt={2}>
-                          <Text
-                            fontSize="sm"
-                            color="blue.500"
-                            cursor="pointer"
-                            onClick={(e) => handleProfileClick(e, incident.created_by_user, navigate)}
-                            _hover={{ textDecoration: 'underline' }}
-                          >
-                            {incident.created_by_user.display_name}
-                          </Text>
-                          {incident.created_by_user?.is_organization && (
-                            <VerifiedBadge size="14px" />
-                          )}
-                        </HStack>
-                      )}
-                      <Text fontSize="sm" color="gray.600">
-                        Reported at: {new Date(incident.timestamp).toLocaleString()}
-                      </Text>
-                    </Box>
-                  </Popup>
-                </Marker>
-              ))}
+              {incidents.map(incident =>
+                incident.isMajorIncident ? (
+                  <MajorIncidentCircle key={`major-incident-${incident.id}`} incident={incident} />
+                ) : (
+                  <Marker
+                    key={`regular-incident-${incident.id}`}
+                    position={[incident.location_lat, incident.location_lng]}
+                    icon={mapIcons[incident.incident_type] || new L.Icon.Default()}
+                  >
+                    <Popup>
+                      <Box p={1}>
+                        <Text fontWeight="bold">
+                          {INCIDENT_TYPES[incident.incident_type] || incident.incident_type}
+                        </Text>
+                        <Text fontSize={{ base: "sm", md: "md" }}>{incident.description}</Text>
+                        {incident.created_by_user && (
+                          <HStack spacing={2} mt={2}>
+                            <Text
+                              fontSize="sm"
+                              color="blue.500"
+                              cursor="pointer"
+                              onClick={(e) => handleProfileClick(e, incident.created_by_user, navigate)}
+                              _hover={{ textDecoration: 'underline' }}
+                            >
+                              {incident.created_by_user.display_name}
+                            </Text>
+                            {incident.created_by_user?.is_organization && (
+                              <VerifiedBadge size="14px" />
+                            )}
+                          </HStack>
+                        )}
+                        <Text fontSize="sm" color="gray.600">
+                          Reported at: {new Date(incident.timestamp).toLocaleString()}
+                        </Text>
+                      </Box>
+                    </Popup>
+                  </Marker>
+                )
+              )}
+              <LocationMarker key={`location-marker-${key}`} />
+              <MapEvents key={`map-events-${key}`} setIncidents={setIncidents} radius={radius} />
+              <ReturnToLocationButton key="return-button" />
             </MapContainer>
           </Box>
         )}
@@ -429,4 +501,4 @@ function MapPage() {
   );
 }
 
-export default MapPage;
+export default MapViewPage;
