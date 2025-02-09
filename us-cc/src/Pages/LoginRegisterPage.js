@@ -1,3 +1,5 @@
+// Version of LoginRegisterPage with the login UI:
+
 import React, { useState, useRef, forwardRef } from "react";
 import {
   Button,
@@ -221,6 +223,9 @@ function Login({ onSwitch }) {
   const navigate = useNavigate();
   const toast = useToast();
   const [isLoading, setIsLoading] = useState(false);
+  // DEBUG: Additional state for regular login
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
 
   const handleDemoLogin = async (type) => {
     setIsLoading(true);
@@ -257,12 +262,78 @@ function Login({ onSwitch }) {
     }
   };
 
+  // DEBUG START - Temporary login form for testing
+  const handleRegularLogin = async (e) => {
+    e.preventDefault();
+    setIsLoading(true);
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "Login successful!",
+        status: "success",
+        duration: 3000,
+      });
+
+      navigate('/volunteering');
+    } catch (error) {
+      toast({
+        title: "Login failed",
+        description: error.message,
+        status: "error",
+        duration: 5000,
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  // DEBUG END
+
   return (
     <Container maxW="lg" py={{ base: '12', md: '24' }} px={{ base: '0', sm: '8' }} centerContent>
       <Stack spacing={4} align="center">
         <Logo style={{ width: '150px', height: '150px' }} />
         <Heading size="lg" mb="8">Demo Login</Heading>
         <VStack spacing={4} bg="bg.surface" p={{ base: '4', sm: '8' }} borderRadius="xl" boxShadow="md" width="100%">
+          {/* DEBUG START - Temporary login form for testing */}
+          <VStack spacing={4} width="100%" mb={8}>
+            <FormControl>
+              <FormLabel>Email</FormLabel>
+              <Input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="Enter your email"
+              />
+            </FormControl>
+
+            <FormControl>
+              <PasswordField
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+              />
+            </FormControl>
+
+            <Button
+              colorScheme="blue"
+              onClick={handleRegularLogin}
+              isLoading={isLoading}
+              width="100%"
+            >
+              Sign In
+            </Button>
+
+            <Text>
+              Don't have an account? <Link color="blue.500" onClick={onSwitch}>Sign up</Link>
+            </Text>
+          </VStack>
+          {/* DEBUG END */}
+
           <Alert status="info" borderRadius="md">
             <AlertIcon />
             <Text fontSize="sm">

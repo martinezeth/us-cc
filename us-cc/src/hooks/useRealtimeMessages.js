@@ -15,18 +15,19 @@ export const useRealtimeMessages = ({
 
     const fetchMessages = async () => {
         if (!enabled) return;
-        
+
         try {
             let query = supabase
                 .from(table)
                 .select(select)
                 .order(orderBy.column, { ascending: orderBy.ascending });
 
-            // Apply filter if provided
+            // Apply any filters
             if (filter) {
-                Object.entries(filter).forEach(([key, value]) => {
-                    query = query.eq(key, value);
-                });
+                const filterStr = typeof filter === 'string' ? filter : filter.or;
+                if (filterStr) {
+                    query = query.or(filterStr);
+                }
             }
 
             const { data, error: fetchError } = await query;
@@ -49,9 +50,9 @@ export const useRealtimeMessages = ({
 
         fetchMessages();
 
-        // Create unique channel name based on filter
-        const channelName = `${table}_${Object.values(filter || {}).join('_')}`;
-        
+        // Create a unique channel name based on the filter
+        const channelName = `messages_${JSON.stringify(filter)}`;
+
         // Set up realtime subscription
         const channel = supabase.channel(channelName, {
             config: {
@@ -60,7 +61,7 @@ export const useRealtimeMessages = ({
             },
         });
 
-        // Handle broadcast messages if enabled
+        // Handle broadcast messages
         if (broadcastEnabled) {
             channel.on('broadcast', { event: 'new_message' }, ({ payload }) => {
                 console.log('Received broadcast message:', payload);
@@ -76,17 +77,19 @@ export const useRealtimeMessages = ({
                     event: '*',
                     schema: 'public',
                     table: table,
-                    ...filter && { filter: Object.entries(filter)
-                        .map(([key, value]) => `${key}=eq.${value}`)
-                        .join(',') }
+                    filter: filter?.or || undefined
                 },
                 async (payload) => {
                     console.log('Received postgres change:', payload);
-                    await fetchMessages(); // Refresh all messages
+                    // Refresh messages to ensure consistency
+                    await fetchMessages();
                 }
             )
             .subscribe(async (status) => {
                 console.log(`Channel status for ${channelName}:`, status);
+                if (status === 'SUBSCRIBED') {
+                    console.log('Successfully subscribed to message changes');
+                }
             });
 
         return () => {
@@ -101,4 +104,4 @@ export const useRealtimeMessages = ({
         loading,
         refreshMessages: fetchMessages
     };
-}; 
+};

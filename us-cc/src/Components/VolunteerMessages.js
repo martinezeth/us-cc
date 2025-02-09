@@ -1,44 +1,130 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
     VStack, Box, Text, Accordion, AccordionItem, AccordionButton,
     AccordionPanel, AccordionIcon, Avatar, Flex, Tag, useToast,
-    Spinner, Badge, Button
+    Badge, Button, Input, IconButton, Divider, HStack
 } from '@chakra-ui/react';
-import { ChatIcon, CheckIcon } from '@chakra-ui/icons';
+import { ChatIcon, CheckIcon, ArrowForwardIcon } from '@chakra-ui/icons';
 import { supabase } from '../supabaseClient';
 import { useRealtimeMessages } from '../hooks/useRealtimeMessages';
 
-const MessageList = ({ messages }) => {
-    // Sort messages in reverse chronological order
-    const sortedMessages = [...messages].sort((a, b) =>
-        new Date(b.sent_at) - new Date(a.sent_at)
-    );
+const MessageBubble = ({ message, isOwn, sender }) => {
+    const bubbleStyle = isOwn ? {
+        bg: "blue.100",
+        alignSelf: "flex-end",
+        borderRadius: "20px 20px 5px 20px"
+    } : {
+        bg: "gray.100",
+        alignSelf: "flex-start",
+        borderRadius: "20px 20px 20px 5px"
+    };
 
     return (
-        <VStack align="flex-start" spacing={2} w="100%">
-            {sortedMessages.map((message) => (
-                <Box
-                    key={message.id}
-                    bg={message.is_group_message ? "purple.50" : "blue.50"}
-                    p={3}
-                    borderRadius="lg"
-                    w="100%"
-                >
-                    <Flex justify="space-between" align="center" mb={1}>
-                        <Tag
-                            size="sm"
-                            colorScheme={message.is_group_message ? "purple" : "blue"}
-                            borderRadius="full"
-                        >
-                            {message.is_group_message ? "Group Message" : "Direct Message"}
-                        </Tag>
-                        <Text fontSize="xs" color="gray.500">
-                            {new Date(message.sent_at).toLocaleString()}
-                        </Text>
-                    </Flex>
-                    <Text>{message.message}</Text>
-                </Box>
-            ))}
+
+        <Box
+            maxW="70%"
+            p={3}
+            {...bubbleStyle}
+        >
+            {!isOwn && (
+                <Text fontSize="xs" fontWeight="bold" color="gray.600" mb={1}>
+                    {sender}
+                </Text>
+            )}
+            <Text>{message.message}</Text>
+            <Text fontSize="xs" color="gray.500" textAlign="right" mt={1}>
+                {new Date(message.sent_at).toLocaleString()}
+            </Text>
+        </Box>
+    );
+};
+
+const ConversationView = ({ messages, currentUserId, onSendReply, opportunity }) => {
+    const [replyText, setReplyText] = useState('');
+    const messagesEndRef = useRef(null);
+    const [isAtBottom, setIsAtBottom] = useState(true);
+    const scrollContainerRef = useRef(null);
+
+    const scrollToBottom = () => {
+        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    };
+
+    useEffect(() => {
+        if (isAtBottom) {
+            scrollToBottom();
+        }
+    }, [messages]);
+
+    const handleScroll = (e) => {
+        const { scrollHeight, scrollTop, clientHeight } = e.target;
+        const bottom = Math.abs(scrollHeight - scrollTop - clientHeight) < 1;
+        setIsAtBottom(bottom);
+    };
+
+    const handleSendMessage = () => {
+        if (replyText.trim()) {
+            onSendReply(null, replyText); // null because it's a new message, not a reply
+            setReplyText('');
+            setIsAtBottom(true);
+        }
+    };
+
+    return (
+        <VStack h="full" spacing={4}>
+            <Box
+                flex={1}
+                w="full"
+                overflowY="auto"
+                p={4}
+                ref={scrollContainerRef}
+                onScroll={handleScroll}
+                sx={{
+                    '&::-webkit-scrollbar': {
+                        width: '4px',
+                    },
+                    '&::-webkit-scrollbar-track': {
+                        width: '6px',
+                    },
+                    '&::-webkit-scrollbar-thumb': {
+                        background: 'gray.300',
+                        borderRadius: '24px',
+                    },
+                }}
+            >
+                <VStack spacing={4} align="stretch">
+                    {messages.map((message) => (
+                        <MessageBubble
+                            key={message.id}
+                            message={message}
+                            isOwn={message.volunteer_id === currentUserId}
+                            sender={message.is_group_message ? 'Group Message' : opportunity.organization_name}
+                        />
+                    ))}
+                    <div ref={messagesEndRef} />
+                </VStack>
+            </Box>
+
+            <Box p={4} borderTop="1px" borderColor="gray.200" w="full">
+                <HStack>
+                    <Input
+                        value={replyText}
+                        onChange={(e) => setReplyText(e.target.value)}
+                        placeholder="Type your message..."
+                        onKeyPress={(e) => {
+                            if (e.key === 'Enter' && !e.shiftKey) {
+                                e.preventDefault();
+                                handleSendMessage();
+                            }
+                        }}
+                    />
+                    <IconButton
+                        icon={<ArrowForwardIcon />}
+                        colorScheme="blue"
+                        onClick={handleSendMessage}
+                        isDisabled={!replyText.trim()}
+                    />
+                </HStack>
+            </Box>
         </VStack>
     );
 };
@@ -46,9 +132,10 @@ const MessageList = ({ messages }) => {
 const VolunteerMessages = ({ onUnreadCountChange }) => {
     const [opportunityMessages, setOpportunityMessages] = useState({});
     const [currentUser, setCurrentUser] = useState(null);
+    const [selectedOpportunity, setSelectedOpportunity] = useState(null);
     const toast = useToast();
+    const [accessibleOpportunityIds, setAccessibleOpportunityIds] = useState([]);
 
-    // Get current user on component mount
     useEffect(() => {
         const getCurrentUser = async () => {
             const { data: { user } } = await supabase.auth.getUser();
@@ -57,123 +144,70 @@ const VolunteerMessages = ({ onUnreadCountChange }) => {
         getCurrentUser();
     }, []);
 
-    // Only set up real-time messages once we have the current user
-    const { messages, loading, error, refreshMessages } = useRealtimeMessages({
-        table: 'messages',
-        select: `
-            *,
-            opportunity:volunteer_opportunities (
-                id,
-                title,
-                organization_id,
-                status
-            ),
-            read_receipts:message_read_receipts!message_id (
-                volunteer_id,
-                read_at
-            )
-        `,
-        filter: currentUser ? {
-            volunteer_id: currentUser.id,
-        } : null,
-        orderBy: { column: 'sent_at', ascending: false },
-        enabled: !!currentUser
-    });
+    useEffect(() => {
+        const fetchAccessibleOpportunities = async () => {
+            if (!currentUser) return;
 
-    const fetchMessages = async () => {
+            try {
+                const { data: responses, error } = await supabase
+                    .from('opportunity_responses')
+                    .select('opportunity_id')
+                    .eq('volunteer_id', currentUser.id);
+
+                if (error) throw error;
+
+                const opportunityIds = responses?.map(r => r.opportunity_id) || [];
+                setAccessibleOpportunityIds(opportunityIds);
+            } catch (error) {
+                console.error('Error fetching accessible opportunities:', error);
+            }
+        };
+
+        fetchAccessibleOpportunities();
+    }, [currentUser]);
+
+    const handleSendReply = async (_, replyText) => {
+        if (!selectedOpportunity) return;
+
         try {
             const { data: { user } } = await supabase.auth.getUser();
 
-            // First get the opportunities this volunteer has responded to
-            const { data: responses } = await supabase
-                .from('opportunity_responses')
-                .select('opportunity_id')
-                .eq('volunteer_id', user.id)
-                .eq('status', 'accepted');
-
-            // Get the opportunity IDs the volunteer has access to
-            const accessibleOpportunityIds = responses?.map(r => r.opportunity_id) || [];
-
-            // Get messages with opportunity data and read receipts
-            const { data: messagesData, error: messagesError } = await supabase
+            // First insert the message
+            const { data: newMessage, error } = await supabase
                 .from('messages')
+                .insert([{
+                    opportunity_id: selectedOpportunity.id,
+                    volunteer_id: user.id,
+                    organization_id: selectedOpportunity.organization_id,
+                    message: replyText,
+                    is_group_message: false
+                }])
                 .select(`
                     *,
-                    opportunity:volunteer_opportunities (
+                    organization:profiles(id, organization_name),
+                    opportunity:volunteer_opportunities(
                         id,
                         title,
                         organization_id,
                         status
-                    ),
-                    read_receipts:message_read_receipts!message_id (
-                        volunteer_id,
-                        read_at
                     )
                 `)
-                .or(
-                    `and(volunteer_id.eq.${user.id},is_group_message.eq.false),` +
-                    `and(is_group_message.eq.true,opportunity_id.in.(${accessibleOpportunityIds.join(',')}))`
-                )
-                .order('sent_at', { ascending: false });
+                .single();
 
-            if (messagesError) throw messagesError;
+            if (error) throw error;
 
-            // Get unique organization IDs
-            const orgIds = [...new Set(messagesData
-                .map(msg => msg.opportunity?.organization_id)
-                .filter(Boolean))];
-
-            // Fetch organization profiles
-            const { data: orgProfiles } = await supabase
-                .from('profiles')
-                .select('id, organization_name, full_name')
-                .in('id', orgIds);
-
-            // Create a lookup map for org names
-            const orgNameMap = {};
-            orgProfiles?.forEach(profile => {
-                orgNameMap[profile.id] = profile.organization_name || profile.full_name;
+            // Then broadcast it
+            const channel = supabase.channel(`messages_${selectedOpportunity.id}`);
+            await channel.send({
+                type: 'broadcast',
+                event: 'new_message',
+                payload: { message: newMessage }
             });
 
-            // Group messages by opportunity
-            const grouped = messagesData.reduce((acc, message) => {
-                const oppId = message.opportunity_id;
-                if (!acc[oppId]) {
-                    acc[oppId] = {
-                        opportunity: {
-                            ...message.opportunity,
-                            organization_name: orgNameMap[message.opportunity?.organization_id] || 'Unknown Organization'
-                        },
-                        messages: []
-                    };
-                }
-
-                // Check if message is read
-                const isRead = message.volunteer_id === user.id ?
-                    message.is_read :
-                    message.read_receipts?.some(receipt =>
-                        receipt.volunteer_id === user.id
-                    );
-
-                acc[oppId].messages.push({
-                    ...message,
-                    is_read: isRead
-                });
-                return acc;
-            }, {});
-
-            setOpportunityMessages(grouped);
-
-            // Calculate and update unread count
-            const totalUnread = Object.values(grouped).reduce((count, { messages }) =>
-                count + messages.filter(m => !m.is_read).length
-                , 0);
-            onUnreadCountChange?.(totalUnread);
-
         } catch (error) {
-            console.error('Error in fetchMessages:', error);
+            console.error('Error sending message:', error);
             toast({
-                title: "Error fetching messages",
+                title: "Error sending message",
                 description: error.message,
                 status: "error",
                 duration: 5000
@@ -181,49 +215,115 @@ const VolunteerMessages = ({ onUnreadCountChange }) => {
         }
     };
 
-    const markMessageAsRead = async (messageId) => {
-        try {
-            const { error } = await supabase
-                .from('messages')
-                .update({ is_read: true })
-                .eq('id', messageId);
+    const { messages, loading, error, refreshMessages } = useRealtimeMessages({
+        table: 'messages',
+        select: `
+            id,
+            opportunity_id,
+            organization_id,
+            volunteer_id,
+            message,
+            sent_at,
+            is_group_message,
+            is_read,
+            organization:profiles(organization_name),
+            opportunity:volunteer_opportunities(
+                id,
+                title,
+                organization_id,
+                status
+            )
+        `,
+        filter: currentUser && accessibleOpportunityIds.length > 0 ? {
+            or: `volunteer_id.eq.${currentUser.id},and(is_group_message.eq.true,opportunity_id.in.(${accessibleOpportunityIds.join(',')}))`
+        } : null,
+        orderBy: { column: 'sent_at', ascending: true },
+        enabled: !!currentUser && accessibleOpportunityIds.length > 0
+    });
 
-            if (error) throw error;
+    useEffect(() => {
+        if (!messages || !currentUser) return;
 
-            // Update local state
-            setOpportunityMessages(prev => {
-                const updated = { ...prev };
-                Object.keys(updated).forEach(oppId => {
-                    updated[oppId].messages = updated[oppId].messages.map(msg =>
-                        msg.id === messageId ? { ...msg, is_read: true } : msg
-                    );
+        const processMessages = async () => {
+            try {
+                const orgIds = [...new Set(messages.map(m => m.organization_id))];
+                const { data: orgs } = await supabase
+                    .from('profiles')
+                    .select('id, organization_name')
+                    .in('id', orgIds);
+
+                const orgNameMap = Object.fromEntries(
+                    orgs?.map(org => [org.id, org.organization_name]) || []
+                );
+
+                const grouped = messages.reduce((acc, message) => {
+                    const oppId = message.opportunity_id;
+
+                    if (!acc[oppId]) {
+                        acc[oppId] = {
+                            opportunity: {
+                                id: message.opportunity_id,
+                                title: message.opportunity_title,
+                                organization_id: message.opportunity_organization_id,
+                                status: message.opportunity_status,
+                                organization_name: orgNameMap[message.opportunity_organization_id] || 'Unknown Organization'
+                            },
+                            messages: []
+                        };
+                    }
+
+                    acc[oppId].messages.push({
+                        ...message,
+                        organization_name: orgNameMap[message.organization_id]
+                    });
+
+                    return acc;
+                }, {});
+
+                setOpportunityMessages(grouped);
+
+                // Only count unread messages from organizations
+                const totalUnread = Object.values(grouped).reduce((count, { messages }) =>
+                    count + messages.filter(m =>
+                        !m.is_read &&
+                        m.organization_id &&
+                        !m.volunteer_id &&
+                        m.volunteer_id !== currentUser.id
+                    ).length, 0);
+
+                onUnreadCountChange?.(totalUnread);
+
+            } catch (error) {
+                console.error('Error processing messages:', error);
+                toast({
+                    title: "Error processing messages",
+                    status: "error",
+                    duration: 5000
                 });
-                return updated;
-            });
-        } catch (error) {
-            console.error('Error marking message as read:', error);
-        }
-    };
+            }
+        };
+
+        processMessages();
+    }, [messages, currentUser]);
 
     const markAllMessagesAsRead = async (opportunityId) => {
         try {
             const { data: { user } } = await supabase.auth.getUser();
-
-            // Get all unread messages for this opportunity
             const messages = opportunityMessages[opportunityId]?.messages || [];
-            const unreadMessages = messages.filter(msg => !msg.is_read);
+
+            // Only mark messages from organizations as read
+            const unreadMessages = messages.filter(msg =>
+                !msg.is_read &&
+                msg.organization_id &&
+                !msg.volunteer_id
+            );
 
             if (unreadMessages.length === 0) {
-                toast({
-                    title: "No unread messages",
-                    status: "info",
-                    duration: 2000
-                });
                 return;
             }
 
             // Handle group messages
-            const groupMessages = unreadMessages.filter(msg => !msg.volunteer_id);
+            const groupMessages = unreadMessages.filter(msg => msg.is_group_message);
             if (groupMessages.length > 0) {
                 const { error: receiptError } = await supabase
                     .from('message_read_receipts')
@@ -239,7 +339,7 @@ const VolunteerMessages = ({ onUnreadCountChange }) => {
             }
 
             // Handle direct messages
-            const directMessages = unreadMessages.filter(msg => msg.volunteer_id === user.id);
+            const directMessages = unreadMessages.filter(msg => !msg.is_group_message);
             if (directMessages.length > 0) {
                 const { error } = await supabase
                     .from('messages')
@@ -249,14 +349,7 @@ const VolunteerMessages = ({ onUnreadCountChange }) => {
                 if (error) throw error;
             }
 
-            // Refresh messages
-            await fetchMessages();
-
-            toast({
-                title: `${unreadMessages.length} messages marked as read`,
-                status: "success",
-                duration: 2000
-            });
+            await refreshMessages();
 
         } catch (error) {
             console.error('Error marking messages as read:', error);
@@ -268,62 +361,6 @@ const VolunteerMessages = ({ onUnreadCountChange }) => {
             });
         }
     };
-
-    const fetchUserMetadata = async () => {
-        try {
-            const { data: { user }, error } = await supabase.auth.getUser();
-            if (error) throw error;
-            return user.user_metadata;
-        } catch (error) {
-            console.error('Error fetching user metadata:', error);
-            return null;
-        }
-    };
-
-    useEffect(() => {
-        fetchMessages();
-
-        // Set up real-time subscription for new messages
-        const subscription = supabase
-            .channel('messages_changes')
-            .on('postgres_changes',
-                {
-                    event: '*',
-                    schema: 'public',
-                    table: 'messages'
-                },
-                (payload) => {
-                    console.log('New message received:', payload);
-                    fetchMessages(); // Refresh messages when changes occur
-                }
-            )
-            .subscribe();
-
-        return () => {
-            subscription.unsubscribe();
-        };
-    }, []);
-
-    // Calculate total unread messages and notify parent component (for the 'Messages' tab display)
-    useEffect(() => {
-        const calculateUnreadCount = async () => {
-            try {
-                const { data: { user } } = await supabase.auth.getUser();
-                const unreadCount = Object.values(opportunityMessages).reduce(
-                    (total, { messages }) =>
-                        total + messages.filter(m =>
-                            !m.is_read && (m.volunteer_id === null || m.volunteer_id === user.id)
-                        ).length,
-                    0
-                );
-                onUnreadCountChange?.(unreadCount);
-            } catch (error) {
-                console.error('Error calculating unread count:', error);
-            }
-        };
-
-        calculateUnreadCount();
-    }, [opportunityMessages, onUnreadCountChange]);
 
     if (loading || !currentUser) {
         return (
@@ -346,11 +383,13 @@ const VolunteerMessages = ({ onUnreadCountChange }) => {
             <Box textAlign="center" py={8}>
                 <ChatIcon boxSize={8} color="gray.400" mb={2} />
                 <Text color="gray.500">No messages yet</Text>
+                <Text fontSize="sm" color="gray.400" mt={2}>
+                    Messages will appear here for opportunities you've responded to
+                </Text>
             </Box>
         );
     }
 
-    // Sort opportunities by most recent message
     const sortedOpportunities = Object.entries(opportunityMessages)
         .sort(([, a], [, b]) => {
             const latestA = Math.max(...a.messages.map(m => new Date(m.sent_at)));
@@ -358,77 +397,124 @@ const VolunteerMessages = ({ onUnreadCountChange }) => {
             return latestB - latestA;
         });
 
+    if (selectedOpportunity) {
+        const currentOpportunityMessages = opportunityMessages[selectedOpportunity.id]?.messages || [];
+
+        return (
+            <Box h="full" display="flex" flexDirection="column">
+                <Flex
+                    p={4}
+                    bg="gray.50"
+                    align="center"
+                    borderBottom="1px"
+                    borderColor="gray.200"
+                >
+                    <IconButton
+                        icon={<ArrowForwardIcon transform="rotate(180deg)" />}
+                        variant="ghost"
+                        onClick={() => setSelectedOpportunity(null)}
+                        mr={4}
+                    />
+                    <Box flex={1}>
+                        <Text fontWeight="bold">{selectedOpportunity.title}</Text>
+                        <Text fontSize="sm" color="gray.600">
+                            {selectedOpportunity.organization_name}
+                        </Text>
+                    </Box>
+                </Flex>
+                <Box flex={1} h="0">
+                    <ConversationView
+                        messages={currentOpportunityMessages}
+                        currentUserId={currentUser.id}
+                        onSendReply={handleSendReply}
+                        opportunity={selectedOpportunity}
+                    />
+                </Box>
+            </Box>
+        );
+    }
+
     return (
-        <Accordion allowMultiple defaultIndex={[0]} w="100%">
+        <VStack spacing={4} align="stretch" h="full">
             {sortedOpportunities.map(([oppId, data]) => {
-                const unreadCount = data.messages.filter(m => !m.is_read).length;
+                const unreadCount = data.messages.filter(m =>
+                    !m.is_read &&
+                    m.organization_id &&
+                    !m.volunteer_id &&
+                    m.volunteer_id !== currentUser.id
+                ).length;
+
+                const lastMessage = data.messages[data.messages.length - 1];
+                const lastMessagePreview = lastMessage ?
+                    (lastMessage.is_group_message ? '🔔 ' : '') + lastMessage.message :
+                    'No messages';
 
                 return (
-                    <AccordionItem key={oppId}>
-                        <AccordionButton>
-                            <Box flex="1">
-                                <Flex align="center" justify="space-between">
-                                    <Flex align="center">
-                                        <Avatar
-                                            size="sm"
-                                            name={data.opportunity.organization_name}
-                                            mr={2}
-                                        />
-                                        <Box textAlign="left">
-                                            <Flex align="center">
-                                                <Text fontWeight="bold">
-                                                    {data.opportunity.title}
-                                                </Text>
-                                                {unreadCount > 0 && (
-                                                    <Badge
-                                                        ml={2}
-                                                        colorScheme="red"
-                                                        borderRadius="full"
-                                                    >
-                                                        {unreadCount} new
-                                                    </Badge>
-                                                )}
-                                            </Flex>
-                                            <Text fontSize="sm" color="gray.600">
-                                                {data.opportunity.organization_name}
+                    <Box
+                        key={oppId}
+                        p={4}
+                        bg="white"
+                        borderRadius="lg"
+                        shadow="sm"
+                        cursor="pointer"
+                        onClick={() => {
+                            setSelectedOpportunity({
+                                id: oppId,
+                                ...data.opportunity
+                            });
+                            if (unreadCount > 0) {
+                                markAllMessagesAsRead(oppId);
+                            }
+                        }}
+                        _hover={{ bg: "gray.50" }}
+                        borderWidth="1px"
+                        borderColor="gray.200"
+                    >
+                        <Flex justify="space-between" align="center">
+                            <Box flex={1}>
+                                <Flex align="center" mb={1}>
+                                    <Avatar
+                                        size="sm"
+                                        name={data.opportunity.organization_name}
+                                        mr={2}
+                                    />
+                                    <Box>
+                                        <Flex align="center">
+                                            <Text fontWeight="bold">
+                                                {data.opportunity.title}
                                             </Text>
-                                        </Box>
-                                    </Flex>
-                                    <Flex align="center">
-                                        <Badge
-                                            colorScheme={data.opportunity.status === 'archived' ? 'gray' : 'green'}
-                                            mr={2}
-                                        >
-                                            {data.opportunity.status}
-                                        </Badge>
-                                        <Badge colorScheme="blue">
-                                            {data.messages.length} messages
-                                        </Badge>
-                                    </Flex>
+                                            {unreadCount > 0 && (
+                                                <Badge
+                                                    ml={2}
+                                                    colorScheme="red"
+                                                    borderRadius="full"
+                                                >
+                                                    {unreadCount} new
+                                                </Badge>
+                                            )}
+                                        </Flex>
+                                        <Text fontSize="sm" color="gray.600">
+                                            {data.opportunity.organization_name}
+                                        </Text>
+                                    </Box>
                                 </Flex>
-                            </Box>
-                            <AccordionIcon />
-                        </AccordionButton>
-                        <AccordionPanel pb={4}>
-                            <Flex justify="flex-end" mb={2}>
-                                <Button
-                                    size="sm"
-                                    leftIcon={<CheckIcon />}
-                                    colorScheme="blue"
-                                    variant="outline"
-                                    onClick={() => markAllMessagesAsRead(oppId)}
-                                    isDisabled={!data.messages.some(msg => !msg.is_read)}
+                                <Text
+                                    fontSize="sm"
+                                    color="gray.500"
+                                    noOfLines={1}
+                                    mt={2}
                                 >
-                                    Mark as Read
-                                </Button>
-                            </Flex>
-                            <MessageList messages={data.messages} />
-                        </AccordionPanel>
-                    </AccordionItem>
-
+                                    {lastMessagePreview}
+                                </Text>
+                            </Box>
+                            <Text fontSize="xs" color="gray.500" ml={4}>
+                                {lastMessage ? new Date(lastMessage.sent_at).toLocaleString() : ''}
+                            </Text>
+                        </Flex>
+                    </Box>
                 );
             })}
-        </Accordion>
+        </VStack>
     );
 };
 

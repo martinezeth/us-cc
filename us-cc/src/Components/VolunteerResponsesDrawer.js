@@ -64,7 +64,6 @@ const VolunteerResponsesDrawer = ({ isOpen, onClose, opportunity }) => {
                     opportunity_id: opportunity.id,
                     message: directMessage,
                     is_group_message: false,
-                    created_at: new Date().toISOString()
                 }]);
 
             if (error) throw error;
@@ -97,7 +96,6 @@ const VolunteerResponsesDrawer = ({ isOpen, onClose, opportunity }) => {
                     opportunity_id: opportunity.id,
                     message: groupMessage,
                     is_group_message: true,
-                    created_at: new Date().toISOString()
                 }]);
 
             if (error) throw error;
