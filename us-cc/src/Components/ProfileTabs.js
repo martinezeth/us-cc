@@ -43,8 +43,8 @@ const SectionCard = ({ children, title }) => (
 const ProfileTabs = ({ profileData, volunteerData, isOwnProfile }) => {
     const [posts, setPosts] = useState([]);
     const [opportunities, setOpportunities] = useState([]);
-    const [likedPosts, setLikedPosts] = useState([]);
     const [opportunityHistory, setOpportunityHistory] = useState([]);
+    const [likedPosts, setLikedPosts] = useState([]);
     const navigate = useNavigate();
     const toast = useToast();
 
@@ -74,7 +74,7 @@ const ProfileTabs = ({ profileData, volunteerData, isOwnProfile }) => {
                 setOpportunities(orgOpportunities || []);
             }
 
-            // Fetch volunteer opportunity history with organization info
+            // Modified query to get only the most recent response for each opportunity
             const { data: opportunityResponses } = await supabase
                 .from('opportunity_responses')
                 .select(`
@@ -91,10 +91,22 @@ const ProfileTabs = ({ profileData, volunteerData, isOwnProfile }) => {
                 .eq('volunteer_id', profileData.id)
                 .order('response_date', { ascending: false });
 
+            // Filter to keep only the most recent response for each opportunity
+            const uniqueResponses = opportunityResponses?.reduce((acc, current) => {
+                const existingResponse = acc.find(item => 
+                    item.opportunity_id === current.opportunity_id
+                );
+                
+                if (!existingResponse) {
+                    acc.push(current);
+                }
+                return acc;
+            }, []);
+
             // If we have responses, fetch the organization names
-            if (opportunityResponses && opportunityResponses.length > 0) {
+            if (uniqueResponses && uniqueResponses.length > 0) {
                 // Get unique organization IDs
-                const orgIds = [...new Set(opportunityResponses
+                const orgIds = [...new Set(uniqueResponses
                     .map(r => r.volunteer_opportunities?.organization_id)
                     .filter(Boolean))];
 
@@ -110,8 +122,8 @@ const ProfileTabs = ({ profileData, volunteerData, isOwnProfile }) => {
                     orgNameMap[profile.id] = profile.organization_name || profile.full_name;
                 });
 
-                // Add organization names to the responses
-                const responsesWithOrgNames = opportunityResponses.map(response => ({
+                // Add organization names to the filtered responses
+                const responsesWithOrgNames = uniqueResponses.map(response => ({
                     ...response,
                     volunteer_opportunities: {
                         ...response.volunteer_opportunities,
@@ -119,6 +131,7 @@ const ProfileTabs = ({ profileData, volunteerData, isOwnProfile }) => {
                     }
                 }));
 
+                console.log('Opportunity History:', responsesWithOrgNames);
                 setOpportunityHistory(responsesWithOrgNames);
             } else {
                 setOpportunityHistory([]);
@@ -139,7 +152,9 @@ const ProfileTabs = ({ profileData, volunteerData, isOwnProfile }) => {
                     .eq('user_id', profileData.id)
                     .order('created_at', { ascending: false });
 
-                setLikedPosts(likes?.map(like => like.posts).filter(Boolean) || []);
+                const processedLikedPosts = likes?.map(like => like.posts).filter(Boolean) || [];
+                console.log('Liked Posts:', processedLikedPosts);
+                setLikedPosts(processedLikedPosts);
             }
         } catch (error) {
             console.error('Error fetching activity:', error);
@@ -154,7 +169,7 @@ const ProfileTabs = ({ profileData, volunteerData, isOwnProfile }) => {
 
     const PostsList = ({ posts }) => (
         <VStack spacing={4} align="stretch">
-            {posts.map(post => (
+            {posts?.map(post => (
                 <Box
                     key={post.id}
                     p={4}
@@ -181,7 +196,7 @@ const ProfileTabs = ({ profileData, volunteerData, isOwnProfile }) => {
                     </HStack>
                 </Box>
             ))}
-            {posts.length === 0 && (
+            {(!posts || posts.length === 0) && (
                 <Text color="gray.500" textAlign="center">No posts yet</Text>
             )}
         </VStack>
@@ -228,7 +243,7 @@ const ProfileTabs = ({ profileData, volunteerData, isOwnProfile }) => {
                             colorScheme="red"
                             variant="outline"
                             onClick={() => handleUnregister(response.opportunity_id)}
-                            ml="auto"
+                            mt={2}
                         >
                             Unregister
                         </Button>
@@ -333,10 +348,7 @@ const ProfileTabs = ({ profileData, volunteerData, isOwnProfile }) => {
                 {profileData.is_organization ? (
                     <Tab>Opportunities</Tab>
                 ) : (
-                    <>
-                        <Tab>Volunteer Activity</Tab>
-                        {isOwnProfile && <Tab>Liked Posts</Tab>}
-                    </>
+                    <Tab>Volunteer Activity</Tab>
                 )}
             </TabList>
 
@@ -421,16 +433,20 @@ const ProfileTabs = ({ profileData, volunteerData, isOwnProfile }) => {
                         <OpportunitiesList opportunities={opportunities} />
                     </TabPanel>
                 ) : (
-                    <>
-                        <TabPanel>
-                            <VolunteerHistory history={opportunityHistory} />
-                        </TabPanel>
-                        {isOwnProfile && (
-                            <TabPanel>
-                                <PostsList posts={likedPosts} />
-                            </TabPanel>
-                        )}
-                    </>
+                    <TabPanel>
+                        <VStack spacing={8} align="stretch">
+                            <Box>
+                                <Heading size="md" mb={4}>Volunteer Activity</Heading>
+                                <VolunteerHistory history={opportunityHistory} />
+                            </Box>
+                            {isOwnProfile && (
+                                <Box>
+                                    <Heading size="md" mb={4}>Liked Posts</Heading>
+                                    <PostsList posts={likedPosts} />
+                                </Box>
+                            )}
+                        </VStack>
+                    </TabPanel>
                 )}
             </TabPanels>
         </Tabs>
