@@ -14,18 +14,20 @@ const MessageBubble = ({ message, isOwn, sender }) => {
     const bubbleStyle = isOwn ? {
         bg: "blue.100",
         alignSelf: "flex-end",
-        borderRadius: "20px 20px 5px 20px"
+        borderRadius: "20px 20px 5px 20px",
+        ml: "20%"  // Add margin to keep messages from stretching too wide
     } : {
         bg: "gray.100",
         alignSelf: "flex-start",
-        borderRadius: "20px 20px 20px 5px"
+        borderRadius: "20px 20px 20px 5px",
+        mr: "20%"  // Add margin to keep messages from stretching too wide
     };
 
     return (
         <Box
-            maxW="70%"
             p={3}
             {...bubbleStyle}
+            position="relative"
         >
             {!isOwn && (
                 <Text fontSize="xs" fontWeight="bold" color="gray.600" mb={1}>
@@ -33,7 +35,12 @@ const MessageBubble = ({ message, isOwn, sender }) => {
                 </Text>
             )}
             <Text>{message.message}</Text>
-            <Text fontSize="xs" color="gray.500" textAlign="right" mt={1}>
+            <Text 
+                fontSize="xs" 
+                color="gray.500" 
+                mt={1}
+                textAlign={isOwn ? "right" : "left"}
+            >
                 {new Date(message.sent_at).toLocaleString()}
             </Text>
         </Box>
@@ -271,7 +278,7 @@ const VolunteerMessages = ({ onUnreadCountChange }) => {
             )
         `,
         filter: currentUser ? {
-            or: `recipient_id.eq.${currentUser.id},is_group_message.eq.true`
+            or: `recipient_id.eq.${currentUser.id},is_group_message.eq.true,volunteer_id.eq.${currentUser.id}`
         } : null,
         orderBy: { column: 'sent_at', ascending: true },
         enabled: !!currentUser,
