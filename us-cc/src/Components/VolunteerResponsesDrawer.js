@@ -381,11 +381,19 @@ const VolunteerResponsesDrawer = ({ isOpen, onClose, opportunity }) => {
 
                         {/* Volunteer List */}
                         <Accordion allowMultiple>
-                            {filteredVolunteers?.map((volunteer) => {
+                            {filteredVolunteers?.map((volunteer, index) => {
+                                console.log('Rendering volunteer response:', {
+                                    volunteer_id: volunteer.volunteer_id,
+                                    opportunity_id: opportunity.id,
+                                    index: index
+                                });
+                                
                                 const { unreadCount } = getVolunteerMessageStats(volunteer.volunteer_id);
                                 
                                 return (
-                                    <AccordionItem key={volunteer.volunteer_id}>
+                                    <AccordionItem 
+                                        key={`volunteer-${volunteer.volunteer_id}-${index}`}
+                                    >
                                         <AccordionButton 
                                             onClick={() => {
                                                 markVolunteerMessagesAsRead(volunteer.volunteer_id);
@@ -431,7 +439,7 @@ const VolunteerResponsesDrawer = ({ isOpen, onClose, opportunity }) => {
                                                     <Text fontWeight="bold" mb={2}>Skills:</Text>
                                                     <Wrap mb={3}>
                                                         {volunteer.skills?.map((skill, index) => (
-                                                            <WrapItem key={index}>
+                                                            <WrapItem key={`skill-${skill}-${index}`}>
                                                                 <Tag size="md" colorScheme="blue">
                                                                     <TagLabel>{skill}</TagLabel>
                                                                 </Tag>
@@ -442,7 +450,7 @@ const VolunteerResponsesDrawer = ({ isOpen, onClose, opportunity }) => {
                                                     <Wrap>
                                                         {volunteer.availability ? (
                                                             formatAvailability(volunteer.availability).map((time, index) => (
-                                                                <WrapItem key={index}>
+                                                                <WrapItem key={`time-${time}-${index}`}>
                                                                     <Tag size="md" colorScheme="purple">
                                                                         <TagLabel>{time}</TagLabel>
                                                                     </Tag>
@@ -479,29 +487,37 @@ const VolunteerResponsesDrawer = ({ isOpen, onClose, opportunity }) => {
                                                         {messages
                                                             .filter(msg => msg.volunteer_id === volunteer.volunteer_id || 
                                                                          (msg.recipient_id === volunteer.volunteer_id && !msg.is_group_message))
-                                                            .map((msg, idx) => (
-                                                                <Box
-                                                                    key={idx}
-                                                                    p={3}
-                                                                    bg={msg.volunteer_id ? "blue.50" : "gray.100"}
-                                                                    borderRadius="md"
-                                                                    alignSelf={msg.volunteer_id ? "flex-start" : "flex-end"}
-                                                                    maxW="80%"
-                                                                    position="relative"
-                                                                >
-                                                                    <Text>
-                                                                        {msg.message}
-                                                                    </Text>
-                                                                    <Text 
-                                                                        fontSize="xs" 
-                                                                        color="gray.500" 
-                                                                        mt={1}
-                                                                        textAlign={msg.volunteer_id ? "left" : "right"}
+                                                            .map((msg, idx) => {
+                                                                console.log('Rendering direct message:', {
+                                                                    id: msg.id,
+                                                                    message: msg.message,
+                                                                    volunteer_id: msg.volunteer_id,
+                                                                    recipient_id: msg.recipient_id
+                                                                });
+                                                                return (
+                                                                    <Box
+                                                                        key={`message-${msg.id}-${idx}`}
+                                                                        p={3}
+                                                                        bg={msg.volunteer_id ? "blue.50" : "gray.100"}
+                                                                        borderRadius="md"
+                                                                        alignSelf={msg.volunteer_id ? "flex-start" : "flex-end"}
+                                                                        maxW="80%"
+                                                                        position="relative"
                                                                     >
-                                                                        {new Date(msg.sent_at).toLocaleString()}
-                                                                    </Text>
-                                                                </Box>
-                                                            ))
+                                                                        <Text>
+                                                                            {msg.message}
+                                                                        </Text>
+                                                                        <Text 
+                                                                            fontSize="xs" 
+                                                                            color="gray.500" 
+                                                                            mt={1}
+                                                                            textAlign={msg.volunteer_id ? "left" : "right"}
+                                                                        >
+                                                                            {new Date(msg.sent_at).toLocaleString()}
+                                                                        </Text>
+                                                                    </Box>
+                                                                );
+                                                            })
                                                         }
                                                     </VStack>
                                                     <Textarea
@@ -566,19 +582,27 @@ const VolunteerResponsesDrawer = ({ isOpen, onClose, opportunity }) => {
                             >
                                 {messages
                                     .filter(msg => msg.is_group_message && opportunity?.id && msg.opportunity_id === opportunity.id)
-                                    .map((msg, idx) => (
-                                        <Box
-                                            key={idx}
-                                            p={3}
-                                            bg="purple.50"
-                                            borderRadius="md"
-                                        >
-                                            <Text>{msg.message}</Text>
-                                            <Text fontSize="xs" color="gray.500" mt={1}>
-                                                {new Date(msg.sent_at).toLocaleString()}
-                                            </Text>
-                                        </Box>
-                                    ))
+                                    .map((msg, idx) => {
+                                        console.log('Rendering message:', {
+                                            id: msg.id,
+                                            message: msg.message,
+                                            opportunity_id: msg.opportunity_id,
+                                            is_group_message: msg.is_group_message
+                                        });
+                                        return (
+                                            <Box
+                                                key={`message-${msg.id}-${idx}`}
+                                                p={3}
+                                                bg="purple.50"
+                                                borderRadius="md"
+                                            >
+                                                <Text>{msg.message}</Text>
+                                                <Text fontSize="xs" color="gray.500" mt={1}>
+                                                    {new Date(msg.sent_at).toLocaleString()}
+                                                </Text>
+                                            </Box>
+                                        );
+                                    })
                                 }
                             </VStack>
                             <Textarea

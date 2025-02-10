@@ -35,7 +35,13 @@ export const useRealtimeMessages = ({
             console.log('Fetched messages:', data);
 
             if (fetchError) throw fetchError;
-            setMessages(data || []);
+
+            // Deduplicate messages based on ID
+            const uniqueMessages = Array.from(
+                new Map(data.map(item => [item.id, item])).values()
+            );
+            
+            setMessages(uniqueMessages);
             setLoading(false);
         } catch (error) {
             console.error('Error fetching messages:', error);
@@ -56,54 +62,28 @@ export const useRealtimeMessages = ({
         const channelName = `messages_${JSON.stringify(filter)}`;
 
         // Set up realtime subscription
-        const channel = supabase.channel(channelName, {
-            config: {
-                broadcast: { self: true },
-                presence: { key: 'user_id' },
-            },
-        });
-
-        // Handle broadcast messages
-        if (broadcastEnabled) {
-            channel.on('broadcast', { event: 'new_message' }, ({ payload }) => {
-                console.log('Received broadcast message:', payload);
-                setMessages(prev => [...prev, payload.message]);
+        const channel = supabase
+            .channel(channelName)
+            .on('postgres_changes', {
+                event: '*',
+                schema: 'public',
+                table: 'messages',
+                filter: filter
+            }, (payload) => {
+                // Handle real-time updates
+                if (payload.eventType === 'INSERT') {
+                    setMessages(prev => {
+                        // Check if message already exists
+                        if (prev.some(msg => msg.id === payload.new.id)) {
+                            return prev;
+                        }
+                        return [...prev, payload.new];
+                    });
+                }
+                // ... handle other event types
             });
-        }
 
-        // Handle postgres changes
-        channel
-            .on(
-                'postgres_changes',
-                {
-                    event: 'INSERT',
-                    schema: 'public',
-                    table: table
-                },
-                async (payload) => {
-                    console.log('Received INSERT:', payload);
-                    await fetchMessages();
-                }
-            )
-            .on(
-                'postgres_changes',
-                {
-                    event: 'UPDATE',
-                    schema: 'public',
-                    table: table
-                },
-                async (payload) => {
-                    console.log('Received UPDATE:', payload);
-                    await fetchMessages();
-                }
-            )
-            .subscribe(async (status) => {
-                console.log(`Channel status for ${channelName}:`, status);
-                if (status === 'SUBSCRIBED') {
-                    console.log('Successfully subscribed to message changes');
-                    await fetchMessages();
-                }
-            });
+        channel.subscribe();
 
         return () => {
             console.log(`Unsubscribing from channel ${channelName}`);

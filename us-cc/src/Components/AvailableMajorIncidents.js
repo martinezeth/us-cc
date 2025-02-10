@@ -34,8 +34,6 @@ const AvailableMajorIncidents = ({ userLocation }) => {
                 .eq('id', user.id)
                 .single();
 
-            // Get all major incidents in the organization's state
-            // that the organization isn't already part of
             const { data: incidents, error } = await supabase
                 .from('major_incidents')
                 .select(`
@@ -45,15 +43,13 @@ const AvailableMajorIncidents = ({ userLocation }) => {
                     )
                 `)
                 .eq('status', 'active')
+                .is('deleted_at', null)
                 .not('major_incident_organizations.organization_id', 'eq', user.id);
 
             if (error) throw error;
 
-            // Filter incidents by state if profile exists
             const filteredIncidents = profile?.state
                 ? incidents.filter(incident => {
-                    // You'll need to add state to major_incidents table
-                    // or use geocoding to determine state from lat/lng
                     return incident.state === profile.state;
                 })
                 : incidents;
@@ -114,7 +110,7 @@ const AvailableMajorIncidents = ({ userLocation }) => {
                 ))}
                 {incidents.length === 0 && !loading && (
                     <Text color="gray.500">
-                        No available major incidents in your area at this time.
+                        No available major incidents. You'll see incidents here when other organizations initiate major incident responses that you haven't joined yet.
                     </Text>
                 )}
             </Grid>

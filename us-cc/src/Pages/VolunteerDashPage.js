@@ -805,9 +805,9 @@ export default function VolunteerDashPage() {
                                     templateColumns="repeat(auto-fill, minmax(350px, 1fr))"
                                     gap={6}
                                 >
-                                    {responses.map(response => (
+                                    {responses.map((response, index) => (
                                         <OpportunityCard
-                                            key={response.id}
+                                            key={`response-${response.id}-${index}`}
                                             opportunity={response}
                                             userSkills={userSkills}
                                             isDemoMode={isDemoMode}

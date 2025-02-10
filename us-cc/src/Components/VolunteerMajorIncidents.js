@@ -26,19 +26,19 @@ const VolunteerMajorIncidents = () => {
     const fetchIncidents = async () => {
         try {
             const { data, error } = await supabase
-                .from('major_incidents')
-                .select(`
-                    *,
-                    major_incident_organizations!inner(
-                        organization:profiles!inner(
-                            id,
-                            organization_name
-                        )
+            .from('major_incidents')
+            .select(`
+                *,
+                major_incident_organizations!inner(
+                    organization:profiles!inner(
+                        id,
+                        organization_name
                     )
-                `)
-                .eq('status', 'active')
-                .not('deleted_at', 'is', null)
-                .order('created_at', { ascending: false });
+                )
+            `)
+            .eq('status', 'active')
+            .is('deleted_at', null)  // Changed to check deleted_at is null
+            .order('created_at', { ascending: false });
 
             if (error) throw error;
             const validIncidents = (data || []).filter(incident => 

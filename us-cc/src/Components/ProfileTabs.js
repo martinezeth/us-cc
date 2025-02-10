@@ -167,9 +167,9 @@ const ProfileTabs = ({ profileData, volunteerData, isOwnProfile }) => {
 
     const PostsList = ({ posts }) => (
         <VStack spacing={4} align="stretch">
-            {posts?.map(post => (
+            {posts?.map((post, index) => (
                 <Box
-                    key={post.id}
+                    key={`post-${post.id}-${index}`}
                     p={4}
                     bg="white"
                     borderRadius="md"
@@ -202,9 +202,9 @@ const ProfileTabs = ({ profileData, volunteerData, isOwnProfile }) => {
 
     const VolunteerHistory = ({ history }) => (
         <VStack spacing={4} align="stretch">
-            {history.map(response => (
+            {history.map((response, index) => (
                 <Box
-                    key={response.id}
+                    key={`response-${response.id}-${index}`}
                     p={4}
                     bg="white"
                     borderRadius="md"
@@ -304,9 +304,9 @@ const ProfileTabs = ({ profileData, volunteerData, isOwnProfile }) => {
 
     const OpportunitiesList = ({ opportunities }) => (
         <VStack spacing={4} align="stretch">
-            {opportunities.map(opp => (
+            {opportunities.map((opp, index) => (
                 <Box
-                    key={opp.id}
+                    key={`opportunity-${opp.id}-${index}`}
                     p={4}
                     bg="white"
                     borderRadius="md"

@@ -49,6 +49,16 @@ const MILES_TO_METERS = 1609.34;
 const ListView = ({ incidents }) => {
   const navigate = useNavigate();
 
+  const getLocationDisplay = (incident) => {
+    if (incident.city && incident.state) {
+      return `${incident.city}, ${incident.state}`;
+    } else if (incident.city) {
+      return incident.city;
+    } else {
+      return `(${incident.location_lat.toFixed(2)}, ${incident.location_lng.toFixed(2)})`;
+    }
+  };
+
   return (
     <VStack spacing={4} align="stretch">
       {incidents.map(incident => (
@@ -94,15 +104,9 @@ const ListView = ({ incidents }) => {
                 <Text fontSize="sm" color="gray.600">
                   Reported at: {new Date(incident.timestamp).toLocaleString()}
                 </Text>
-                {incident.city && incident.state ? (
-                  <Badge colorScheme="blue">
-                    📍 {incident.city}, {incident.state}
-                  </Badge>
-                ) : (
-                  <Badge colorScheme="blue">
-                    📍 ({incident.location_lat.toFixed(2)}, {incident.location_lng.toFixed(2)})
-                  </Badge>
-                )}
+                <Badge colorScheme="blue">
+                  📍 {getLocationDisplay(incident)}
+                </Badge>
               </HStack>
             </Box>
           </HStack>
@@ -184,7 +188,7 @@ function MapEvents({ setIncidents, radius }) {
 
         if (error) throw error;
 
-        // Fetch major incidents
+        // Fetch major incidents - add status filter and is_deleted check
         const { data: majorIncidentsData, error: majorError } = await supabase
           .from('major_incidents')
           .select('*')
@@ -192,17 +196,22 @@ function MapEvents({ setIncidents, radius }) {
           .lte('location_lat', neLat)
           .gte('location_lng', swLng)
           .lte('location_lng', neLng)
-          .eq('status', 'active');
+          .eq('status', 'active')
+          .eq('is_deleted', false);
 
         if (majorError) throw majorError;
+
+        // Filter out any incidents without valid IDs
+        const validIncidentsData = incidentsData.filter(incident => incident && incident.id);
+        const validMajorIncidentsData = majorIncidentsData.filter(incident => incident && incident.id);
 
         // Get unique user IDs from both types of incidents
         const userIds = [
           ...new Set([
-            ...incidentsData.map(incident => incident.created_by),
-            ...majorIncidentsData.map(incident => incident.created_by)
+            ...validIncidentsData.map(incident => incident.created_by),
+            ...validMajorIncidentsData.map(incident => incident.created_by)
           ])
-        ];
+        ].filter(Boolean); // Filter out any null/undefined user IDs
 
         // Fetch profiles for these users
         const { data: profiles } = await supabase
@@ -222,14 +231,14 @@ function MapEvents({ setIncidents, radius }) {
         });
 
         // Combine regular incidents with user profiles
-        const enrichedIncidents = incidentsData.map(incident => ({
+        const enrichedIncidents = validIncidentsData.map(incident => ({
           ...incident,
           created_by_user: userProfiles[incident.created_by] || null,
           isMajorIncident: false
         }));
 
         // Add major incidents with user profiles
-        const enrichedMajorIncidents = majorIncidentsData.map(incident => ({
+        const enrichedMajorIncidents = validMajorIncidentsData.map(incident => ({
           ...incident,
           created_by_user: userProfiles[incident.created_by] || null,
           isMajorIncident: true,
