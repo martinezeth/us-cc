@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
     Drawer,
     DrawerBody,
@@ -45,32 +45,11 @@ const VolunteerResponsesDrawer = ({ isOpen, onClose, opportunity }) => {
     const [currentUser, setCurrentUser] = useState(null);
     const toast = useToast();
     const navigate = useNavigate();
+    const [messages, setMessages] = useState([]);
+    const [loading, setLoading] = useState(true);
 
-    const { messages: existingMessages, loading, error, refreshMessages } = useRealtimeMessages({
-        table: 'messages',
-        select: `
-            id,
-            opportunity_id,
-            organization_id,
-            volunteer_id,
-            recipient_id,
-            message,
-            sent_at,
-            is_group_message,
-            read_status:message_read_status(
-                user_id,
-                read_at
-            )
-        `,
-        filter: opportunity?.id ? {
-            opportunity_id: opportunity.id
-        } : null,
-        broadcastEnabled: true,
-        onSubscription: (message) => {
-            console.log('Drawer realtime message received:', message);
-        },
-        enabled: !!opportunity?.id && isOpen
-    });
+    // Add channel ref to maintain subscription
+    const channelRef = useRef(null);
 
     useEffect(() => {
         const getCurrentUser = async () => {
@@ -79,73 +58,6 @@ const VolunteerResponsesDrawer = ({ isOpen, onClose, opportunity }) => {
         };
         getCurrentUser();
     }, []);
-
-    const handleSendDirectMessage = async () => {
-        if (!selectedVolunteer) return;
-
-        try {
-            const { data: { user } } = await supabase.auth.getUser();
-
-            const { error } = await supabase
-                .from('messages')
-                .insert([{
-                    organization_id: user.id,
-                    volunteer_id: null,
-                    recipient_id: selectedVolunteer.volunteer_id,
-                    opportunity_id: opportunity.id,
-                    message: directMessage,
-                    is_group_message: false
-                }]);
-
-            if (error) throw error;
-
-            setDirectMessage('');
-            toast({
-                title: "Message sent",
-                status: "success",
-                duration: 3000
-            });
-        } catch (error) {
-            toast({
-                title: "Error sending message",
-                description: error.message,
-                status: "error",
-                duration: 5000
-            });
-        }
-    };
-
-    const handleSendGroupMessage = async () => {
-        try {
-            const { data: { user } } = await supabase.auth.getUser();
-
-            const { error } = await supabase
-                .from('messages')
-                .insert([{
-                    organization_id: user.id,
-                    volunteer_id: null,
-                    opportunity_id: opportunity.id,
-                    message: groupMessage,
-                    is_group_message: true,
-                }]);
-
-            if (error) throw error;
-
-            setGroupMessage('');
-            toast({
-                title: "Group message sent",
-                status: "success",
-                duration: 3000
-            });
-        } catch (error) {
-            toast({
-                title: "Error sending group message",
-                description: error.message,
-                status: "error",
-                duration: 5000
-            });
-        }
-    };
 
     // Filter volunteers based on search query
     const filteredVolunteers = opportunity?.responses?.filter(volunteer => {
@@ -206,7 +118,7 @@ const VolunteerResponsesDrawer = ({ isOpen, onClose, opportunity }) => {
     const getVolunteerMessageStats = (volunteerId) => {
         if (!currentUser) return { unreadCount: 0 };
 
-        const volunteerMessages = existingMessages.filter(msg => 
+        const volunteerMessages = messages.filter(msg => 
             msg.volunteer_id === volunteerId && !msg.is_group_message
         );
         
@@ -242,7 +154,7 @@ const VolunteerResponsesDrawer = ({ isOpen, onClose, opportunity }) => {
                 return;
             }
 
-            await refreshMessages();
+            await fetchMessages();
         } catch (error) {
             console.error('Error in markMessagesAsRead:', error);
         }
@@ -251,7 +163,7 @@ const VolunteerResponsesDrawer = ({ isOpen, onClose, opportunity }) => {
     // Add function to mark all messages from a volunteer as read
     const markVolunteerMessagesAsRead = async (volunteerId) => {
         try {
-            const unreadMessageIds = existingMessages
+            const unreadMessageIds = messages
                 .filter(msg => {
                     const shouldMark = msg.volunteer_id === volunteerId && isMessageUnread(msg);
                     
@@ -285,6 +197,151 @@ const VolunteerResponsesDrawer = ({ isOpen, onClose, opportunity }) => {
             .match(/[A-Z][a-z]+/g) // Split on capital letters and include following lowercase letters
             .map(time => time.trim())
             .filter(Boolean); // Remove any empty strings
+    };
+
+    // Move fetchMessages to component scope
+    const fetchMessages = async () => {
+        if (!opportunity?.id) return;
+        
+        try {
+            const { data, error } = await supabase
+                .from('messages')
+                .select(`
+                    id,
+                    opportunity_id,
+                    organization_id,
+                    volunteer_id,
+                    recipient_id,
+                    message,
+                    sent_at,
+                    is_group_message,
+                    read_status:message_read_status(
+                        user_id,
+                        read_at
+                    )
+                `)
+                .eq('opportunity_id', opportunity.id)
+                .order('sent_at', { ascending: true });
+
+            if (error) throw error;
+            console.log('Fetched messages:', data);
+            setMessages(data || []);
+        } catch (error) {
+            console.error('Error fetching messages:', error);
+        }
+    };
+
+    // Update the subscription effect
+    useEffect(() => {
+        if (!opportunity?.id) return;
+
+        // Initial fetch
+        fetchMessages();
+
+        // Create channel
+        const channel = supabase.channel(`room_${opportunity.id}`, {
+            config: {
+                broadcast: { self: true },
+                presence: { key: currentUser?.id },
+            },
+        });
+
+        // Set up channel handlers
+        channel
+            .on(
+                'postgres_changes',
+                {
+                    event: 'INSERT',
+                    schema: 'public',
+                    table: 'messages',
+                    filter: `opportunity_id=eq.${opportunity.id}`
+                },
+                (payload) => {
+                    console.log('New message received:', payload);
+                    // Add new message to state
+                    setMessages(prev => [...prev, payload.new]);
+                }
+            )
+            .subscribe((status) => {
+                console.log('Channel status:', status);
+                if (status === 'SUBSCRIBED') {
+                    console.log('Successfully subscribed to message changes');
+                }
+            });
+
+        // Cleanup function
+        return () => {
+            channel.unsubscribe();
+        };
+    }, [opportunity?.id, currentUser?.id]);
+
+    // Update handleSendDirectMessage
+    const handleSendDirectMessage = async () => {
+        if (!selectedVolunteer) return;
+
+        try {
+            const { data: { user } } = await supabase.auth.getUser();
+            
+            const { data: newMessage, error } = await supabase
+                .from('messages')
+                .insert([{
+                    organization_id: user.id,
+                    volunteer_id: null,
+                    recipient_id: selectedVolunteer.volunteer_id,
+                    opportunity_id: opportunity.id,
+                    message: directMessage,
+                    is_group_message: false
+                }])
+                .select('*')
+                .single();
+
+            if (error) throw error;
+
+            // Update local state immediately
+            setMessages(prev => [...prev, newMessage]);
+            setDirectMessage('');
+        } catch (error) {
+            console.error('Error sending message:', error);
+            toast({
+                title: "Error sending message",
+                description: error.message,
+                status: "error",
+                duration: 5000
+            });
+        }
+    };
+
+    // Update handleSendGroupMessage
+    const handleSendGroupMessage = async () => {
+        try {
+            const { data: { user } } = await supabase.auth.getUser();
+
+            const { error } = await supabase
+                .from('messages')
+                .insert([{
+                    organization_id: user.id,
+                    volunteer_id: null,
+                    opportunity_id: opportunity.id,
+                    message: groupMessage,
+                    is_group_message: true,
+                }]);
+
+            if (error) throw error;
+
+            setGroupMessage('');
+            toast({
+                title: "Group message sent",
+                status: "success",
+                duration: 3000
+            });
+        } catch (error) {
+            toast({
+                title: "Error sending group message",
+                description: error.message,
+                status: "error",
+                duration: 5000
+            });
+        }
     };
 
     // Add cleanup for messages when drawer closes
@@ -419,7 +476,7 @@ const VolunteerResponsesDrawer = ({ isOpen, onClose, opportunity }) => {
                                                             },
                                                         }}
                                                     >
-                                                        {existingMessages
+                                                        {messages
                                                             .filter(msg => msg.volunteer_id === volunteer.volunteer_id || 
                                                                          (msg.recipient_id === volunteer.volunteer_id && !msg.is_group_message))
                                                             .map((msg, idx) => (
@@ -507,7 +564,7 @@ const VolunteerResponsesDrawer = ({ isOpen, onClose, opportunity }) => {
                                     },
                                 }}
                             >
-                                {existingMessages
+                                {messages
                                     .filter(msg => msg.is_group_message && opportunity?.id && msg.opportunity_id === opportunity.id)
                                     .map((msg, idx) => (
                                         <Box

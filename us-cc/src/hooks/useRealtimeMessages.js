@@ -30,7 +30,9 @@ export const useRealtimeMessages = ({
                 }
             }
 
+            console.log('Fetching messages with filter:', filter?.or);
             const { data, error: fetchError } = await query;
+            console.log('Fetched messages:', data);
 
             if (fetchError) throw fetchError;
             setMessages(data || []);
@@ -74,14 +76,24 @@ export const useRealtimeMessages = ({
             .on(
                 'postgres_changes',
                 {
-                    event: '*',
+                    event: 'INSERT',
                     schema: 'public',
-                    table: table,
-                    filter: filter?.or || undefined
+                    table: table
                 },
                 async (payload) => {
-                    console.log('Received postgres change:', payload);
-                    // Refresh messages to ensure consistency
+                    console.log('Received INSERT:', payload);
+                    await fetchMessages();
+                }
+            )
+            .on(
+                'postgres_changes',
+                {
+                    event: 'UPDATE',
+                    schema: 'public',
+                    table: table
+                },
+                async (payload) => {
+                    console.log('Received UPDATE:', payload);
                     await fetchMessages();
                 }
             )
@@ -89,6 +101,7 @@ export const useRealtimeMessages = ({
                 console.log(`Channel status for ${channelName}:`, status);
                 if (status === 'SUBSCRIBED') {
                     console.log('Successfully subscribed to message changes');
+                    await fetchMessages();
                 }
             });
 

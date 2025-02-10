@@ -223,7 +223,7 @@ const VolunteerMessages = ({ onUnreadCountChange }) => {
                 }])
                 .select(`
                     *,
-                    organization:profiles(id, organization_name),
+                    organization:profiles(organization_name),
                     opportunity:volunteer_opportunities(
                         id,
                         title,
@@ -236,7 +236,7 @@ const VolunteerMessages = ({ onUnreadCountChange }) => {
             if (error) throw error;
 
             // Then broadcast it
-            const channel = supabase.channel(`messages_${selectedOpportunity.id}`);
+            const channel = supabase.channel(`opportunity_${selectedOpportunity.id}`);
             await channel.send({
                 type: 'broadcast',
                 event: 'new_message',
@@ -253,6 +253,54 @@ const VolunteerMessages = ({ onUnreadCountChange }) => {
             });
         }
     };
+
+    useEffect(() => {
+        if (!selectedOpportunity?.id || !currentUser) return;
+
+        const channel = supabase.channel(`opportunity_${selectedOpportunity.id}`, {
+            config: {
+                broadcast: { self: true },
+                presence: { key: currentUser.id },
+            },
+        });
+
+        channel
+            .on('broadcast', { event: 'new_message' }, ({ payload }) => {
+                console.log('Received broadcast message:', payload);
+                // Update messages immediately
+                setOpportunityMessages(prev => {
+                    const oppId = payload.message.opportunity_id;
+                    if (!prev[oppId]) return prev;
+                    return {
+                        ...prev,
+                        [oppId]: {
+                            ...prev[oppId],
+                            messages: [...prev[oppId].messages, payload.message]
+                        }
+                    };
+                });
+            })
+            .on(
+                'postgres_changes',
+                {
+                    event: '*',
+                    schema: 'public',
+                    table: 'messages',
+                    filter: `opportunity_id=eq.${selectedOpportunity.id}`
+                },
+                async () => {
+                    // Refresh messages as backup
+                    await refreshMessages();
+                }
+            )
+            .subscribe(status => {
+                console.log('Channel status:', status);
+            });
+
+        return () => {
+            supabase.removeChannel(channel);
+        };
+    }, [selectedOpportunity?.id, currentUser]);
 
     const { messages, loading, error, refreshMessages } = useRealtimeMessages({
         table: 'messages',
@@ -280,10 +328,23 @@ const VolunteerMessages = ({ onUnreadCountChange }) => {
         filter: currentUser ? {
             or: `recipient_id.eq.${currentUser.id},is_group_message.eq.true,volunteer_id.eq.${currentUser.id}`
         } : null,
-        orderBy: { column: 'sent_at', ascending: true },
-        enabled: !!currentUser,
+        broadcastEnabled: true,
         onSubscription: (message) => {
-            console.log('Realtime message received:', message);
+            console.log('Volunteer messages realtime received:', message);
+            if (message.payload) {
+                setOpportunityMessages(prev => {
+                    const oppId = message.payload.message.opportunity_id;
+                    if (!prev[oppId]) return prev;
+                    
+                    return {
+                        ...prev,
+                        [oppId]: {
+                            ...prev[oppId],
+                            messages: [...prev[oppId].messages, message.payload.message]
+                        }
+                    };
+                });
+            }
         }
     });
 
