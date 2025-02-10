@@ -33,9 +33,15 @@ import {
     AlertDialogFooter,
     AlertDialogHeader,
     AlertDialogContent,
-    AlertDialogOverlay
+    AlertDialogOverlay,
+    Menu,
+    MenuButton,
+    MenuList,
+    MenuItem,
+    IconButton
 } from '@chakra-ui/react';
-import { WarningIcon, AddIcon } from '@chakra-ui/icons';
+import { WarningIcon, AddIcon, DeleteIcon } from '@chakra-ui/icons';
+import { BsThreeDotsVertical } from 'react-icons/bs';
 import { supabase } from '../supabaseClient';
 import { MapContainer, TileLayer, Circle, Popup, useMap } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -140,10 +146,7 @@ const MajorIncidentDashboard = () => {
     const fetchIncidentData = async () => {
         try {
             setLoading(true);
-            const { data: { user } } = await supabase.auth.getUser();
-
-            // Fetch specific major incident data
-            const { data: incident, error: incidentError } = await supabase
+            const { data: incident, error } = await supabase
                 .from('major_incidents')
                 .select(`
                     *,
@@ -153,7 +156,20 @@ const MajorIncidentDashboard = () => {
                 .eq('id', id)
                 .single();
 
-            if (incidentError) throw incidentError;
+            if (error) {
+                if (error.code === 'PGRST116') {
+                    // Incident not found
+                    toast({
+                        title: "Incident Not Found",
+                        description: "This major incident may have been deleted",
+                        status: "error",
+                        duration: 5000
+                    });
+                    navigate('/organization-dashboard');
+                    return;
+                }
+                throw error;
+            }
 
             if (!incident) {
                 toast({
@@ -420,6 +436,126 @@ const MajorIncidentDashboard = () => {
         }
     };
 
+    const handleDeleteIncident = async () => {
+        try {
+            const { data: { user } } = await supabase.auth.getUser();
+            
+            // First soft delete the incident
+            await supabase.rpc('soft_delete_major_incident', {
+                incident_id: id
+            });
+
+            // First get all channels to handle their dependencies
+            const { data: channels } = await supabase
+                .from('coordination_channels')
+                .select('id')
+                .eq('major_incident_id', id);
+
+            if (channels?.length > 0) {
+                const channelIds = channels.map(c => c.id);
+                
+                // Delete messages first
+                await supabase
+                    .from('coordination_messages')
+                    .delete()
+                    .in('channel_id', channelIds);
+
+                // Delete channel members
+                await supabase
+                    .from('channel_members')
+                    .delete()
+                    .in('channel_id', channelIds);
+
+                // Delete channels
+                await supabase
+                    .from('coordination_channels')
+                    .delete()
+                    .eq('major_incident_id', id);
+            }
+
+            // Get all opportunities to handle their dependencies
+            const { data: opportunities } = await supabase
+                .from('volunteer_opportunities')
+                .select('id')
+                .eq('major_incident_id', id);
+
+            if (opportunities?.length > 0) {
+                const oppIds = opportunities.map(o => o.id);
+                
+                // Delete message read receipts first
+                await supabase
+                    .from('message_read_receipts')
+                    .delete()
+                    .in('message_id', (
+                        supabase
+                            .from('messages')
+                            .select('id')
+                            .in('opportunity_id', oppIds)
+                    ));
+
+                // Delete messages
+                await supabase
+                    .from('messages')
+                    .delete()
+                    .in('opportunity_id', oppIds);
+
+                // Delete opportunity responses
+                await supabase
+                    .from('opportunity_responses')
+                    .delete()
+                    .in('opportunity_id', oppIds);
+            }
+
+            // Delete all volunteer assignments
+            await supabase
+                .from('major_incident_volunteer_assignments')
+                .delete()
+                .eq('major_incident_id', id);
+
+            // Delete all volunteer pool entries
+            await supabase
+                .from('major_incident_volunteer_pool')
+                .delete()
+                .eq('major_incident_id', id);
+
+            // Delete all updates
+            await supabase
+                .from('major_incident_updates')
+                .delete()
+                .eq('major_incident_id', id);
+
+            // Delete opportunities
+            await supabase
+                .from('volunteer_opportunities')
+                .delete()
+                .eq('major_incident_id', id);
+
+            // Delete organization participants
+            await supabase
+                .from('major_incident_organizations')
+                .delete()
+                .eq('major_incident_id', id);
+
+            toast({
+                title: "Major Incident Deleted",
+                description: "The incident and all related data have been deleted",
+                status: "success",
+                duration: 5000
+            });
+
+            // Navigate back to organization dashboard
+            navigate('/organization-dashboard');
+        } catch (error) {
+            console.error('Delete error:', error);
+            toast({
+                title: "Error",
+                description: error.message,
+                status: "error",
+                duration: 5000
+            });
+        }
+    };
+
     const renderActionButton = () => {
         if (!user) {
             return (
@@ -524,6 +660,38 @@ const MajorIncidentDashboard = () => {
                                 >
                                     {activeIncident.severity_level.toUpperCase()}
                                 </Badge>
+                                {isOrganization && isParticipating && (
+                                    <Menu>
+                                        <MenuButton
+                                            as={IconButton}
+                                            icon={<BsThreeDotsVertical />}
+                                            variant="ghost"
+                                            size="sm"
+                                            ml={2}
+                                            isDisabled={activeIncident?.status === 'archived'}
+                                            _disabled={{
+                                                opacity: 0.6,
+                                                cursor: 'not-allowed'
+                                            }}
+                                        />
+                                        <MenuList>
+                                            <MenuItem
+                                                icon={<DeleteIcon />}
+                                                color="red.500"
+                                                onClick={() => {
+                                                    const confirmed = window.confirm(
+                                                        "Are you sure you want to delete this major incident? This action cannot be undone and will delete all related data including opportunities, assignments, and messages."
+                                                    );
+                                                    if (confirmed) {
+                                                        handleDeleteIncident();
+                                                    }
+                                                }}
+                                            >
+                                                Delete Incident
+                                            </MenuItem>
+                                        </MenuList>
+                                    </Menu>
+                                )}
                             </HStack>
                             <Text color="gray.600">
                                 Impact Radius: {activeIncident.radius_miles} miles |

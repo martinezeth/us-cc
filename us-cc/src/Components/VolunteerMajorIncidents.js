@@ -20,26 +20,35 @@ const VolunteerMajorIncidents = () => {
     const navigate = useNavigate();
 
     useEffect(() => {
-        fetchMajorIncidents();
+        fetchIncidents();
     }, []);
 
-    const fetchMajorIncidents = async () => {
+    const fetchIncidents = async () => {
         try {
             const { data, error } = await supabase
                 .from('major_incidents')
                 .select(`
                     *,
-                    major_incident_organizations (
-                        organization:profiles(organization_name)
+                    major_incident_organizations!inner(
+                        organization:profiles!inner(
+                            id,
+                            organization_name
+                        )
                     )
                 `)
                 .eq('status', 'active')
+                .not('deleted_at', 'is', null)
                 .order('created_at', { ascending: false });
 
             if (error) throw error;
-            setIncidents(data || []);
+            const validIncidents = (data || []).filter(incident => 
+                incident.id && 
+                incident.title && 
+                incident.major_incident_organizations?.length > 0
+            );
+            setIncidents(validIncidents);
         } catch (error) {
-            console.error('Error fetching major incidents:', error);
+            console.error('Error fetching incidents:', error);
             toast({
                 title: "Error",
                 description: "Failed to load major incidents",
@@ -50,6 +59,11 @@ const VolunteerMajorIncidents = () => {
             setLoading(false);
         }
     };
+
+    useEffect(() => {
+        const interval = setInterval(fetchIncidents, 30000);
+        return () => clearInterval(interval);
+    }, []);
 
     if (loading) {
         return <Text textAlign="center">Loading major incidents...</Text>;
