@@ -59,8 +59,31 @@ const VolunteerResponsesDrawer = ({ isOpen, onClose, opportunity }) => {
         getCurrentUser();
     }, []);
 
-    // Filter volunteers based on search query
-    const filteredVolunteers = opportunity?.responses?.filter(volunteer => {
+    // Add this function near the top of the component, before the useEffect hooks
+    const getUniqueVolunteers = (responses) => {
+        if (!responses) return [];
+        
+        // Create a map to store the latest response for each volunteer
+        const volunteerMap = new Map();
+        
+        // Sort responses by date (newest first) before processing
+        const sortedResponses = [...responses].sort((a, b) => {
+            return new Date(b.response_date || 0) - new Date(a.response_date || 0);
+        });
+        
+        // Keep only the latest response for each volunteer
+        sortedResponses.forEach(response => {
+            if (!volunteerMap.has(response.volunteer_id)) {
+                volunteerMap.set(response.volunteer_id, response);
+            }
+        });
+        
+        // Convert map back to array
+        return Array.from(volunteerMap.values());
+    };
+
+    // Update the filteredVolunteers definition
+    const filteredVolunteers = getUniqueVolunteers(opportunity?.responses)?.filter(volunteer => {
         const searchTerm = searchQuery.toLowerCase();
         const volunteerName = volunteer?.volunteer_name || '';
         return volunteerName.toLowerCase().includes(searchTerm);

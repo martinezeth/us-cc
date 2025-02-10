@@ -357,12 +357,14 @@ export default function OrganizationDashboard() {
             setLoading(true);
             const { data: { user } } = await supabase.auth.getUser();
 
-            // Fetch active opportunities
+            // Fetch active opportunities with a subquery to count unique volunteers
             const { data: activeOpps, error: activeError } = await supabase
                 .from('volunteer_opportunities')
                 .select(`
                     *,
-                    responses:opportunity_responses(count)
+                    responses:opportunity_responses!inner(
+                        volunteer_id
+                    )
                 `)
                 .eq('organization_id', user.id)
                 .eq('status', 'open')
@@ -370,12 +372,14 @@ export default function OrganizationDashboard() {
 
             if (activeError) throw activeError;
 
-            // Fetch archived opportunities
+            // Fetch archived opportunities with the same subquery
             const { data: archivedOpps, error: archivedError } = await supabase
                 .from('volunteer_opportunities')
                 .select(`
                     *,
-                    responses:opportunity_responses(count)
+                    responses:opportunity_responses!inner(
+                        volunteer_id
+                    )
                 `)
                 .eq('organization_id', user.id)
                 .eq('status', 'archived')
@@ -383,10 +387,10 @@ export default function OrganizationDashboard() {
 
             if (archivedError) throw archivedError;
 
-            // Process opportunities to include response counts
+            // Process opportunities to include unique response counts
             const processOpportunities = (opps) => opps.map(opp => ({
                 ...opp,
-                response_count: opp.responses[0]?.count || 0
+                response_count: new Set(opp.responses?.map(r => r.volunteer_id)).size || 0
             }));
 
             setActiveOpportunities(processOpportunities(activeOpps || []));
