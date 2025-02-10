@@ -1,0 +1,806 @@
+Running this query:
+"
+SELECT 
+    table_name,
+    column_name,
+    data_type,
+    column_default,
+    is_nullable,
+    character_maximum_length
+FROM information_schema.columns
+WHERE table_schema = 'public'
+AND table_name IN (
+    'incidents',
+    'message_read_receipts',
+    'messages',
+    'notifications',
+    'opportunity_responses',
+    'post_comments',
+    'post_likes',
+    'posts',
+    'profiles',
+    'volunteer_opportunities',
+    'volunteer_signups'
+)
+ORDER BY table_name, ordinal_position;
+"
+
+Returned this:
+"
+| table_name              | column_name           | data_type                | column_default               | is_nullable | character_maximum_length |
+| ----------------------- | --------------------- | ------------------------ | ---------------------------- | ----------- | ------------------------ |
+| incidents               | incident_id           | uuid                     | uuid_generate_v4()           | NO          |                          |
+| incidents               | incident_type         | text                     |                              | NO          |                          |
+| incidents               | description           | text                     |                              | YES         |                          |
+| incidents               | location_lat          | double precision         |                              | NO          |                          |
+| incidents               | location_lng          | double precision         |                              | NO          |                          |
+| incidents               | timestamp             | timestamp with time zone | timezone('utc'::text, now()) | YES         |                          |
+| incidents               | created_by            | uuid                     |                              | YES         |                          |
+| incidents               | created_at            | timestamp with time zone | CURRENT_TIMESTAMP            | YES         |                          |
+| message_read_receipts   | id                    | uuid                     | gen_random_uuid()            | NO          |                          |
+| message_read_receipts   | message_id            | uuid                     |                              | YES         |                          |
+| message_read_receipts   | volunteer_id          | uuid                     |                              | YES         |                          |
+| message_read_receipts   | read_at               | timestamp with time zone | now()                        | YES         |                          |
+| messages                | id                    | uuid                     | uuid_generate_v4()           | NO          |                          |
+| messages                | organization_id       | uuid                     |                              | YES         |                          |
+| messages                | volunteer_id          | uuid                     |                              | YES         |                          |
+| messages                | opportunity_id        | uuid                     |                              | YES         |                          |
+| messages                | message               | text                     |                              | NO          |                          |
+| messages                | sent_at               | timestamp with time zone | timezone('utc'::text, now()) | YES         |                          |
+| messages                | is_group_message      | boolean                  | false                        | YES         |                          |
+| messages                | is_read               | boolean                  | false                        | YES         |                          |
+| notifications           | id                    | uuid                     | uuid_generate_v4()           | NO          |                          |
+| notifications           | user_id               | uuid                     |                              | NO          |                          |
+| notifications           | type                  | text                     |                              | NO          |                          |
+| notifications           | content               | text                     |                              | NO          |                          |
+| notifications           | related_id            | uuid                     |                              | YES         |                          |
+| notifications           | is_read               | boolean                  | false                        | YES         |                          |
+| notifications           | created_at            | timestamp with time zone | timezone('utc'::text, now()) | NO          |                          |
+| opportunity_responses   | id                    | uuid                     | uuid_generate_v4()           | NO          |                          |
+| opportunity_responses   | opportunity_id        | uuid                     |                              | YES         |                          |
+| opportunity_responses   | volunteer_id          | uuid                     |                              | YES         |                          |
+| opportunity_responses   | status                | text                     | 'accepted'::text             | YES         |                          |
+| opportunity_responses   | response_date         | timestamp with time zone | CURRENT_TIMESTAMP            | YES         |                          |
+| post_comments           | id                    | uuid                     | uuid_generate_v4()           | NO          |                          |
+| post_comments           | post_id               | uuid                     |                              | YES         |                          |
+| post_comments           | user_id               | uuid                     |                              | YES         |                          |
+| post_comments           | content               | text                     |                              | NO          |                          |
+| post_comments           | user_email            | text                     |                              | NO          |                          |
+| post_comments           | user_name             | text                     |                              | NO          |                          |
+| post_comments           | created_at            | timestamp with time zone | now()                        | YES         |                          |
+| post_comments           | parent_id             | uuid                     |                              | YES         |                          |
+| post_likes              | id                    | uuid                     | uuid_generate_v4()           | NO          |                          |
+| post_likes              | post_id               | uuid                     |                              | YES         |                          |
+| post_likes              | user_id               | uuid                     |                              | YES         |                          |
+| post_likes              | created_at            | timestamp with time zone | now()                        | YES         |                          |
+| posts                   | id                    | uuid                     | uuid_generate_v4()           | NO          |                          |
+| posts                   | user_id               | uuid                     |                              | NO          |                          |
+| posts                   | user_name             | text                     |                              | YES         |                          |
+| posts                   | user_username         | text                     |                              | YES         |                          |
+| posts                   | title                 | text                     |                              | NO          |                          |
+| posts                   | body                  | text                     |                              | YES         |                          |
+| posts                   | date_posted           | timestamp with time zone | timezone('utc'::text, now()) | YES         |                          |
+| posts                   | location_lat          | double precision         |                              | YES         |                          |
+| posts                   | location_lng          | double precision         |                              | YES         |                          |
+| posts                   | city                  | text                     |                              | YES         |                          |
+| posts                   | state                 | text                     |                              | YES         |                          |
+| posts                   | city_coords           | text                     |                              | YES         |                          |
+| profiles                | id                    | uuid                     |                              | NO          |                          |
+| profiles                | full_name             | text                     |                              | YES         |                          |
+| profiles                | city                  | text                     |                              | YES         |                          |
+| profiles                | state                 | text                     |                              | YES         |                          |
+| profiles                | updated_at            | timestamp with time zone | timezone('utc'::text, now()) | YES         |                          |
+| profiles                | location_lat          | double precision         |                              | YES         |                          |
+| profiles                | location_lng          | double precision         |                              | YES         |                          |
+| profiles                | organization_name     | text                     |                              | YES         |                          |
+| profiles                | phone                 | text                     |                              | YES         |                          |
+| profiles                | address               | text                     |                              | YES         |                          |
+| profiles                | mission_statement     | text                     |                              | YES         |                          |
+| volunteer_opportunities | id                    | uuid                     | uuid_generate_v4()           | NO          |                          |
+| volunteer_opportunities | created_at            | timestamp with time zone | CURRENT_TIMESTAMP            | YES         |                          |
+| volunteer_opportunities | organization_id       | uuid                     |                              | YES         |                          |
+| volunteer_opportunities | title                 | text                     |                              | NO          |                          |
+| volunteer_opportunities | description           | text                     |                              | NO          |                          |
+| volunteer_opportunities | location              | text                     |                              | YES         |                          |
+| volunteer_opportunities | required_skills       | ARRAY                    |                              | YES         |                          |
+| volunteer_opportunities | status                | text                     | 'open'::text                 | YES         |                          |
+| volunteer_opportunities | event_date            | timestamp with time zone |                              | YES         |                          |
+| volunteer_opportunities | volunteer_assignments | ARRAY                    | '{}'::uuid[]                 | YES         |                          |
+| volunteer_opportunities | location_lat          | double precision         |                              | YES         |                          |
+| volunteer_opportunities | location_lng          | double precision         |                              | YES         |                          |
+| volunteer_opportunities | radius_miles          | integer                  | 50                           | YES         |                          |
+| volunteer_opportunities | archived_at           | timestamp with time zone |                              | YES         |                          |
+| volunteer_signups       | id                    | uuid                     | uuid_generate_v4()           | NO          |                          |
+| volunteer_signups       | user_id               | uuid                     |                              | YES         |                          |
+| volunteer_signups       | incident_id           | uuid                     |                              | YES         |                          |
+| volunteer_signups       | status                | text                     | 'pending'::text              | YES         |                          |
+| volunteer_signups       | created_at            | timestamp with time zone | CURRENT_TIMESTAMP            | YES         |                          |
+| volunteer_signups       | skills                | ARRAY                    |                              | YES         |                          |
+| volunteer_signups       | availability          | ARRAY                    |                              | YES         |                          |
+| volunteer_signups       | region                | text                     |                              | YES         |                          |
+| volunteer_signups       | location_lat          | double precision         |                              | YES         |                          |
+| volunteer_signups       | location_lng          | double precision         |                              | YES         |                          |
+| volunteer_signups       | city                  | text                     |                              | YES         |                          |
+| volunteer_signups       | state                 | text                     |                              | YES         |                          |
+| volunteer_signups       | country               | text                     |                              | YES         |                          |
+"
+
+Running this query:
+"
+SELECT
+    tc.table_schema, 
+    tc.constraint_name, 
+    tc.table_name, 
+    kcu.column_name, 
+    ccu.table_schema AS foreign_table_schema,
+    ccu.table_name AS foreign_table_name,
+    ccu.column_name AS foreign_column_name 
+FROM 
+    information_schema.table_constraints AS tc 
+    JOIN information_schema.key_column_usage AS kcu
+      ON tc.constraint_name = kcu.constraint_name
+      AND tc.table_schema = kcu.table_schema
+    JOIN information_schema.constraint_column_usage AS ccu
+      ON ccu.constraint_name = tc.constraint_name
+      AND ccu.table_schema = tc.table_schema
+WHERE tc.constraint_type = 'FOREIGN KEY'
+AND tc.table_schema = 'public';
+"
+
+Returned this:
+"
+| table_schema | constraint_name                           | table_name            | column_name    | foreign_table_schema | foreign_table_name      | foreign_column_name |
+| ------------ | ----------------------------------------- | --------------------- | -------------- | -------------------- | ----------------------- | ------------------- |
+| public       | opportunity_responses_opportunity_id_fkey | opportunity_responses | opportunity_id | public               | volunteer_opportunities | id                  |
+| public       | messages_opportunity_id_fkey              | messages              | opportunity_id | public               | volunteer_opportunities | id                  |
+| public       | volunteer_signups_incident_id_fkey        | volunteer_signups     | incident_id    | public               | incidents               | incident_id         |
+| public       | post_comments_parent_id_fkey              | post_comments         | parent_id      | public               | post_comments           | id                  |
+| public       | post_comments_post_id_fkey                | post_comments         | post_id        | public               | posts                   | id                  |
+| public       | post_likes_post_id_fkey                   | post_likes            | post_id        | public               | posts                   | id                  |
+| public       | message_read_receipts_message_id_fkey     | message_read_receipts | message_id     | public               | messages                | id                  |
+| public       | message_read_receipts_volunteer_id_fkey   | message_read_receipts | volunteer_id   | public               | profiles                | id                  |
+"
+
+Running this query:
+"
+SELECT
+    t.relname AS table_name,
+    i.relname AS index_name,
+    a.attname AS column_name,
+    ix.indisunique AS is_unique
+FROM
+    pg_class t,
+    pg_class i,
+    pg_index ix,
+    pg_attribute a
+WHERE
+    t.oid = ix.indrelid
+    AND i.oid = ix.indexrelid
+    AND a.attrelid = t.oid
+    AND a.attnum = ANY(ix.indkey)
+    AND t.relkind = 'r'
+    AND t.relname IN (
+        'incidents',
+        'message_read_receipts',
+        'messages',
+        'notifications',
+        'opportunity_responses',
+        'post_comments',
+        'post_likes',
+        'posts',
+        'profiles',
+        'volunteer_opportunities',
+        'volunteer_signups'
+    )
+ORDER BY
+    t.relname,
+    i.relname;
+"
+
+Returned this:
+"
+| table_name              | index_name                                        | column_name  | is_unique |
+| ----------------------- | ------------------------------------------------- | ------------ | --------- |
+| incidents               | incidents_pkey                                    | incident_id  | true      |
+| message_read_receipts   | message_read_receipts_message_id_volunteer_id_key | volunteer_id | true      |
+| message_read_receipts   | message_read_receipts_message_id_volunteer_id_key | message_id   | true      |
+| message_read_receipts   | message_read_receipts_pkey                        | id           | true      |
+| messages                | messages_pkey                                     | id           | true      |
+| notifications           | notifications_pkey                                | id           | true      |
+| opportunity_responses   | opportunity_responses_pkey                        | id           | true      |
+| post_comments           | idx_post_comments_parent                          | parent_id    | false     |
+| post_comments           | post_comments_pkey                                | id           | true      |
+| post_likes              | post_likes_pkey                                   | id           | true      |
+| post_likes              | post_likes_post_id_user_id_key                    | user_id      | true      |
+| post_likes              | post_likes_post_id_user_id_key                    | post_id      | true      |
+| posts                   | posts_pkey                                        | id           | true      |
+| profiles                | profiles_pkey                                     | id           | true      |
+| volunteer_opportunities | volunteer_opportunities_pkey                      | id           | true      |
+| volunteer_signups       | unique_user_volunteer_signup                      | user_id      | true      |
+| volunteer_signups       | volunteer_signups_pkey                            | id           | true      |
+"
+
+Running this query:
+"
+SELECT 
+    trigger_schema,
+    trigger_name,
+    event_manipulation,
+    event_object_table,
+    action_statement,
+    action_timing
+FROM information_schema.triggers
+WHERE trigger_schema = 'public'
+ORDER BY event_object_table, trigger_name;
+"
+
+Returned this:
+"
+Success. No rows returned
+"
+
+Running this query:
+"
+SELECT 
+    t.typname AS enum_type,
+    e.enumlabel AS enum_value
+FROM pg_type t 
+JOIN pg_enum e ON t.oid = e.enumtypid  
+JOIN pg_catalog.pg_namespace n ON n.oid = t.typnamespace
+WHERE n.nspname = 'public';
+"
+
+Returned this:
+"
+Success. No rows returned
+"
+
+Running this query:
+"
+SELECT
+    schemaname,
+    tablename,
+    policyname,
+    permissive,
+    roles,
+    cmd,
+    qual,
+    with_check
+FROM pg_policies
+WHERE schemaname = 'public'
+ORDER BY tablename, policyname;
+"
+
+Returned this:
+"
+| schemaname | tablename             | policyname                                 | permissive | roles           | cmd    | qual                                                                                                                                                                                                                                                                                              | with_check                                                                                                                                                                                                            |
+| ---------- | --------------------- | ------------------------------------------ | ---------- | --------------- | ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| public     | message_read_receipts | Volunteers can create read receipts        | PERMISSIVE | {authenticated} | INSERT |                                                                                                                                                                                                                                                                                                   | (volunteer_id = auth.uid())                                                                                                                                                                                           |
+| public     | message_read_receipts | Volunteers can read receipts               | PERMISSIVE | {authenticated} | SELECT | (volunteer_id = auth.uid())                                                                                                                                                                                                                                                                       |                                                                                                                                                                                                                       |
+| public     | messages              | Organizations can send messages            | PERMISSIVE | {public}        | INSERT |                                                                                                                                                                                                                                                                                                   | (organization_id = auth.uid())                                                                                                                                                                                        |
+| public     | messages              | Organizations can view their sent messages | PERMISSIVE | {public}        | SELECT | (organization_id = auth.uid())                                                                                                                                                                                                                                                                    |                                                                                                                                                                                                                       |
+| public     | messages              | Volunteers can read their messages         | PERMISSIVE | {authenticated} | SELECT | ((volunteer_id = auth.uid()) OR ((is_group_message = true) AND (volunteer_id IS NULL)))                                                                                                                                                                                                           |                                                                                                                                                                                                                       |
+| public     | messages              | Volunteers can send messages               | PERMISSIVE | {authenticated} | INSERT |                                                                                                                                                                                                                                                                                                   | ((volunteer_id = auth.uid()) AND (EXISTS ( SELECT 1
+   FROM opportunity_responses
+  WHERE ((opportunity_responses.volunteer_id = auth.uid()) AND (opportunity_responses.opportunity_id = messages.opportunity_id))))) |
+| public     | messages              | Volunteers can send replies                | PERMISSIVE | {authenticated} | INSERT |                                                                                                                                                                                                                                                                                                   | ((volunteer_id = auth.uid()) AND (EXISTS ( SELECT 1
+   FROM opportunity_responses
+  WHERE ((opportunity_responses.volunteer_id = auth.uid()) AND (opportunity_responses.opportunity_id = messages.opportunity_id))))) |
+| public     | messages              | Volunteers can update their messages       | PERMISSIVE | {authenticated} | UPDATE | (volunteer_id = auth.uid())                                                                                                                                                                                                                                                                       | (volunteer_id = auth.uid())                                                                                                                                                                                           |
+| public     | messages              | Volunteers can view messages sent to them  | PERMISSIVE | {public}        | SELECT | ((volunteer_id = auth.uid()) OR ((is_group_message = true) AND (volunteer_id IS NULL)))                                                                                                                                                                                                           |                                                                                                                                                                                                                       |
+| public     | notifications         | Users can create notifications for others  | PERMISSIVE | {public}        | INSERT |                                                                                                                                                                                                                                                                                                   | (auth.uid() <> user_id)                                                                                                                                                                                               |
+| public     | notifications         | Users can update their own notifications   | PERMISSIVE | {public}        | UPDATE | (auth.uid() = user_id)                                                                                                                                                                                                                                                                            |                                                                                                                                                                                                                       |
+| public     | notifications         | Users can view their own notifications     | PERMISSIVE | {public}        | SELECT | (auth.uid() = user_id)                                                                                                                                                                                                                                                                            |                                                                                                                                                                                                                       |
+| public     | post_comments         | Anyone can read comments                   | PERMISSIVE | {authenticated} | SELECT | true                                                                                                                                                                                                                                                                                              |                                                                                                                                                                                                                       |
+| public     | post_comments         | Enable read access for all users           | PERMISSIVE | {public}        | SELECT | true                                                                                                                                                                                                                                                                                              |                                                                                                                                                                                                                       |
+| public     | post_comments         | Users can create comments                  | PERMISSIVE | {authenticated} | INSERT |                                                                                                                                                                                                                                                                                                   | true                                                                                                                                                                                                                  |
+| public     | post_likes            | Anyone can read likes                      | PERMISSIVE | {authenticated} | SELECT | true                                                                                                                                                                                                                                                                                              |                                                                                                                                                                                                                       |
+| public     | post_likes            | Enable read access for all users           | PERMISSIVE | {public}        | SELECT | true                                                                                                                                                                                                                                                                                              |                                                                                                                                                                                                                       |
+| public     | post_likes            | Users can create likes                     | PERMISSIVE | {authenticated} | INSERT |                                                                                                                                                                                                                                                                                                   | true                                                                                                                                                                                                                  |
+| public     | post_likes            | Users can delete their own likes           | PERMISSIVE | {authenticated} | DELETE | (auth.uid() = user_id)                                                                                                                                                                                                                                                                            |                                                                                                                                                                                                                       |
+| public     | posts                 | Anyone can read posts                      | PERMISSIVE | {public}        | SELECT | true                                                                                                                                                                                                                                                                                              |                                                                                                                                                                                                                       |
+| public     | posts                 | Authenticated users can create posts       | PERMISSIVE | {authenticated} | INSERT |                                                                                                                                                                                                                                                                                                   | (auth.uid() = user_id)                                                                                                                                                                                                |
+| public     | posts                 | Users can delete own posts                 | PERMISSIVE | {authenticated} | DELETE | (auth.uid() = user_id)                                                                                                                                                                                                                                                                            |                                                                                                                                                                                                                       |
+| public     | posts                 | Users can update own posts                 | PERMISSIVE | {authenticated} | UPDATE | (auth.uid() = user_id)                                                                                                                                                                                                                                                                            | (auth.uid() = user_id)                                                                                                                                                                                                |
+| public     | profiles              | Public profiles are viewable by everyone.  | PERMISSIVE | {public}        | SELECT | true                                                                                                                                                                                                                                                                                              |                                                                                                                                                                                                                       |
+| public     | profiles              | Read organization profiles                 | PERMISSIVE | {public}        | SELECT | true                                                                                                                                                                                                                                                                                              |                                                                                                                                                                                                                       |
+| public     | profiles              | Users can insert their own profile.        | PERMISSIVE | {public}        | INSERT |                                                                                                                                                                                                                                                                                                   | (auth.uid() = id)                                                                                                                                                                                                     |
+| public     | profiles              | Users can update own profile.              | PERMISSIVE | {public}        | UPDATE | (auth.uid() = id)                                                                                                                                                                                                                                                                                 |                                                                                                                                                                                                                       |
+| public     | profiles              | Volunteers can read organization profiles  | PERMISSIVE | {public}        | SELECT | (auth.uid() IN ( SELECT opportunity_responses.volunteer_id
+   FROM opportunity_responses
+  WHERE (opportunity_responses.opportunity_id IN ( SELECT volunteer_opportunities.id
+           FROM volunteer_opportunities
+          WHERE (volunteer_opportunities.organization_id = profiles.id))))) |                                                                                                                                                                                                                       |
+"
+
+
+I ran this query to update some tables:
+"
+-- New table for major incidents
+CREATE TABLE major_incidents (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    title TEXT NOT NULL,
+    description TEXT,
+    severity_level TEXT NOT NULL,
+    radius_miles INTEGER DEFAULT 50,
+    expected_duration INTERVAL,
+    status TEXT DEFAULT 'active',
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    created_by UUID REFERENCES profiles(id),
+    location_lat DOUBLE PRECISION,
+    location_lng DOUBLE PRECISION,
+    original_incident_id UUID REFERENCES incidents(incident_id)
+);
+
+-- Table for organization participation in major incidents
+CREATE TABLE major_incident_organizations (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    major_incident_id UUID REFERENCES major_incidents(id),
+    organization_id UUID REFERENCES profiles(id),
+    role TEXT,
+    joined_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(major_incident_id, organization_id)
+);
+
+-- Table for major incident updates/timeline
+CREATE TABLE major_incident_updates (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    major_incident_id UUID REFERENCES major_incidents(id),
+    organization_id UUID REFERENCES profiles(id),
+    update_type TEXT NOT NULL,
+    content TEXT NOT NULL,
+    priority_level TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    is_public BOOLEAN DEFAULT true
+);
+
+-- Table for coordination channels
+CREATE TABLE coordination_channels (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    major_incident_id UUID REFERENCES major_incidents(id),
+    name TEXT NOT NULL,
+    description TEXT,
+    channel_type TEXT DEFAULT 'general',
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+"
+
+I ran this query to add the coordination_messages table:
+"
+CREATE TABLE coordination_messages (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    channel_id UUID REFERENCES coordination_channels(id),
+    organization_id UUID REFERENCES profiles(id),
+    content TEXT NOT NULL,
+    message_type TEXT DEFAULT 'text',
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Add appropriate RLS policies
+ALTER TABLE coordination_messages ENABLE ROW LEVEL SECURITY;
+
+-- Organizations can read messages if they are part of the incident
+CREATE POLICY "Organizations can read messages" ON coordination_messages
+FOR SELECT USING (
+    EXISTS (
+        SELECT 1 FROM major_incident_organizations mio
+        JOIN coordination_channels cc ON cc.major_incident_id = mio.major_incident_id
+        WHERE cc.id = coordination_messages.channel_id
+        AND mio.organization_id = auth.uid()
+    )
+);
+
+-- Organizations can send messages if they are part of the incident
+CREATE POLICY "Organizations can send messages" ON coordination_messages
+FOR INSERT WITH CHECK (
+    EXISTS (
+        SELECT 1 FROM major_incident_organizations mio
+        JOIN coordination_channels cc ON cc.major_incident_id = mio.major_incident_id
+        WHERE cc.id = coordination_messages.channel_id
+        AND mio.organization_id = auth.uid()
+    )
+);
+"
+
+I also ran these queries:
+"
+-- For tracking volunteers who opt into major incident response
+CREATE TABLE major_incident_volunteer_pool (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    major_incident_id UUID REFERENCES major_incidents(id),
+    volunteer_id UUID REFERENCES profiles(id),
+    joined_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(major_incident_id, volunteer_id)
+);
+
+-- For tracking which organizations a volunteer works with in a major incident
+CREATE TABLE major_incident_volunteer_assignments (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    pool_entry_id UUID REFERENCES major_incident_volunteer_pool(id),
+    organization_id UUID REFERENCES profiles(id),
+    status TEXT DEFAULT 'active',
+    assigned_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(pool_entry_id, organization_id)
+);
+
+-- After creating tables, add RLS
+ALTER TABLE major_incident_volunteer_pool ENABLE ROW LEVEL SECURITY;
+ALTER TABLE major_incident_volunteer_assignments ENABLE ROW LEVEL SECURITY;
+
+-- Policies for major_incident_volunteer_pool
+CREATE POLICY "Organizations can view volunteer pool" ON major_incident_volunteer_pool
+FOR SELECT USING (
+    EXISTS (
+        SELECT 1 FROM major_incident_organizations mio
+        WHERE mio.major_incident_id = major_incident_volunteer_pool.major_incident_id
+        AND mio.organization_id = auth.uid()
+    )
+);
+
+-- Policies for major_incident_volunteer_assignments
+CREATE POLICY "Organizations can view assignments" ON major_incident_volunteer_assignments
+FOR SELECT USING (
+    EXISTS (
+        SELECT 1 FROM major_incident_organizations mio
+        JOIN major_incident_volunteer_pool mvp ON mvp.major_incident_id = mio.major_incident_id
+        WHERE mvp.id = major_incident_volunteer_assignments.pool_entry_id
+        AND mio.organization_id = auth.uid()
+    )
+);
+
+CREATE POLICY "Organizations can create assignments" ON major_incident_volunteer_assignments
+FOR INSERT WITH CHECK (
+    auth.uid() = organization_id AND
+    EXISTS (
+        SELECT 1 FROM major_incident_organizations mio
+        JOIN major_incident_volunteer_pool mvp ON mvp.major_incident_id = mio.major_incident_id
+        WHERE mvp.id = pool_entry_id
+        AND mio.organization_id = auth.uid()
+    )
+);
+"
+
+I also ran this query:
+"
+ALTER TABLE volunteer_opportunities
+ADD COLUMN major_incident_id UUID REFERENCES major_incidents(id);
+"
+
+I also ran this query:
+"
+-- Enable RLS
+ALTER TABLE major_incident_volunteer_pool ENABLE ROW LEVEL SECURITY;
+
+-- Allow volunteers to add themselves to the pool
+CREATE POLICY "Volunteers can add themselves to pool"
+ON major_incident_volunteer_pool
+FOR INSERT
+TO authenticated
+WITH CHECK (
+    -- Check if the user is a volunteer
+    EXISTS (
+        SELECT 1 FROM volunteer_signups 
+        WHERE user_id = auth.uid()
+    )
+    -- And they're inserting themselves (not someone else)
+    AND volunteer_id = auth.uid()
+);
+
+-- Allow organizations to view volunteers in their incident pools
+CREATE POLICY "Organizations can view their incident pool"
+ON major_incident_volunteer_pool
+FOR SELECT
+TO authenticated
+USING (
+    EXISTS (
+        SELECT 1 FROM major_incident_organizations
+        WHERE major_incident_organizations.major_incident_id = major_incident_volunteer_pool.major_incident_id
+        AND major_incident_organizations.organization_id = auth.uid()
+    )
+);
+
+-- Allow volunteers to view pools they're in
+CREATE POLICY "Volunteers can view pools they're in"
+ON major_incident_volunteer_pool
+FOR SELECT
+TO authenticated
+USING (
+    volunteer_id = auth.uid()
+);
+"
+
+I ran this query:
+"
+SELECT column_name, data_type 
+FROM information_schema.columns 
+WHERE table_name = 'major_incident_volunteer_assignments';
+"
+
+and this was the response:
+"
+| column_name     | data_type                |
+| --------------- | ------------------------ |
+| id              | uuid                     |
+| pool_entry_id   | uuid                     |
+| organization_id | uuid                     |
+| assigned_at     | timestamp with time zone |
+| status          | text                     |
+"
+
+I also ran this query:
+"
+CREATE POLICY "Organizations can update assignments"
+ON major_incident_volunteer_assignments
+FOR UPDATE
+TO authenticated
+USING (
+    -- Organization can update their own assignments
+    organization_id = auth.uid()
+    AND EXISTS (
+        SELECT 1 FROM major_incident_organizations mio
+        JOIN major_incident_volunteer_pool mvp ON mvp.major_incident_id = mio.major_incident_id
+        WHERE mvp.id = major_incident_volunteer_assignments.pool_entry_id
+        AND mio.organization_id = auth.uid()
+    )
+)
+WITH CHECK (
+    -- Same conditions for the new row
+    organization_id = auth.uid()
+    AND EXISTS (
+        SELECT 1 FROM major_incident_organizations mio
+        JOIN major_incident_volunteer_pool mvp ON mvp.major_incident_id = mio.major_incident_id
+        WHERE mvp.id = major_incident_volunteer_assignments.pool_entry_id
+        AND mio.organization_id = auth.uid()
+    )
+);
+"
+
+I also ran this query:
+"
+create table public.channel_members (
+    id uuid default uuid_generate_v4() primary key,
+    channel_id uuid references public.coordination_channels(id) on delete cascade,
+    organization_id uuid references public.profiles(id) on delete cascade,
+    role text check (role in ('owner', 'member')),
+    created_at timestamp with time zone default timezone('utc'::text, now()) not null,
+    unique(channel_id, organization_id)
+);
+
+-- Add RLS policies
+alter table public.channel_members enable row level security;
+
+create policy "Organizations can view channel members"
+    on public.channel_members for select
+    using (exists (
+        select 1 from major_incident_organizations mio
+        join coordination_channels cc on cc.major_incident_id = mio.major_incident_id
+        where cc.id = channel_members.channel_id
+        and mio.organization_id = auth.uid()
+    ));
+
+create policy "Channel owners can manage members"
+    on public.channel_members for all
+    using (
+        exists (
+            select 1 from channel_members cm
+            where cm.channel_id = channel_members.channel_id
+            and cm.organization_id = auth.uid()
+            and cm.role = 'owner'
+        )
+    );
+"
+
+I also ran this query:
+"
+-- Add created_by column to coordination_channels table
+alter table public.coordination_channels 
+add column created_by uuid references public.profiles(id);
+
+-- Update RLS policies to allow organizations to create channels
+create policy "Organizations can create channels"
+    on public.coordination_channels for insert
+    with check (
+        exists (
+            select 1 from major_incident_organizations mio
+            where mio.major_incident_id = coordination_channels.major_incident_id
+            and mio.organization_id = auth.uid()
+        )
+    );
+
+-- Update RLS policies to allow organizations to view channels
+create policy "Organizations can view channels"
+    on public.coordination_channels for select
+    using (
+        exists (
+            select 1 from major_incident_organizations mio
+            where mio.major_incident_id = coordination_channels.major_incident_id
+            and mio.organization_id = auth.uid()
+        )
+    );
+"
+
+Had some issues with that so ran this query:
+"
+-- First drop all existing policies
+drop policy if exists "Organizations can view channel members" on public.channel_members;
+drop policy if exists "Channel owners can manage members" on public.channel_members;
+drop policy if exists "Organizations can insert channel members" on public.channel_members;
+drop policy if exists "Channel owners can delete members" on public.channel_members;
+drop policy if exists "Channel owners can update members" on public.channel_members;
+
+-- Then create the new policies
+create policy "Organizations can insert channel members"
+    on public.channel_members for insert
+    with check (
+        exists (
+            select 1 from major_incident_organizations mio
+            join coordination_channels cc on cc.major_incident_id = mio.major_incident_id
+            where cc.id = channel_members.channel_id
+            and mio.organization_id = auth.uid()
+        )
+    );
+
+create policy "Organizations can view channel members"
+    on public.channel_members for select
+    using (
+        exists (
+            select 1 from major_incident_organizations mio
+            join coordination_channels cc on cc.major_incident_id = mio.major_incident_id
+            where cc.id = channel_members.channel_id
+            and mio.organization_id = auth.uid()
+        )
+    );
+
+create policy "Channel owners can delete members"
+    on public.channel_members for delete
+    using (
+        exists (
+            select 1 from channel_members cm
+            where cm.channel_id = channel_members.channel_id
+            and cm.organization_id = auth.uid()
+            and cm.role = 'owner'
+        )
+        and
+        channel_members.role != 'owner' -- Prevent deletion of owner
+    );
+
+create policy "Channel owners can update members"
+    on public.channel_members for update
+    using (
+        exists (
+            select 1 from channel_members cm
+            where cm.channel_id = channel_members.channel_id
+            and cm.organization_id = auth.uid()
+            and cm.role = 'owner'
+        )
+        and
+        channel_members.role != 'owner' -- Prevent modification of owner role
+    );
+"
+
+I also ran this query:
+"
+-- First, drop all existing policies
+drop policy if exists "Organizations can view channel members" on public.channel_members;
+drop policy if exists "Organizations can insert channel members" on public.channel_members;
+drop policy if exists "Channel owners can delete members" on public.channel_members;
+drop policy if exists "Channel owners can update members" on public.channel_members;
+
+-- Create new policies with simpler checks
+create policy "Organizations can view channel members"
+    on public.channel_members for select
+    using (true);  -- Allow all organizations to view members
+
+create policy "Organizations can insert channel members"
+    on public.channel_members for insert
+    with check (
+        exists (
+            select 1 from coordination_channels cc
+            where cc.id = channel_members.channel_id
+            and cc.created_by = auth.uid()
+        )
+    );
+
+create policy "Channel owners can manage members"
+    on public.channel_members for all
+    using (
+        -- Check if the user is the creator of the channel
+        exists (
+            select 1 from coordination_channels cc
+            where cc.id = channel_members.channel_id
+            and cc.created_by = auth.uid()
+        )
+        and
+        -- Prevent modification of owner records
+        (channel_members.role != 'owner' or channel_members.organization_id = auth.uid())
+    );
+"
+
+I also ran this query:
+"
+create or replace function delete_opportunity_with_related(opportunity_id uuid)
+returns void
+language plpgsql
+security definer
+as $$
+begin
+    -- Delete message read receipts first
+    delete from message_read_receipts mr
+    where mr.message_id in (
+        select m.id from messages m
+        where m.opportunity_id = $1
+    );
+
+    -- Delete messages
+    delete from messages m
+    where m.opportunity_id = $1;
+
+    -- Delete responses
+    delete from opportunity_responses or
+    where or.opportunity_id = $1;
+
+    -- Delete the opportunity
+    delete from volunteer_opportunities vo
+    where vo.id = $1;
+end;
+$$;
+
+-- Set up RLS policy for the function
+create policy "Organizations can execute delete_opportunity_with_related"
+    on volunteer_opportunities
+    for delete
+    using (
+        organization_id = auth.uid()
+    );
+"
+
+Then this:
+"
+create or replace function delete_opportunity_with_related(opportunity_id uuid)
+returns void
+language plpgsql
+security definer
+as $$
+begin
+    -- Update volunteer assignments to inactive
+    update major_incident_volunteer_assignments miva
+    set status = 'inactive'
+    where miva.id in (
+        select miva2.id
+        from major_incident_volunteer_assignments miva2
+        join major_incident_volunteer_pool mvp on mvp.id = miva2.pool_entry_id
+        where miva2.status = 'active'
+        and exists (
+            select 1
+            from volunteer_opportunities vo
+            where vo.id = $1
+            and vo.major_incident_id = mvp.major_incident_id
+        )
+    );
+
+    -- Delete message read receipts first
+    delete from message_read_receipts mr
+    where mr.message_id in (
+        select m.id from messages m
+        where m.opportunity_id = $1
+    );
+
+    -- Delete messages
+    delete from messages m
+    where m.opportunity_id = $1;
+
+    -- Delete responses
+    delete from opportunity_responses resp
+    where resp.opportunity_id = $1;
+
+    -- Delete the opportunity
+    delete from volunteer_opportunities vo
+    where vo.id = $1;
+end;
+$$;
+"
+
+I also ran this query:
+"
+ALTER TABLE messages ADD COLUMN in_reply_to UUID REFERENCES messages(id);
+"

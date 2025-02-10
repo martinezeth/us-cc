@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate, Link as RouterLink } from 'react-router-dom';
 import {
     Box,
@@ -27,7 +27,13 @@ import {
     Heading,
     Divider,
     Flex,
-    Avatar
+    Avatar,
+    AlertDialog,
+    AlertDialogBody,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogContent,
+    AlertDialogOverlay
 } from '@chakra-ui/react';
 import { WarningIcon, AddIcon } from '@chakra-ui/icons';
 import { supabase } from '../supabaseClient';
@@ -100,6 +106,8 @@ const MajorIncidentDashboard = () => {
     const [user, setUser] = useState(null);
     const [volunteerPoolRefresh, setVolunteerPoolRefresh] = useState(0);
     const [isUpdateModalOpen, setIsUpdateModalOpen] = useState(false);
+    const [isArchiveDialogOpen, setIsArchiveDialogOpen] = useState(false);
+    const cancelRef = useRef();
 
     useEffect(() => {
         if (id) {
@@ -366,6 +374,52 @@ const MajorIncidentDashboard = () => {
         }
     };
 
+    const handleArchiveIncident = async () => {
+        try {
+            const { data: { user } } = await supabase.auth.getUser();
+            
+            if (activeIncident.status === 'archived') {
+                // Unarchive
+                const { error } = await supabase
+                    .from('major_incidents')
+                    .update({ 
+                        status: 'active',
+                        archived_at: null,
+                        archived_by: null
+                    })
+                    .eq('id', id);
+                if (error) throw error;
+            } else {
+                // Archive
+                const { error } = await supabase.rpc('archive_major_incident', {
+                    incident_id: id,
+                    archiving_user: user.id
+                });
+                if (error) throw error;
+            }
+
+            toast({
+                title: "Major Incident Archived",
+                description: activeIncident.status === 'archived' 
+                    ? "The incident has been unarchived and reactivated"
+                    : "The incident and related opportunities have been archived",
+                status: "success",
+                duration: 5000
+            });
+
+            // Refresh incident data
+            fetchIncidentData();
+            setIsArchiveDialogOpen(false);
+        } catch (error) {
+            toast({
+                title: "Error",
+                description: error.message,
+                status: "error",
+                duration: 5000
+            });
+        }
+    };
+
     const renderActionButton = () => {
         if (!user) {
             return (
@@ -384,6 +438,11 @@ const MajorIncidentDashboard = () => {
                 <Button
                     colorScheme="red"
                     onClick={handleUnregister}
+                    isDisabled={activeIncident?.status === 'archived'}
+                    _disabled={{
+                        opacity: 0.6,
+                        cursor: 'not-allowed'
+                    }}
                 >
                     Unregister from Effort
                 </Button>
@@ -473,13 +532,36 @@ const MajorIncidentDashboard = () => {
                             </Text>
                         </VStack>
                         <HStack>
+                            {isOrganization && isParticipating && (
+                                activeIncident?.status === 'archived' ? (
+                                    <Button
+                                        colorScheme="green"
+                                        variant="outline"
+                                        onClick={() => setIsArchiveDialogOpen(true)}
+                                    >
+                                        Unarchive Incident
+                                    </Button>
+                                ) : (
+                                    <Button
+                                        colorScheme="red"
+                                        variant="outline"
+                                        onClick={() => setIsArchiveDialogOpen(true)}
+                                    >
+                                        Archive Incident
+                                    </Button>
+                                )
+                            )}
                             {renderActionButton()}
                             {isOrganization && isParticipating && (
                                 <Button
                                     leftIcon={<AddIcon />}
                                     colorScheme="blue"
-                                    size="sm"
                                     onClick={() => setIsUpdateModalOpen(true)}
+                                    isDisabled={activeIncident?.status === 'archived'}
+                                    _disabled={{
+                                        opacity: 0.6,
+                                        cursor: 'not-allowed'
+                                    }}
                                 >
                                     Post Update
                                 </Button>
@@ -664,6 +746,7 @@ const MajorIncidentDashboard = () => {
                                             <VolunteerPool
                                                 majorIncidentId={id}
                                                 refreshTrigger={volunteerPoolRefresh}
+                                                isArchived={activeIncident?.status === 'archived'}
                                             />
                                         </TabPanel>
                                     )}
@@ -687,6 +770,7 @@ const MajorIncidentDashboard = () => {
                                     {isParticipating ? (
                                         <OrganizationChannel
                                             majorIncidentId={id}
+                                            isArchived={activeIncident?.status === 'archived'}
                                         />
                                     ) : !isOrganization && (
                                         <VStack spacing={4} align="stretch">
@@ -758,6 +842,38 @@ const MajorIncidentDashboard = () => {
                 onClose={() => setIsUpdateModalOpen(false)}
                 onSubmit={handleCreateUpdate}
             />
+            <AlertDialog
+                isOpen={isArchiveDialogOpen}
+                leastDestructiveRef={cancelRef}
+                onClose={() => setIsArchiveDialogOpen(false)}
+            >
+                <AlertDialogOverlay>
+                    <AlertDialogContent>
+                        <AlertDialogHeader>
+                            {activeIncident?.status === 'archived' ? 'Unarchive' : 'Archive'} Major Incident
+                        </AlertDialogHeader>
+                        <AlertDialogBody>
+                            {activeIncident?.status === 'archived' ? (
+                                'Are you sure? This will reactivate the incident and allow new volunteer opportunities to be created.'
+                            ) : (
+                                'Are you sure? This will archive the incident and all related volunteer opportunities. This action cannot be undone.'
+                            )}
+                        </AlertDialogBody>
+                        <AlertDialogFooter>
+                            <Button ref={cancelRef} onClick={() => setIsArchiveDialogOpen(false)}>
+                                Cancel
+                            </Button>
+                            <Button 
+                                colorScheme={activeIncident?.status === 'archived' ? 'green' : 'red'}
+                                onClick={handleArchiveIncident} 
+                                ml={3}
+                            >
+                                {activeIncident?.status === 'archived' ? 'Unarchive' : 'Archive'}
+                            </Button>
+                        </AlertDialogFooter>
+                    </AlertDialogContent>
+                </AlertDialogOverlay>
+            </AlertDialog>
         </Box>
     );
 };

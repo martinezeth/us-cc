@@ -27,7 +27,7 @@ import { supabase } from '../supabaseClient';
 import VolunteerPoolHeader from './VolunteerPoolHeader';
 import VolunteerFilterBar from './VolunteerFilterBar';
 
-const VolunteerPool = ({ majorIncidentId, refreshTrigger }) => {
+const VolunteerPool = ({ majorIncidentId, refreshTrigger, isArchived }) => {
     const [isOrganization, setIsOrganization] = useState(false);
     const [volunteers, setVolunteers] = useState([]);
     const [opportunities, setOpportunities] = useState([]);
@@ -439,6 +439,11 @@ const VolunteerPool = ({ majorIncidentId, refreshTrigger }) => {
                                                         size="sm"
                                                         colorScheme="blue"
                                                         rightIcon={<ChevronDownIcon />}
+                                                        isDisabled={isArchived}
+                                                        _disabled={{
+                                                            opacity: 0.6,
+                                                            cursor: 'not-allowed'
+                                                        }}
                                                     >
                                                         Assign to Opportunity
                                                     </MenuButton>
@@ -481,6 +486,10 @@ const VolunteerPool = ({ majorIncidentId, refreshTrigger }) => {
             </Box>
         </Box>
     );
+};
+
+VolunteerPool.defaultProps = {
+    isArchived: false
 };
 
 export default VolunteerPool;

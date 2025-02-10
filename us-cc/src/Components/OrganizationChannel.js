@@ -36,9 +36,11 @@ import {
     FormHelperText,
     CheckboxGroup,
     Checkbox,
-    Tooltip
+    Tooltip,
+    InputGroup,
+    InputRightElement
 } from '@chakra-ui/react';
-import { AddIcon, AttachmentIcon, EditIcon } from '@chakra-ui/icons';
+import { AddIcon, AttachmentIcon, EditIcon, ArrowForwardIcon } from '@chakra-ui/icons';
 import { supabase } from '../supabaseClient';
 import VerifiedBadge from './VerifiedBadge';
 import { useNavigate } from 'react-router-dom';
@@ -101,7 +103,7 @@ const MessageDisplay = ({ message, currentOrganization }) => {
     );
 };
 
-const OrganizationChannel = ({ majorIncidentId, channelId }) => {
+const OrganizationChannel = ({ majorIncidentId, isArchived }) => {
     const [messages, setMessages] = useState([]);
     const [newMessage, setNewMessage] = useState('');
     const [channels, setChannels] = useState([]);
@@ -202,10 +204,10 @@ const OrganizationChannel = ({ majorIncidentId, channelId }) => {
 
     //  useEffect to handle channel changes
     useEffect(() => {
-        if (channelId && !currentChannel) {
-            setCurrentChannel(channelId);
+        if (majorIncidentId && !currentChannel) {
+            setCurrentChannel(majorIncidentId);
         }
-    }, [channelId, currentChannel]);
+    }, [majorIncidentId, currentChannel]);
 
     const fetchChannels = async () => {
         try {
@@ -561,6 +563,11 @@ const OrganizationChannel = ({ majorIncidentId, channelId }) => {
                         onClick={() => setIsCreatingChannel(true)}
                         minW="120px"
                         whiteSpace="nowrap"
+                        isDisabled={isArchived}
+                        _disabled={{
+                            opacity: 0.6,
+                            cursor: 'not-allowed'
+                        }}
                     >
                         New Channel
                     </Button>
@@ -571,6 +578,11 @@ const OrganizationChannel = ({ majorIncidentId, channelId }) => {
                                 icon={<BsThreeDotsVertical />}
                                 variant="ghost"
                                 size="sm"
+                                isDisabled={isArchived}
+                                _disabled={{
+                                    opacity: 0.6,
+                                    cursor: 'not-allowed'
+                                }}
                             />
                             <MenuList>
                                 <MenuItem onClick={() => {
@@ -614,11 +626,16 @@ const OrganizationChannel = ({ majorIncidentId, channelId }) => {
                                 sendMessage(newMessage);
                             }
                         }}
+                        isDisabled={isArchived}
+                        _disabled={{
+                            opacity: 0.6,
+                            cursor: 'not-allowed'
+                        }}
                     />
                     <Button
                         colorScheme="blue"
                         onClick={() => sendMessage(newMessage)}
-                        isDisabled={!newMessage.trim()}
+                        isDisabled={!newMessage.trim() || isArchived}
                         minW="80px"
                         size="md"
                     >
@@ -819,6 +836,10 @@ const OrganizationChannel = ({ majorIncidentId, channelId }) => {
             </Modal>
         </Box>
     );
+};
+
+OrganizationChannel.defaultProps = {
+    isArchived: false
 };
 
 export default OrganizationChannel;
