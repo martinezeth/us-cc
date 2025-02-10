@@ -180,12 +180,12 @@ export default function Profile() {
                         .select('*', { count: 'exact', head: true })
                         .eq('volunteer_id', targetUserId);
 
-                    // Get active opportunities count
+                    // Get active opportunities count - include both accepted and pending
                     const { data: activeOpps } = await supabase
                         .from('opportunity_responses')
                         .select('id')
                         .eq('volunteer_id', targetUserId)
-                        .eq('status', 'accepted');
+                        .in('status', ['accepted', 'pending']);
 
                     setVolunteerData({
                         ...volunteerInfo,

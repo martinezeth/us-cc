@@ -131,7 +131,6 @@ const ProfileTabs = ({ profileData, volunteerData, isOwnProfile }) => {
                     }
                 }));
 
-                console.log('Opportunity History:', responsesWithOrgNames);
                 setOpportunityHistory(responsesWithOrgNames);
             } else {
                 setOpportunityHistory([]);
@@ -153,7 +152,6 @@ const ProfileTabs = ({ profileData, volunteerData, isOwnProfile }) => {
                     .order('created_at', { ascending: false });
 
                 const processedLikedPosts = likes?.map(like => like.posts).filter(Boolean) || [];
-                console.log('Liked Posts:', processedLikedPosts);
                 setLikedPosts(processedLikedPosts);
             }
         } catch (error) {
@@ -221,12 +219,6 @@ const ProfileTabs = ({ profileData, volunteerData, isOwnProfile }) => {
                         {response.volunteer_opportunities?.description}
                     </Text>
                     <HStack spacing={4} mt={4}>
-                        <Badge colorScheme={
-                            response.status === 'accepted' ? 'green' :
-                                response.status === 'pending' ? 'yellow' : 'red'
-                        }>
-                            {response.status}
-                        </Badge>
                         <Text fontSize="sm" color="gray.500">
                             📍 {response.volunteer_opportunities?.location}
                         </Text>
