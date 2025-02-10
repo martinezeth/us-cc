@@ -51,6 +51,8 @@ const MajorIncidentOpportunities = ({ majorIncidentId, majorIncidentData, onOppo
     const [isDeleteAlertOpen, setIsDeleteAlertOpen] = useState(false);
     const [opportunityToDelete, setOpportunityToDelete] = useState(null);
     const cancelRef = useRef();
+    const [isArchiveAlertOpen, setIsArchiveAlertOpen] = useState(false);
+    const [opportunityToArchive, setOpportunityToArchive] = useState(null);
 
     useEffect(() => {
         const checkUserType = async () => {
@@ -185,80 +187,41 @@ const MajorIncidentOpportunities = ({ majorIncidentId, majorIncidentData, onOppo
         onClose();
     };
 
-    const handleArchiveOpportunity = async (opportunityId) => {
+    const handleArchiveClick = (opportunity) => {
+        setOpportunityToArchive(opportunity);
+        setIsArchiveAlertOpen(true);
+    };
+
+    const handleArchiveConfirm = async () => {
+        if (!opportunityToArchive) return;
+        
         try {
-            const { data: { user } } = await supabase.auth.getUser();
-
-            // First check if opportunity is already archived
-            const { data: opportunity } = await supabase
+            const { error } = await supabase
                 .from('volunteer_opportunities')
-                .select('status')
-                .eq('id', opportunityId)
-                .single();
+                .update({ archived_at: new Date().toISOString() })
+                .eq('id', opportunityToArchive.id);
 
-            if (opportunity?.status === 'archived') {
-                toast({
-                    title: "Already Archived",
-                    description: "This opportunity is already archived",
-                    status: "info",
-                    duration: 3000
-                });
-                return;
-            }
-
-            // Get all active assignments for this organization's opportunity
-            const { data: assignments, error: findError } = await supabase
-                .from('major_incident_volunteer_assignments')
-                .select('id, status')
-                .eq('organization_id', user.id)
-                .eq('status', 'active');
-
-            if (findError) {
-                console.error('Error finding assignments:', findError);
-                throw findError;
-            }
-
-            // Update opportunity status to archived
-            const { error: updateError } = await supabase
-                .from('volunteer_opportunities')
-                .update({ status: 'archived' })
-                .eq('id', opportunityId);
-
-            if (updateError) throw updateError;
-
-            // Update all active assignments to inactive
-            if (assignments?.length > 0) {
-                const { error: assignmentError } = await supabase
-                    .from('major_incident_volunteer_assignments')
-                    .update({ status: 'inactive' })
-                    .in('id', assignments.map(a => a.id));
-
-                if (assignmentError) {
-                    console.error('Error updating assignments:', assignmentError);
-                    throw assignmentError;
-                }
-            }
-
-            // Call the refresh handler after successful archive
-            onOpportunityStatusChange?.();
+            if (error) throw error;
 
             toast({
-                title: "Success",
-                description: "Opportunity archived and volunteers released",
+                title: "Opportunity Archived",
+                description: "The volunteer opportunity has been archived successfully.",
                 status: "success",
-                duration: 3000
+                duration: 3000,
             });
 
-            // Refresh the opportunities list
-            fetchOpportunities();
+            // Refresh your data here
+            if (onOpportunityStatusChange) onOpportunityStatusChange();
         } catch (error) {
-            console.error('Error archiving opportunity:', error);
             toast({
-                title: "Error archiving opportunity",
-                description: error.message,
+                title: "Error",
+                description: "Failed to archive the opportunity. Please try again.",
                 status: "error",
-                duration: 5000
+                duration: 5000,
             });
+        } finally {
+            setIsArchiveAlertOpen(false);
+            setOpportunityToArchive(null);
         }
     };
 
@@ -518,7 +481,7 @@ const MajorIncidentOpportunities = ({ majorIncidentId, majorIncidentData, onOppo
                                             />
                                             <MenuList>
                                                 <MenuItem
-                                                    onClick={() => handleArchiveOpportunity(opportunity.id)}
+                                                    onClick={() => handleArchiveClick(opportunity)}
                                                     isDisabled={opportunity.status === 'archived'}
                                                 >
                                                     Archive Opportunity
@@ -647,6 +610,34 @@ const MajorIncidentOpportunities = ({ majorIncidentId, majorIncidentData, onOppo
                                 </Button>
                                 <Button colorScheme="red" onClick={handleDelete} ml={3}>
                                     Delete
+                                </Button>
+                            </AlertDialogFooter>
+                        </AlertDialogContent>
+                    </AlertDialogOverlay>
+                </AlertDialog>
+
+                <AlertDialog
+                    isOpen={isArchiveAlertOpen}
+                    leastDestructiveRef={cancelRef}
+                    onClose={() => setIsArchiveAlertOpen(false)}
+                >
+                    <AlertDialogOverlay>
+                        <AlertDialogContent>
+                            <AlertDialogHeader fontSize='lg' fontWeight='bold'>
+                                Archive Volunteer Opportunity
+                            </AlertDialogHeader>
+
+                            <AlertDialogBody>
+                                Are you sure you want to archive this opportunity? 
+                                This will remove it from the active opportunities list and volunteers will no longer be able to respond to it.
+                            </AlertDialogBody>
+
+                            <AlertDialogFooter>
+                                <Button ref={cancelRef} onClick={() => setIsArchiveAlertOpen(false)}>
+                                    Cancel
+                                </Button>
+                                <Button colorScheme='red' onClick={handleArchiveConfirm} ml={3}>
+                                    Archive
                                 </Button>
                             </AlertDialogFooter>
                         </AlertDialogContent>
