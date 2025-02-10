@@ -167,6 +167,37 @@ const VolunteerMessages = ({ onUnreadCountChange }) => {
         fetchAccessibleOpportunities();
     }, [currentUser]);
 
+    const markMessagesAsRead = async (messageIds) => {
+        console.log('Attempting to mark messages as read:', {
+            messageIds,
+            currentUser: currentUser?.id
+        });
+        try {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) return;
+
+            // Insert read status for all messages at once
+            const { error } = await supabase
+                .from('message_read_status')
+                .upsert(
+                    messageIds.map(msgId => ({
+                        message_id: msgId,
+                        user_id: user.id
+                    })),
+                    { onConflict: 'message_id,user_id' }
+                );
+
+            if (error) {
+                console.error('Error marking messages as read:', error);
+                return;
+            }
+
+            await refreshMessages();
+        } catch (error) {
+            console.error('Error in markMessagesAsRead:', error);
+        }
+    };
+
     const handleSendReply = async (_, replyText) => {
         if (!selectedOpportunity) return;
 
@@ -223,10 +254,14 @@ const VolunteerMessages = ({ onUnreadCountChange }) => {
             opportunity_id,
             organization_id,
             volunteer_id,
+            recipient_id,
             message,
             sent_at,
             is_group_message,
-            is_read,
+            read_status:message_read_status(
+                user_id,
+                read_at
+            ),
             organization:profiles(organization_name),
             opportunity:volunteer_opportunities(
                 id,
@@ -235,21 +270,69 @@ const VolunteerMessages = ({ onUnreadCountChange }) => {
                 status
             )
         `,
-        filter: currentUser && accessibleOpportunityIds.length > 0 ? {
-            or: `volunteer_id.eq.${currentUser.id},and(is_group_message.eq.true,opportunity_id.in.(${accessibleOpportunityIds.join(',')}))`
+        filter: currentUser ? {
+            or: `recipient_id.eq.${currentUser.id},is_group_message.eq.true`
         } : null,
         orderBy: { column: 'sent_at', ascending: true },
-        enabled: !!currentUser && accessibleOpportunityIds.length > 0
+        enabled: !!currentUser,
+        onSubscription: (message) => {
+            console.log('Realtime message received:', message);
+        }
     });
+
+    const isMessageUnread = (message) => {
+        // Add memoization
+        if (!message._isUnreadCache) {
+            const result = !message.read_status?.some(status => 
+                status.user_id === currentUser?.id
+            );
+            message._isUnreadCache = {
+                result,
+                userId: currentUser?.id
+            };
+            console.log('Checking message read status:', {
+                messageId: message.id,
+                message: message.message,
+                readStatus: message.read_status,
+                currentUserId: currentUser?.id,
+                isUnread: result
+            });
+            return result;
+        }
+        
+        // Use cached result if user hasn't changed
+        if (message._isUnreadCache.userId === currentUser?.id) {
+            return message._isUnreadCache.result;
+        }
+        
+        // Recalculate if user changed
+        const result = !message.read_status?.some(status => 
+            status.user_id === currentUser?.id
+        );
+        message._isUnreadCache = {
+            result,
+            userId: currentUser?.id
+        };
+        return result;
+    };
 
     useEffect(() => {
         if (!messages || !currentUser) return;
 
         const processMessages = async () => {
+            console.log('Processing messages:', {
+                messageCount: messages.length,
+                messages: messages.map(m => ({
+                    id: m.id,
+                    message: m.message,
+                    readStatus: m.read_status,
+                    isGroupMessage: m.is_group_message
+                }))
+            });
             try {
                 const grouped = messages.reduce((acc, message) => {
                     const oppId = message.opportunity_id;
-                    
+
                     if (!acc[oppId]) {
                         acc[oppId] = {
                             opportunity: {
@@ -273,74 +356,80 @@ const VolunteerMessages = ({ onUnreadCountChange }) => {
 
                 setOpportunityMessages(grouped);
 
-                // Only count unread messages from organizations
-                const totalUnread = Object.values(grouped).reduce((count, { messages }) =>
-                    count + messages.filter(m =>
-                        !m.is_read &&
-                        m.organization_id &&
-                        !m.volunteer_id &&
-                        m.volunteer_id !== currentUser.id
-                    ).length, 0);
+                // Add detailed logging for unread count calculation
+                const totalUnread = Object.values(grouped).reduce((count, { messages: groupMessages }) => {
+                    const unreadInThisGroup = groupMessages.filter(m => {
+                        const shouldCount = (m.recipient_id === currentUser.id || m.is_group_message) && 
+                            isMessageUnread(m);
+                        
+                        console.log('Checking message for unread count:', {
+                            messageId: m.id,
+                            message: m.message,
+                            isGroupMessage: m.is_group_message,
+                            recipientId: m.recipient_id,
+                            currentUserId: currentUser.id,
+                            isUnread: isMessageUnread(m),
+                            shouldCount
+                        });
+                        
+                        return shouldCount;
+                    }).length;
+                    
+                    console.log('Unread in group:', {
+                        opportunityId: groupMessages[0]?.opportunity_id,
+                        unreadCount: unreadInThisGroup,
+                        totalMessages: groupMessages.length
+                    });
+                    
+                    return count + unreadInThisGroup;
+                }, 0);
 
-                onUnreadCountChange?.(totalUnread);
+                console.log('Final total unread count:', totalUnread);
+                onUnreadCountChange(totalUnread);
 
             } catch (error) {
                 console.error('Error processing messages:', error);
-                toast({
-                    title: "Error processing messages",
-                    status: "error",
-                    duration: 5000
-                });
             }
         };
 
         processMessages();
-    }, [messages, currentUser]);
+    }, [messages, currentUser, onUnreadCountChange]);
 
     const markAllMessagesAsRead = async (opportunityId) => {
         try {
-            const { data: { user } } = await supabase.auth.getUser();
             const messages = opportunityMessages[opportunityId]?.messages || [];
+            console.log('All messages for opportunity:', messages);
 
-            // Only mark messages from organizations as read
-            const unreadMessages = messages.filter(msg =>
-                !msg.is_read &&
-                msg.organization_id &&
-                !msg.volunteer_id
-            );
-
-            if (unreadMessages.length === 0) {
-                return;
-            }
-
-            // Handle group messages
-            const groupMessages = unreadMessages.filter(msg => msg.is_group_message);
-            if (groupMessages.length > 0) {
-                const { error: receiptError } = await supabase
-                    .from('message_read_receipts')
-                    .upsert(
-                        groupMessages.map(msg => ({
-                            message_id: msg.id,
-                            volunteer_id: user.id,
-                            read_at: new Date().toISOString()
-                        }))
+            // Get IDs of unread messages (both direct and group) for this opportunity
+            const unreadMessageIds = messages
+                .filter(msg => {
+                    const shouldMark = (
+                        // Include both direct messages to this user and group messages
+                        (msg.recipient_id === currentUser.id || msg.is_group_message) &&
+                        isMessageUnread(msg)
                     );
 
-                if (receiptError) throw receiptError;
+                    console.log('Message filtering:', {
+                        id: msg.id,
+                        message: msg.message,
+                        is_group_message: msg.is_group_message,
+                        recipient_id: msg.recipient_id,
+                        is_unread: isMessageUnread(msg),
+                        shouldMark
+                    });
+
+                    return shouldMark;
+                })
+                .map(msg => msg.id);
+
+            console.log('Unread message IDs:', unreadMessageIds);
+
+            if (unreadMessageIds.length > 0) {
+                console.log('Attempting to mark messages as read:', unreadMessageIds);
+                await markMessagesAsRead(unreadMessageIds);
+            } else {
+                console.log('No unread messages to mark as read');
             }
-
-            // Handle direct messages
-            const directMessages = unreadMessages.filter(msg => !msg.is_group_message);
-            if (directMessages.length > 0) {
-                const { error } = await supabase
-                    .from('messages')
-                    .update({ is_read: true })
-                    .in('id', directMessages.map(msg => msg.id));
-
-                if (error) throw error;
-            }
-
-            await refreshMessages();
 
         } catch (error) {
             console.error('Error marking messages as read:', error);
@@ -348,7 +437,7 @@ const VolunteerMessages = ({ onUnreadCountChange }) => {
                 title: "Error marking messages as read",
                 description: error.message,
                 status: "error",
-                duration: 3000
+                duration: 5000
             });
         }
     };
@@ -435,10 +524,9 @@ const VolunteerMessages = ({ onUnreadCountChange }) => {
         <VStack spacing={4} align="stretch" h="full">
             {sortedOpportunities.map(([oppId, data]) => {
                 const unreadCount = data.messages.filter(m =>
-                    !m.is_read &&
-                    m.organization_id &&
-                    !m.volunteer_id &&
-                    m.volunteer_id !== currentUser.id
+                    // Count both unread direct messages and group messages
+                    ((m.recipient_id === currentUser.id) || m.is_group_message) &&
+                    isMessageUnread(m)
                 ).length;
 
                 const lastMessage = data.messages[data.messages.length - 1];
@@ -459,9 +547,8 @@ const VolunteerMessages = ({ onUnreadCountChange }) => {
                                 id: oppId,
                                 ...data.opportunity
                             });
-                            if (unreadCount > 0) {
-                                markAllMessagesAsRead(oppId);
-                            }
+                            // Always try to mark messages as read when opening conversation
+                            markAllMessagesAsRead(oppId);
                         }}
                         _hover={{ bg: "gray.50" }}
                         borderWidth="1px"
