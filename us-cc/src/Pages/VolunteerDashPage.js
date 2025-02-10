@@ -550,7 +550,7 @@ export default function VolunteerDashPage() {
                 .from('volunteer_opportunities')
                 .select(`
                     *,
-                    responses:opportunity_responses!inner(
+                    responses:opportunity_responses(
                         id,
                         volunteer_id,
                         status
@@ -558,7 +558,6 @@ export default function VolunteerDashPage() {
                     major_incident:major_incidents(id)
                 `)
                 .eq('status', 'open')
-                .neq('opportunity_responses.status', 'cancelled')  // Only consider non-cancelled responses
                 .order('created_at', { ascending: false });
 
             if (opportunitiesError) throw opportunitiesError;
@@ -657,31 +656,50 @@ export default function VolunteerDashPage() {
 
     useEffect(() => {
         const debugMessages = async () => {
-            const { data: { user } } = await supabase.auth.getUser();
-            console.log('Current user:', user);
+            try {
+                const { data: { user } } = await supabase.auth.getUser();
+                if (!user) {
+                    console.log('No user found');
+                    return;
+                }
 
-            // Get all messages for this user
-            const { data: messages, error } = await supabase
-                .from('messages')
-                .select(`
-                    *,
-                    opportunity:volunteer_opportunities (
-                        id,
-                        title,
-                        organization_id
-                    )
-                `)
-                .or(`volunteer_id.eq.${user.id},and(is_group_message.eq.true,volunteer_id.is.null)`);
+                // Get all messages for this user
+                const { data: messages, error } = await supabase
+                    .from('messages')
+                    .select(`
+                        *,
+                        opportunity:volunteer_opportunities (
+                            id,
+                            title,
+                            organization_id
+                        )
+                    `)
+                    .or(`volunteer_id.eq.${user.id},and(is_group_message.eq.true,volunteer_id.is.null)`);
 
-            console.log('All messages:', messages);
+                if (error) {
+                    console.error('Error fetching messages:', error);
+                    return;
+                }
 
-            // Get user's opportunity responses
-            const { data: responses } = await supabase
-                .from('opportunity_responses')
-                .select('*')
-                .eq('volunteer_id', user.id);
+                // Get user's opportunity responses
+                const { data: responses, error: responsesError } = await supabase
+                    .from('opportunity_responses')
+                    .select('*')
+                    .eq('volunteer_id', user.id);
 
-            console.log('User responses:', responses);
+                if (responsesError) {
+                    console.error('Error fetching responses:', responsesError);
+                    return;
+                }
+
+                console.log('Debug info:', {
+                    user,
+                    messages,
+                    responses
+                });
+            } catch (error) {
+                console.error('Debug error:', error);
+            }
         };
 
         debugMessages();
